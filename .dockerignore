@@ -1,0 +1,9 @@
+.git
+.env
+upload
+*.zip
+**/__pycache__
+**/*.pyc
+ur_cbf_ws/build
+ur_cbf_ws/install
+ur_cbf_ws/log

@@ -1,0 +1,2 @@
+# A versao 1.2.7 fornece wheel CPython 3.12 e o modelo Robot.create_ur_ur3e().
+uaibot==1.2.7

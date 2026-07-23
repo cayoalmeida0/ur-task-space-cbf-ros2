@@ -1,0 +1,49 @@
+x-ur-cbf-common: &ur-cbf-common
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile
+    args:
+      USER_UID: ${HOST_UID:-1000}
+      USER_GID: ${HOST_GID:-1000}
+  image: ur-cbf-jazzy:${IMAGE_TAG:-0.1.7}
+  network_mode: host
+  ipc: host
+  stdin_open: true
+  tty: true
+  environment:
+    AUTO_BUILD: missing
+    DISPLAY: ${DISPLAY}
+    QT_X11_NO_MITSHM: "1"
+    LIBGL_ALWAYS_SOFTWARE: ${LIBGL_ALWAYS_SOFTWARE:-1}
+    ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-42}
+    UR_TYPE: ${UR_TYPE:-ur3e}
+  volumes:
+    - ..:/workspace:rw
+    - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+services:
+  ur_cbf_dev:
+    <<: *ur-cbf-common
+    profiles: [dev]
+    command: ["bash"]
+
+  ur_cbf_sim:
+    <<: *ur-cbf-common
+    profiles: [sim]
+    command:
+      - ros2
+      - launch
+      - ur_cbf_bringup
+      - simulation.launch.py
+      - ur_type:=${UR_TYPE:-ur3e}
+
+  ur_cbf_real:
+    <<: *ur-cbf-common
+    profiles: [real]
+    command:
+      - ros2
+      - launch
+      - ur_cbf_bringup
+      - real.launch.py
+      - ur_type:=${UR_TYPE:-ur3e}
+      - robot_ip:=${ROBOT_IP}

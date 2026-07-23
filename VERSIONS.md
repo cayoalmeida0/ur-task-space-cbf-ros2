@@ -1,0 +1,98 @@
+# Registro inicial de versoes
+
+Data da definicao do ambiente: 17 de julho de 2026.
+
+## Revisao 0.1.7 — 23 de julho de 2026
+
+- Integra ao alvo `make sim` a autorizacao grafica X11/XWayland que antes
+  precisava ser executada manualmente com `xhost`.
+- Restringe a autorizacao ao usuario local que inicia o ambiente, sem habilitar
+  acesso global ao servidor X.
+- Verifica previamente a existencia de `DISPLAY` e do comando `xhost`, retornando
+  orientacoes objetivas quando o host nao estiver preparado.
+- Remove a criacao e a montagem de `~/.Xauthority`, que podiam produzir um
+  arquivo vazio e impedir a inicializacao da interface Qt do Gazebo.
+- Atualiza a imagem consolidada para `ur-cbf-jazzy:0.1.7`.
+- Atualiza os metadados do pacote ROS `ur_cbf_bringup` para a versao `0.1.7`.
+
+## Revisao 0.1.6 — 23 de julho de 2026
+
+- Corrige o alvo `make build` para ativar explicitamente o perfil `dev` e
+  construir o servico `ur_cbf_dev`.
+- Elimina a resposta enganosa `No services to build`, que mantinha em uso a
+  imagem antiga sem `ros-jazzy-ros2controlcli`.
+- Versiona a imagem Docker como `ur-cbf-jazzy:0.1.6`, evitando que revisoes
+  diferentes compartilhem silenciosamente a tag `latest`.
+- O diagnostico agora diferencia a instalacao do pacote Debian
+  `ros-jazzy-ros2controlcli` do registro da extensao `ros2 control`.
+
+## Revisao 0.1.5 — 23 de julho de 2026
+
+- Instala explicitamente o pacote `ros-jazzy-ros2controlcli`, responsavel por
+  registrar a extensao `control` no comando `ros2`.
+- Acrescenta ao `make check` uma verificacao autossuficiente de
+  `ros2 control list_controllers -h`, sem exigir um `controller_manager` ativo.
+- Mantem a simulacao UR na versao 2.5.0 e a interface de velocidades articulares
+  pelo `forward_velocity_controller`.
+
+## Revisao 0.1.4 — 23 de julho de 2026
+
+- Substitui o commit `90fa0ee`, exclusivo da branch `ros2` e posterior a uma
+  alteracao incompatível, pelo tag oficial `2.5.0` da simulacao UR.
+- Fixa `ur_simulation_gz` no commit
+  `048c80cd1faf87a2c74e14baadb65bd22b564d8f`, pertencente à ancestralidade da
+  branch `kilted`, utilizada para ROS 2 Jazzy.
+- Acrescenta ao `make diagnose` a referência exata da simulação UR usada na
+  construção.
+
+## Revisao 0.1.3 — 23 de julho de 2026
+
+- Corrige a falha `COLCON_TRACE: unbound variable` ao carregar o ambiente
+  gerado pelo `colcon`.
+- Mantem `set -euo pipefail` em todo o diagnostico e suspende `nounset` somente
+  durante o `source` de `install/setup.bash`.
+
+## Revisao 0.1.2 — 23 de julho de 2026
+
+- Corrige o e-mail invalido `cayo@localhost` no manifesto do pacote
+  `ur_cbf_bringup`.
+- Carrega explicitamente o ambiente instalado do workspace no diagnostico,
+  garantindo que o pacote local seja encontrado apos a compilacao.
+- Substitui a mensagem generica `Package not found` por um diagnostico que
+  identifica o pacote ausente e exibe o `AMENT_PREFIX_PATH`.
+
+## Revisao 0.1.1 — 23 de julho de 2026
+
+- Atualiza o indice APT imediatamente antes de o `rosdep` instalar as dependencias
+  da simulacao oficial da Universal Robots.
+- Reutiliza e renomeia o usuario e o grupo de UID/GID 1000 ja presentes na imagem
+  `ubuntu:24.04`, evitando a falha `GID '1000' already exists`.
+- Acrescenta `make diagnose` para confirmar o projeto e o Dockerfile usados pelo
+  Docker Compose antes da construcao.
+
+| Componente | Versao ou referencia |
+|---|---|
+| Sistema base | Ubuntu 24.04 LTS |
+| ROS 2 | Jazzy |
+| Python | 3.12 |
+| UAIbot | 1.2.7 |
+| Gazebo | Harmonic |
+| Simulacao UR | tag `2.5.0`, commit `048c80cd1faf87a2c74e14baadb65bd22b564d8f` |
+| Controlador ROS | `forward_velocity_controller` |
+
+## Evidencia de compatibilidade do UAIbot
+
+O pacote binario `uaibot==1.2.7` foi instalado e testado em CPython 3.12.13. O teste
+confirmou a importacao da biblioteca, a existencia de `Robot.create_ur_ur3e()` e a
+criacao de um modelo com seis elos.
+
+O arquivo `/opt/ur_cbf_python_versions.txt`, gerado durante a construcao da imagem,
+registra todas as dependencias Python efetivamente instaladas.
+
+## Politica de reproducibilidade
+
+- O UAIbot e fixado por versao.
+- A simulacao UR e fixada por commit.
+- Pacotes ROS instalados por APT recebem atualizacoes compatíveis com Jazzy durante a
+  construcao. Para cada campanha experimental, deve-se arquivar tambem a saida de
+  `apt list --installed` e o identificador da imagem Docker utilizada.

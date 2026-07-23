@@ -1,0 +1,12 @@
+.env
+.idea/
+.vscode/
+**/__pycache__/
+**/*.pyc
+.pytest_cache/
+.coverage
+*.zip
+upload/
+ur_cbf_ws/build/
+ur_cbf_ws/install/
+ur_cbf_ws/log/
