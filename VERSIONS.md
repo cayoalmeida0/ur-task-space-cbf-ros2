@@ -2,6 +2,21 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao 0.3.2 — 20 de agosto de 2026
+
+- Mede o limite dinamico de `30 s` pelo relogio ROS/Gazebo, tornando o criterio
+  independente do fator de tempo real da simulacao.
+- Mantem watchdogs de comunicacao em relogio monotonicamente crescente e adiciona
+  um limite absoluto de seguranca de `180 s` reais.
+- Usa tempo simulado tambem nas fases de estabilizacao e confirmacao da parada.
+- Registra `t_sim`, `t_real` e o fator de tempo real aproximado no log.
+- Gera um JSON atomico por execucao com versoes, parametros, seed, ordem das
+  juntas, posicoes, metricas e serie temporal de erros e comandos.
+- Publica comando nulo imediatamente ao solicitar uma interrupcao do ensaio.
+- Adiciona oito testes de temporizacao, retrocesso de relogio e persistencia,
+  elevando o total do pacote para 30 testes unitarios.
+- Mantem a infraestrutura Docker `ur-cbf-jazzy:0.1.8`.
+
 ## Revisao 0.3.1 / infraestrutura 0.1.8 — 20 de agosto de 2026
 
 - Disponibiliza o `site-packages` do ambiente virtual do UAIbot aos executaveis
@@ -14,8 +29,9 @@ Data da definicao do ambiente: 17 de julho de 2026.
   `0.1.8`.
 - Atualiza o pacote `ur_cbf_control` para `0.3.1` e o tempo maximo do ensaio
   cartesiano de `8 s` para `30 s`.
-- O ajuste de tempo preserva ganhos, amortecimento, referencia, limites e criterio
-  de tolerancia. O ensaio com `30 s` atingiu o criterio de convergencia no Gazebo.
+- O ajuste preservou ganhos, amortecimento, referencia, limites e criterio de
+  tolerancia. A repeticao atingiu a convergencia, mas revelou que o limite ainda
+  dependia do tempo real e do desempenho grafico do host.
 
 ## Revisao 0.3.0 — 20 de agosto de 2026
 

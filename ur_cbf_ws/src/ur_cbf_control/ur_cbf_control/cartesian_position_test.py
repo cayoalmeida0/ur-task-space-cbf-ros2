@@ -2,6 +2,7 @@
 
 from enum import Enum, auto
 import math
+import os
 import sys
 import time
 
@@ -17,6 +18,10 @@ from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
+from ur_cbf_control.experiment import ControlTiming
+from ur_cbf_control.experiment import evaluate_control_timing
+from ur_cbf_control.experiment import ExperimentDataError
+from ur_cbf_control.experiment import write_experiment_record
 from ur_cbf_control.kinematics import KinematicState
 from ur_cbf_control.kinematics import KinematicsError
 from ur_cbf_control.kinematics import UaibotKinematics
@@ -68,11 +73,14 @@ class CartesianPositionTest(Node):
         self.declare_parameter("success_hold_duration", 0.5)
         self.declare_parameter("zero_hold_duration", 0.5)
         self.declare_parameter("max_control_duration", 30.0)
+        self.declare_parameter("max_wall_control_duration", 180.0)
         self.declare_parameter("state_timeout", 0.25)
         self.declare_parameter("startup_timeout", 15.0)
         self.declare_parameter("command_rate", 50.0)
         self.declare_parameter("experiment_id", "cartesian_position_ur3e_001")
         self.declare_parameter("random_seed", 0)
+        self.declare_parameter("result_directory", "/workspace/results")
+        self.declare_parameter("require_result_record", True)
 
         self.execute_test = bool(self.get_parameter("execute_test").value)
         self.controller_node = str(self.get_parameter("controller_node").value)
@@ -117,11 +125,20 @@ class CartesianPositionTest(Node):
         self.max_control_duration = float(
             self.get_parameter("max_control_duration").value
         )
+        self.max_wall_control_duration = float(
+            self.get_parameter("max_wall_control_duration").value
+        )
         self.state_timeout = float(self.get_parameter("state_timeout").value)
         self.startup_timeout = float(self.get_parameter("startup_timeout").value)
         self.command_rate = float(self.get_parameter("command_rate").value)
         self.experiment_id = str(self.get_parameter("experiment_id").value)
         self.random_seed = int(self.get_parameter("random_seed").value)
+        self.result_directory = str(
+            self.get_parameter("result_directory").value
+        )
+        self.require_result_record = bool(
+            self.get_parameter("require_result_record").value
+        )
 
         self._validate_parameters()
         self.kinematics = UaibotKinematics.create(
@@ -136,16 +153,24 @@ class CartesianPositionTest(Node):
         self.phase = Phase.WAITING
         self.start_monotonic = time.monotonic()
         self.phase_start_monotonic = self.start_monotonic
+        self.phase_start_sim_seconds: float | None = None
+        self.control_start_monotonic: float | None = None
+        self.control_start_sim_seconds: float | None = None
         self.controller_joints: tuple[str, ...] | None = None
         self.latest_state: OrderedJointState | None = None
         self.latest_state_receipt: float | None = None
         self.initial_position: np.ndarray | None = None
         self.target_position: np.ndarray | None = None
+        self._last_position: np.ndarray | None = None
         self.pending_failure: str | None = None
         self._joint_parameter_future = None
         self._last_state_error: str | None = None
         self._last_progress_log = self.start_monotonic
         self._maximum_command = 0.0
+        self._tolerance_simulated_seconds: float | None = None
+        self._tolerance_wall_seconds: float | None = None
+        self._trace_samples: list[dict[str, object]] = []
+        self._result_path: str | None = None
 
         command_qos = QoSProfile(
             depth=1,
@@ -184,7 +209,8 @@ class CartesianPositionTest(Node):
         else:
             self.get_logger().info(
                 f"Ensaio {self.experiment_id} armado; ur_type={self.ur_type}; "
-                f"seed={self.random_seed}; imagem esperada=ur-cbf-jazzy:0.1.8."
+                f"seed={self.random_seed}; pacote=0.3.2; "
+                "imagem esperada=ur-cbf-jazzy:0.1.8."
             )
 
     def _validate_parameters(self) -> None:
@@ -197,6 +223,7 @@ class CartesianPositionTest(Node):
             "success_hold_duration": self.success_hold_duration,
             "zero_hold_duration": self.zero_hold_duration,
             "max_control_duration": self.max_control_duration,
+            "max_wall_control_duration": self.max_wall_control_duration,
             "state_timeout": self.state_timeout,
             "startup_timeout": self.startup_timeout,
             "command_rate": self.command_rate,
@@ -225,6 +252,8 @@ class CartesianPositionTest(Node):
             2.0 * self.position_tolerance
         ):
             raise ValueError("target_offset deve superar duas vezes a tolerancia.")
+        if not self.result_directory.strip():
+            raise ValueError("result_directory nao pode ser vazio.")
 
     def _request_joint_order(self) -> None:
         if self._joint_parameter_future is not None:
@@ -324,11 +353,167 @@ class CartesianPositionTest(Node):
         )
 
     def _evaluate_kinematics(self) -> KinematicState:
-        return self.kinematics.evaluate(self._model_positions())
+        state = self.kinematics.evaluate(self._model_positions())
+        self._last_position = np.asarray(state.position, dtype=float)
+        return state
+
+    def _simulation_seconds(self) -> float:
+        seconds = self.get_clock().now().nanoseconds * 1e-9
+        if not math.isfinite(seconds):
+            raise ExperimentDataError("Relogio ROS retornou tempo nao finito.")
+        return seconds
+
+    def _control_timing(
+        self,
+        *,
+        now_wall: float | None = None,
+        now_simulated: float | None = None,
+    ) -> ControlTiming:
+        if (
+            self.control_start_monotonic is None
+            or self.control_start_sim_seconds is None
+        ):
+            raise ExperimentDataError("Temporizacao de controle ainda nao iniciou.")
+        return evaluate_control_timing(
+            start_simulated=self.control_start_sim_seconds,
+            current_simulated=(
+                self._simulation_seconds()
+                if now_simulated is None
+                else now_simulated
+            ),
+            start_wall=self.control_start_monotonic,
+            current_wall=time.monotonic() if now_wall is None else now_wall,
+            max_simulated=self.max_control_duration,
+            max_wall=self.max_wall_control_duration,
+        )
+
+    def _record_trace(
+        self,
+        *,
+        timing: ControlTiming,
+        error: np.ndarray,
+        command: tuple[float, ...],
+        phase: str,
+        cartesian_saturated: bool,
+        joint_saturated: bool,
+    ) -> None:
+        self._trace_samples.append(
+            {
+                "phase": phase,
+                "simulated_seconds": timing.simulated_seconds,
+                "wall_seconds": timing.wall_seconds,
+                "error": [float(value) for value in error],
+                "error_norm": float(np.linalg.norm(error)),
+                "controller_velocity": [float(value) for value in command],
+                "cartesian_saturated": bool(cartesian_saturated),
+                "joint_saturated": bool(joint_saturated),
+            }
+        )
+
+    def _result_record(
+        self,
+        *,
+        result: str,
+        reason: str,
+        final_error_norm: float | None,
+    ) -> dict[str, object]:
+        simulated_seconds = None
+        wall_seconds = None
+        if self._trace_samples:
+            simulated_seconds = self._trace_samples[-1]["simulated_seconds"]
+            wall_seconds = self._trace_samples[-1]["wall_seconds"]
+        return {
+            "schema_version": "1.0",
+            "experiment_id": self.experiment_id,
+            "result": result,
+            "reason": reason,
+            "software": {
+                "docker_image": "ur-cbf-jazzy:0.1.8",
+                "control_package": "ur_cbf_control:0.3.2",
+                "ros_distro": os.environ.get("ROS_DISTRO", "unknown"),
+                "ur_type": self.ur_type,
+            },
+            "random_seed": self.random_seed,
+            "joint_order": {
+                "model": list(self.model_joint_names),
+                "controller": list(self.controller_joints or ()),
+            },
+            "positions": {
+                "initial": (
+                    None
+                    if self.initial_position is None
+                    else self.initial_position.tolist()
+                ),
+                "target": (
+                    None
+                    if self.target_position is None
+                    else self.target_position.tolist()
+                ),
+                "final": (
+                    None
+                    if self._last_position is None
+                    else self._last_position.tolist()
+                ),
+            },
+            "metrics": {
+                "initial_error_norm": (
+                    None
+                    if self.target_position is None
+                    else float(np.linalg.norm(self.target_offset))
+                ),
+                "final_error_norm": final_error_norm,
+                "max_abs_joint_velocity": self._maximum_command,
+                "simulated_seconds": simulated_seconds,
+                "wall_seconds": wall_seconds,
+                "time_to_tolerance_simulated": (
+                    self._tolerance_simulated_seconds
+                ),
+                "time_to_tolerance_wall": self._tolerance_wall_seconds,
+            },
+            "parameters": {
+                "target_offset": self.target_offset.tolist(),
+                "position_gains": list(self.position_gains),
+                "damping": self.damping,
+                "max_cartesian_speed": self.max_cartesian_speed,
+                "max_abs_joint_velocity": self.max_abs_joint_velocity,
+                "position_tolerance": self.position_tolerance,
+                "max_simulated_control_duration": self.max_control_duration,
+                "max_wall_control_duration": self.max_wall_control_duration,
+                "command_rate": self.command_rate,
+                "eef_offset_xyz": list(self.eef_offset_xyz),
+                "uaibot_mode": self.uaibot_mode,
+            },
+            "samples": self._trace_samples,
+        }
+
+    def _save_result(
+        self,
+        *,
+        result: str,
+        reason: str,
+        final_error_norm: float | None,
+    ) -> bool:
+        try:
+            path = write_experiment_record(
+                record=self._result_record(
+                    result=result,
+                    reason=reason,
+                    final_error_norm=final_error_norm,
+                ),
+                directory=self.result_directory,
+                experiment_id=self.experiment_id,
+            )
+        except ExperimentDataError as error:
+            self.get_logger().error(str(error))
+            return not self.require_result_record
+        self._result_path = str(path)
+        self.get_logger().info(f"Resultado experimental salvo em {path}.")
+        return True
 
     def request_abort(self, reason: str) -> None:
         if self.finished or self.phase is Phase.STOPPING:
             return
+        self._publish_zero()
         self.pending_failure = reason
         self.phase = Phase.STOPPING
         self.phase_start_monotonic = time.monotonic()
@@ -336,6 +521,16 @@ class CartesianPositionTest(Node):
 
     def _finish_failure(self, reason: str) -> None:
         self._publish_zero()
+        final_error_norm = None
+        if self.target_position is not None and self._last_position is not None:
+            final_error_norm = float(
+                np.linalg.norm(self.target_position - self._last_position)
+            )
+        self._save_result(
+            result="rejected",
+            reason=reason,
+            final_error_norm=final_error_norm,
+        )
         self.get_logger().error(f"ENSAIO CARTESIANO REPROVADO: {reason}")
         self.finished = True
         self.exit_code = 1
@@ -343,10 +538,33 @@ class CartesianPositionTest(Node):
     def _finish_success(self, state: KinematicState) -> None:
         self._publish_zero()
         error = self.target_position - np.asarray(state.position)
+        timing = self._control_timing()
+        self._record_trace(
+            timing=timing,
+            error=error,
+            command=zero_velocity_command(self.controller_joints),
+            phase="completed",
+            cartesian_saturated=False,
+            joint_saturated=False,
+        )
+        final_error_norm = float(np.linalg.norm(error))
+        if not self._save_result(
+            result="approved",
+            reason="Tolerancia mantida durante a parada.",
+            final_error_norm=final_error_norm,
+        ):
+            self.get_logger().error(
+                "ENSAIO CARTESIANO REPROVADO: resultado obrigatorio nao foi salvo."
+            )
+            self.finished = True
+            self.exit_code = 1
+            return
         self.get_logger().info(
             "ENSAIO CARTESIANO APROVADO: "
-            f"erro_final={np.linalg.norm(error):.6f} m; "
-            f"max_qdot={self._maximum_command:.6f} rad/s."
+            f"erro_final={final_error_norm:.6f} m; "
+            f"max_qdot={self._maximum_command:.6f} rad/s; "
+            f"t_sim={timing.simulated_seconds:.3f} s; "
+            f"t_real={timing.wall_seconds:.3f} s."
         )
         self.finished = True
         self.exit_code = 0
@@ -354,7 +572,12 @@ class CartesianPositionTest(Node):
     def _tick(self) -> None:
         try:
             self._tick_impl()
-        except (KinematicsError, NominalControlError, ValueError) as error:
+        except (
+            ExperimentDataError,
+            KinematicsError,
+            NominalControlError,
+            ValueError,
+        ) as error:
             self.request_abort(f"Falha de controle: {error}")
         except Exception as error:  # pragma: no cover - protecao de ultima camada
             self.request_abort(f"Falha inesperada: {error}")
@@ -386,18 +609,47 @@ class CartesianPositionTest(Node):
         if self.phase is Phase.WAITING:
             self.phase = Phase.SETTLING
             self.phase_start_monotonic = now
+            self.phase_start_sim_seconds = self._simulation_seconds()
             self._publish_zero()
             self.get_logger().info("Estado valido recebido; estabilizando.")
             return
 
         if self.phase is Phase.SETTLING:
             self._publish_zero()
-            if now - self.phase_start_monotonic >= self.settle_duration:
+            settle_timing = evaluate_control_timing(
+                start_simulated=self.phase_start_sim_seconds,
+                current_simulated=self._simulation_seconds(),
+                start_wall=self.phase_start_monotonic,
+                current_wall=now,
+                max_simulated=self.settle_duration,
+                max_wall=self.startup_timeout,
+            )
+            if settle_timing.wall_limit_reached:
+                self._finish_failure(
+                    "Tempo real maximo excedido durante a estabilizacao."
+                )
+                return
+            if settle_timing.simulated_limit_reached:
                 state = self._evaluate_kinematics()
                 self.initial_position = np.asarray(state.position)
                 self.target_position = self.initial_position + self.target_offset
                 self.phase = Phase.CONTROLLING
                 self.phase_start_monotonic = now
+                self.control_start_monotonic = now
+                self.control_start_sim_seconds = self._simulation_seconds()
+                timing = self._control_timing(
+                    now_wall=now,
+                    now_simulated=self.control_start_sim_seconds,
+                )
+                initial_error = self.target_position - self.initial_position
+                self._record_trace(
+                    timing=timing,
+                    error=initial_error,
+                    command=zero_velocity_command(self.controller_joints),
+                    phase="control_start",
+                    cartesian_saturated=False,
+                    joint_saturated=False,
+                )
                 self.get_logger().info(
                     "Posicao inicial="
                     f"{self.initial_position.tolist()}; alvo={self.target_position.tolist()}; "
@@ -406,18 +658,59 @@ class CartesianPositionTest(Node):
             return
 
         if self.phase is Phase.CONTROLLING:
-            if now - self.phase_start_monotonic > self.max_control_duration:
-                self.request_abort("Tempo maximo de controle excedido.")
-                return
+            now_simulated = self._simulation_seconds()
+            timing = self._control_timing(
+                now_wall=now,
+                now_simulated=now_simulated,
+            )
             state = self._evaluate_kinematics()
             error = self.target_position - np.asarray(state.position)
             error_norm = float(np.linalg.norm(error))
             if error_norm <= self.position_tolerance:
                 self.phase = Phase.HOLDING
                 self.phase_start_monotonic = now
+                self.phase_start_sim_seconds = now_simulated
+                self._tolerance_simulated_seconds = timing.simulated_seconds
+                self._tolerance_wall_seconds = timing.wall_seconds
                 self._publish_zero()
+                self._record_trace(
+                    timing=timing,
+                    error=error,
+                    command=zero_velocity_command(self.controller_joints),
+                    phase="tolerance_reached",
+                    cartesian_saturated=False,
+                    joint_saturated=False,
+                )
                 self.get_logger().info(
-                    f"Tolerancia atingida: erro={error_norm:.6f} m; validando parada."
+                    f"Tolerancia atingida: erro={error_norm:.6f} m; "
+                    f"t_sim={timing.simulated_seconds:.3f} s; "
+                    f"t_real={timing.wall_seconds:.3f} s; validando parada."
+                )
+                return
+            if timing.simulated_limit_reached:
+                self._record_trace(
+                    timing=timing,
+                    error=error,
+                    command=zero_velocity_command(self.controller_joints),
+                    phase="simulated_timeout",
+                    cartesian_saturated=False,
+                    joint_saturated=False,
+                )
+                self.request_abort(
+                    "Tempo simulado maximo de controle excedido."
+                )
+                return
+            if timing.wall_limit_reached:
+                self._record_trace(
+                    timing=timing,
+                    error=error,
+                    command=zero_velocity_command(self.controller_joints),
+                    phase="wall_timeout",
+                    cartesian_saturated=False,
+                    joint_saturated=False,
+                )
+                self.request_abort(
+                    "Tempo real maximo de seguranca do controle excedido."
                 )
                 return
             result = compute_position_control(
@@ -435,24 +728,66 @@ class CartesianPositionTest(Node):
                 self._maximum_command,
                 max(abs(value) for value in result.controller_velocity),
             )
+            self._record_trace(
+                timing=timing,
+                error=error,
+                command=result.controller_velocity,
+                phase="controlling",
+                cartesian_saturated=result.cartesian_saturated,
+                joint_saturated=result.joint_saturated,
+            )
             if now - self._last_progress_log >= 1.0:
+                real_time_factor = (
+                    timing.simulated_seconds / timing.wall_seconds
+                    if timing.wall_seconds > 0.0
+                    else 0.0
+                )
                 self.get_logger().info(
                     f"erro={result.error_norm:.6f} m; "
                     f"cart_sat={result.cartesian_saturated}; "
-                    f"joint_sat={result.joint_saturated}."
+                    f"joint_sat={result.joint_saturated}; "
+                    f"t_sim={timing.simulated_seconds:.3f} s; "
+                    f"t_real={timing.wall_seconds:.3f} s; "
+                    f"RTF={real_time_factor:.3f}."
                 )
                 self._last_progress_log = now
             return
 
         if self.phase is Phase.HOLDING:
             self._publish_zero()
+            now_simulated = self._simulation_seconds()
+            timing = self._control_timing(
+                now_wall=now,
+                now_simulated=now_simulated,
+            )
             state = self._evaluate_kinematics()
             error = self.target_position - np.asarray(state.position)
             error_norm = float(np.linalg.norm(error))
+            if timing.wall_limit_reached:
+                self.request_abort(
+                    "Tempo real maximo excedido durante a validacao da parada."
+                )
+                return
             if error_norm > 2.0 * self.position_tolerance:
+                self._record_trace(
+                    timing=timing,
+                    error=error,
+                    command=zero_velocity_command(self.controller_joints),
+                    phase="hold_error",
+                    cartesian_saturated=False,
+                    joint_saturated=False,
+                )
                 self.request_abort("Erro cresceu durante a validacao da parada.")
                 return
-            if now - self.phase_start_monotonic >= self.success_hold_duration:
+            hold_timing = evaluate_control_timing(
+                start_simulated=self.phase_start_sim_seconds,
+                current_simulated=now_simulated,
+                start_wall=self.phase_start_monotonic,
+                current_wall=now,
+                max_simulated=self.success_hold_duration,
+                max_wall=self.max_wall_control_duration,
+            )
+            if hold_timing.simulated_limit_reached:
                 self._finish_success(state)
             return
 

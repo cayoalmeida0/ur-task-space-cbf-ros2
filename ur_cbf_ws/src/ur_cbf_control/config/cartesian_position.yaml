@@ -26,8 +26,11 @@ cartesian_position_test:
     success_hold_duration: 0.5
     zero_hold_duration: 0.5
     max_control_duration: 30.0
+    max_wall_control_duration: 180.0
     state_timeout: 0.25
     startup_timeout: 15.0
     command_rate: 50.0
     experiment_id: cartesian_position_ur3e_001
     random_seed: 0
+    result_directory: /workspace/results
+    require_result_record: true

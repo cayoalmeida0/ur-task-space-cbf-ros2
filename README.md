@@ -6,7 +6,7 @@ na simulacao e no hardware real: velocidades articulares publicadas em
 `/forward_velocity_controller/commands`.
 
 > **Estado do projeto:** infraestrutura Docker `v0.1.8` e pacote de controle
-> nominal `ur_cbf_control` na revisao `0.3.1`. A formulacao QP/CBF sera
+> nominal `ur_cbf_control` na revisao `0.3.2`. A formulacao QP/CBF sera
 > desenvolvida sobre esta base.
 
 ## Arquitetura
@@ -229,7 +229,7 @@ presente. Consulte os criterios completos em
 ## 9. Regulacao cartesiana nominal de posicao
 
 A serie `0.3` introduz o primeiro controlador cartesiano, ainda sem QP e sem CBF.
-A revisao `0.3.1` consolida o ensaio validado. O UAIbot calcula a posicao do
+A revisao `0.3.2` consolida o ensaio validado. O UAIbot calcula a posicao do
 efetuador e o Jacobiano translacional a partir das juntas medidas no Gazebo. A
 velocidade articular nominal usa inversa amortecida, com limites cartesiano e
 articular antes da publicacao.
@@ -246,7 +246,12 @@ O ensaio inicial define uma referencia relativa de `0.01 m` no eixo `z` do
 cenario UAIbot, limita a velocidade cartesiana a `0.01 m/s` e a velocidade de
 cada junta a `0.10 rad/s`. Ele e desarmado por padrao, exige `/gz_ros_control` e
 publica comando nulo em timeout, interrupcao ou falha numerica. O tempo maximo
-padrao e `30 s`, definido a partir do primeiro ensaio de convergencia no Gazebo.
+dinamico e `30 s` simulados, independente do fator de tempo real do Gazebo. Um
+segundo limite de `180 s` reais protege contra travamento ou lentidao extrema.
+
+Cada execucao grava em `results/` um JSON com parametros, versoes, seed, ordem
+das juntas, posicoes, erro final, tempos simulado/real e a serie temporal de erro
+e comandos. O log tambem apresenta o fator de tempo real aproximado (`RTF`).
 
 ## Estrutura
 
@@ -266,14 +271,15 @@ padrao e `30 s`, definido a partir do primeiro ensaio de convergencia no Gazebo.
         └── ur_cbf_control/
 ```
 
-Arquivos locais de ambiente (`.env`), resultados do `colcon`, ZIPs de entrega e
-artigos usados como referencia nao fazem parte do versionamento.
+Arquivos locais de ambiente (`.env`), resultados do `colcon`, ZIPs de entrega,
+artigos usados como referencia e resultados experimentais locais nao fazem parte
+do versionamento.
 
 ## Observacao sobre UAIbot e UR5e
 
 A interface ROS e os backends Gazebo/real ja sao independentes do modelo. Entretanto,
 o UAIbot 1.2.7 oferece atualmente a fabrica `Robot.create_ur_ur3e()`, mas nao uma
-fabrica equivalente para o UR5e. O adaptador da revisao `0.3.1` rejeita modelos sem
+fabrica equivalente para o UR5e. O adaptador da revisao `0.3.2` rejeita modelos sem
 implementacao explicita, em vez de aplicar parametros UR3e silenciosamente. Para
 outro manipulador, deve-se adicionar seu adaptador cinetostatico preservando a
 interface do controlador.

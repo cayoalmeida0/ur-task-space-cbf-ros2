@@ -69,12 +69,13 @@ Protecoes adicionais:
 - watchdog baseado no instante monotonicamente crescente de recepcao do estado;
 - comando nulo durante espera, estabilizacao, parada e falhas;
 - armamento explicito e bloqueio quando `/gz_ros_control` esta ausente;
-- identificador, seed e parametros registrados no log do ensaio;
+- identificador, seed, versoes e parametros registrados no resultado do ensaio;
 - rejeicao explicita de modelos sem adaptador cinetico UAIbot.
 
-O tempo maximo de regulacao e `30 s`. Esse valor evita interromper a convergencia
-em configuracoes nas quais o amortecimento reduz a velocidade efetiva da tarefa,
-mantendo inalterados os ganhos e os limites de velocidade do ensaio inicial.
+O tempo maximo de regulacao e `30 s` no relogio ROS/Gazebo. O watchdog de estado
+continua usando relogio monotonicamente crescente, e um limite separado de `180 s`
+reais encerra o ensaio em caso de lentidao extrema. Assim, a dinamica simulada nao
+e interrompida apenas porque o fator de tempo real esta abaixo de um.
 
 Com `make sim` ativo em outro terminal:
 
@@ -83,6 +84,17 @@ ros2 launch ur_cbf_control cartesian_position.launch.py \
   ur_type:=ur3e \
   execute_test:=true
 ```
+
+O terminal informa `t_sim`, `t_real` e `RTF`. Ao finalizar, o diretorio
+`/workspace/results` recebe um JSON com o resumo e a serie temporal completa:
+
+```bash
+ls -1t /workspace/results/*.json | head -n 1
+```
+
+Cada nova execucao usa uma referencia relativa de `10 mm` a partir de sua propria
+posicao inicial; portanto, repetir o comando cria um novo alvo, em vez de retomar
+o alvo absoluto da execucao anterior.
 
 Os parametros estao em `config/cartesian_position.yaml`. A transformacao do ultimo
 frame DH ao ponto controlado e explicita em `eef_offset_xyz`; o valor inicial
