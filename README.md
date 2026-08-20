@@ -195,6 +195,35 @@ O primeiro comando deve ser executado dentro do container, por exemplo com
 `make shell`. Para cada experimento, registre a versao da imagem, os parametros
 ROS/YAML e as seeds utilizadas.
 
+## 8. Primeiro ensaio da camada de controle
+
+O pacote `ur_cbf_control` inicia a validacao da cadeia de comandos antes do
+controlador cartesiano e das CBFs. Seu ensaio monoarticular consulta a ordem das
+juntas no proprio `forward_velocity_controller`, reordena `/joint_states` por nome,
+aplica saturacao e publica comando nulo em caso de timeout ou interrupcao.
+
+Compile e teste dentro do container:
+
+```bash
+cd /workspace/ur_cbf_ws
+colcon build --symlink-install --packages-select ur_cbf_control
+source install/setup.bash
+colcon test --packages-select ur_cbf_control --event-handlers console_direct+
+colcon test-result --verbose
+```
+
+Com a simulacao ativa, execute deliberadamente o pulso de baixa velocidade:
+
+```bash
+ros2 launch ur_cbf_control joint_velocity_pulse.launch.py \
+  target_joint:=shoulder_pan_joint \
+  execute_test:=true
+```
+
+O teste e desarmado por padrao e recusa execucao se `/gz_ros_control` nao estiver
+presente. Consulte os criterios completos em
+`ur_cbf_ws/src/ur_cbf_control/README.md`.
+
 ## Estrutura
 
 ```text
@@ -209,7 +238,8 @@ ROS/YAML e as seeds utilizadas.
 │   └── check_system.sh
 └── ur_cbf_ws/
     └── src/
-        └── ur_cbf_bringup/
+        ├── ur_cbf_bringup/
+        └── ur_cbf_control/
 ```
 
 Arquivos locais de ambiente (`.env`), resultados do `colcon`, ZIPs de entrega e

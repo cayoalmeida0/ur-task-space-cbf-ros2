@@ -1,0 +1,20 @@
+joint_velocity_pulse_test:
+  ros__parameters:
+    use_sim_time: true
+    execute_test: false
+    controller_node: /forward_velocity_controller
+    command_topic: /forward_velocity_controller/commands
+    joint_states_topic: /joint_states
+    required_simulation_node: /gz_ros_control
+    target_joint: ""
+    pulse_velocity: 0.03
+    max_abs_velocity: 0.05
+    pulse_duration: 0.5
+    settle_duration: 0.5
+    zero_hold_duration: 0.5
+    state_timeout: 0.25
+    startup_timeout: 10.0
+    command_rate: 50.0
+    minimum_motion_ratio: 0.5
+    maximum_motion_ratio: 1.5
+    max_other_joint_displacement: 0.003

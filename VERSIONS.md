@@ -2,6 +2,19 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao 0.2.0 — 20 de agosto de 2026
+
+- Adiciona o pacote ROS 2 `ur_cbf_control` para iniciar a validacao da camada de
+  controle sem alterar a imagem Docker consolidada `ur-cbf-jazzy:0.1.7`.
+- Introduz um ensaio monoarticular de baixa velocidade, desarmado por padrao e
+  restrito ao backend de simulacao pela presenca de `/gz_ros_control`.
+- Consulta a ordem das juntas no `forward_velocity_controller` e reordena
+  `/joint_states` pelos nomes recebidos, sem assumir a ordem da mensagem.
+- Aplica saturacao simetrica e comando nulo durante estabilizacao, parada,
+  timeout, interrupcao ou falha de validacao.
+- Acrescenta testes unitarios para reordenacao, estados invalidos, saturacao,
+  dimensao do comando e deteccao de estado obsoleto.
+
 ## Revisao 0.1.7 — 23 de julho de 2026
 
 - Integra ao alvo `make sim` a autorizacao grafica X11/XWayland que antes
