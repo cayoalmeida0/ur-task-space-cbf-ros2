@@ -129,6 +129,16 @@ do ultimo frame DH, equivalente a `tool0`, e selecionada por `onrobot_type`: RG2
 usa translacao `[0.0, 0.0, 0.218] m` e RG6 usa `[0.0, 0.0, 0.268] m`; ambas usam
 RPY `[0.0, 0.0, -pi/2]`, coerente com a montagem descrita no Xacro.
 
+Para comparar o modelo com TF, use `base -> gripper_tcp`. O frame industrial
+`base`, adotado pela convencao DH, difere do frame visual `base_link` por uma
+rotacao de `pi` em `z`. O adaptador tambem corrige de forma versionada o quinto
+parametro DH do UAIbot 1.2.7, de `0.10535 m` para o valor oficial `0.08535 m`.
+Essa correcao atua antes do calculo de posicao e Jacobiano; o TCP da RG2 permanece
+em `0.218 m`. Valores inesperados da dependencia interrompem a execucao, e toda
+correcao aplicada e registrada no JSON experimental de esquema `1.3`.
+O modo efetivo do UAIbot e `python`, garantindo que o DH e o TCP corrigidos nao
+sejam substituidos por uma copia C++ criada anteriormente pela dependencia.
+
 Esta revisao suporta o UR3e no adaptador UAIbot. Modelos adicionais devem declarar
 sua fabrica e a ordem de juntas correspondente; a execucao e recusada se o modelo
 nao estiver implementado.

@@ -6,7 +6,7 @@ na simulacao e no hardware real: velocidades articulares publicadas em
 `/forward_velocity_controller/commands`.
 
 > **Estado do projeto:** infraestrutura Docker `v0.2.0` e pacote de controle
-> `ur_cbf_control` na revisao `0.5.0`. O controlador nominal pode operar por DLS
+> `ur_cbf_control` na revisao `0.5.1`. O controlador nominal pode operar por DLS
 > ou por QP com limites articulares. A simulacao inclui uma OnRobot RG2/RG6
 > selecionavel; as CBFs serao adicionadas na proxima etapa.
 
@@ -388,6 +388,32 @@ de `ONROBOT_TYPE`: a transformacao usa `0.218 m` para RG2 ou `0.268 m` para RG6,
 incluindo a orientacao rigida definida pela descricao da ferramenta. O OSQP
 resolve, em cada iteracao:
 
+### Frames e referencia cinemática
+
+Os nomes abaixo evitam comparar coordenadas expressas em bases diferentes:
+
+| Frame | Papel |
+|---|---|
+| `base_link` | frame visual definido pelo URDF |
+| `base` | base industrial/DH usada pelo modelo cinemático; difere de `base_link` por uma rotacao de `pi` em `z` |
+| `tool0` | flange mecanica do UR |
+| `gripper_tcp` | ponto controlado, no centro dos dedos fechados |
+
+Assim, a comparacao entre TF e UAIbot deve usar `base -> gripper_tcp`, e nao
+`base_link -> gripper_tcp`. Na configuracao inicial padrao do UR3e com RG2, o TF
+esperado fica aproximadamente em `[0.000, -0.441, 0.694] m`, expresso em `base`.
+
+A [fabrica UR3e do UAIbot 1.2.7](https://github.com/UAIbot/UAIbotPy/blob/main/uaibot/robot/_create_ur_ur3e.py)
+define o quinto parametro DH como `0.10535 m`, enquanto a
+[descricao oficial Jazzy](https://github.com/UniversalRobots/Universal_Robots_ROS2_Description/blob/jazzy/config/ur3e/default_kinematics.yaml)
+usa `0.08535 m`. A revisao `0.5.1` aplica no adaptador uma correcao estrita desses
+`20 mm` antes de calcular posicao e Jacobiano. A correcao nao altera o TCP de
+`0.218 m` da RG2 e e recusada se a dependencia apresentar um terceiro valor
+desconhecido. O JSON experimental registra o modelo e a correcao aplicada no
+esquema `1.3`. O adaptador usa o caminho Python do UAIbot para que os parametros
+corrigidos e o TCP configurado sejam usados na mesma instancia; uma solicitacao
+explicita de modo `c++` e recusada.
+
 ```text
 min_qdot  1/2 ||J_v qdot - v||^2 + 1/2 lambda^2 ||qdot||^2
 sujeito a -qdot_max <= qdot <= qdot_max
@@ -457,7 +483,7 @@ do versionamento.
 
 A interface ROS e os backends Gazebo/real ja sao independentes do modelo. Entretanto,
 o UAIbot 1.2.7 oferece atualmente a fabrica `Robot.create_ur_ur3e()`, mas nao uma
-fabrica equivalente para o UR5e. O adaptador da revisao `0.5.0` rejeita modelos sem
+fabrica equivalente para o UR5e. O adaptador da revisao `0.5.1` rejeita modelos sem
 implementacao explicita, em vez de aplicar parametros UR3e silenciosamente. Para
 outro manipulador, deve-se adicionar seu adaptador cinetostatico preservando a
 interface do controlador.

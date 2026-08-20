@@ -179,6 +179,15 @@ class CartesianPositionTest(Node):
             eef_offset_rpy=self.eef_offset_rpy,
             mode=self.uaibot_mode,
         )
+        if self.kinematics.model_corrections:
+            corrections = ", ".join(
+                f"{item.parameter}: {item.upstream_value:.5f} -> "
+                f"{item.corrected_value:.5f} m"
+                for item in self.kinematics.model_corrections
+            )
+            self.get_logger().info(
+                f"Correcoes do modelo cinemático aplicadas: {corrections}."
+            )
         self.qp_solver = BoxConstrainedQpSolver(
             absolute_tolerance=self.qp_absolute_tolerance,
             relative_tolerance=self.qp_relative_tolerance,
@@ -250,8 +259,11 @@ class CartesianPositionTest(Node):
                 f"Ensaio {self.experiment_id} armado; ur_type={self.ur_type}; "
                 f"onrobot_type={self.onrobot_type}; "
                 f"frame={self.controlled_frame}; "
-                f"modo={self.controller_mode}; seed={self.random_seed}; "
-                "pacote=0.5.0; imagem esperada=ur-cbf-jazzy:0.2.0."
+                f"modo={self.controller_mode}; "
+                f"uaibot={self.kinematics.mode} "
+                f"(solicitado={self.kinematics.requested_mode}); "
+                f"seed={self.random_seed}; "
+                "pacote=0.5.1; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
 
     def _validate_parameters(self) -> None:
@@ -517,18 +529,25 @@ class CartesianPositionTest(Node):
             simulated_seconds = self._trace_samples[-1]["simulated_seconds"]
             wall_seconds = self._trace_samples[-1]["wall_seconds"]
         return {
-            "schema_version": "1.2",
+            "schema_version": "1.3",
             "experiment_id": self.experiment_id,
             "result": result,
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.5.0",
+                "control_package": "ur_cbf_control:0.5.1",
                 "controller_mode": self.controller_mode,
                 "osqp": self.qp_solver.solver_version,
                 "ros_distro": os.environ.get("ROS_DISTRO", "unknown"),
                 "ur_type": self.ur_type,
                 "onrobot_type": self.onrobot_type,
+                "kinematic_model": self.kinematics.model_name,
+                "uaibot_requested_mode": self.kinematics.requested_mode,
+                "uaibot_effective_mode": self.kinematics.mode,
+                "kinematic_model_corrections": [
+                    correction.as_record()
+                    for correction in self.kinematics.model_corrections
+                ],
             },
             "random_seed": self.random_seed,
             "joint_order": {

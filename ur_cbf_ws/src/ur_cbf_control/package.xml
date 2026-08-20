@@ -5,7 +5,7 @@
 ?>
 <package format="3">
   <name>ur_cbf_control</name>
-  <version>0.5.0</version>
+  <version>0.5.1</version>
   <description>
     Controladores seguros no espaco de tarefa para manipuladores Universal Robots.
   </description>

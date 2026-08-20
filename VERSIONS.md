@@ -2,6 +2,23 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao 0.5.1 / infraestrutura 0.2.0 — 20 de agosto de 2026
+
+- Corrige no adaptador do UAIbot o quinto parametro DH do UR3e de `0.10535 m`
+  para o valor `0.08535 m` da descricao oficial Jazzy.
+- Mantem inalterado o TCP fisico da RG2 em `0.218 m`; a diferenca de `20 mm` nao
+  e tratada como deslocamento de ferramenta porque afeta posicao e Jacobiano de
+  forma dependente da configuracao.
+- Aceita tanto o valor conhecido do UAIbot 1.2.7 quanto um modelo futuro ja
+  corrigido, mas interrompe a execucao se encontrar qualquer terceiro valor.
+- Documenta as convencoes de `base_link`, `base`, `tool0` e `gripper_tcp` e
+  estabelece `base -> gripper_tcp` como comparacao correta entre TF e UAIbot.
+- Registra nome e correcoes do modelo cinemático no esquema experimental `1.3`.
+- Forca o caminho Python do UAIbot no adaptador UR3e, garantindo que DH e TCP
+  corrigidos nao sejam ignorados por uma copia C++ criada anteriormente.
+- Atualiza `ur_cbf_control` para `0.5.1` e adiciona quatro testes de regressao,
+  elevando o total do pacote para 48 testes.
+
 ## Revisao 0.5.0 / infraestrutura 0.2.0 — 20 de agosto de 2026
 
 - Substitui o deslocamento generico de `0.2 m` da fabrica UR3e do UAIbot pelo
