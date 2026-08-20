@@ -23,6 +23,7 @@ flowchart TD
     T --> R["UR real + ur_robot_driver"]
     G["UAIbot: cinemática e geometria"] --> C
     H["/finger_width_controller/commands"] --> S
+    H --> R
 ```
 
 ## Componentes
@@ -38,6 +39,7 @@ flowchart TD
 - interface de linha de comando `ros2 control` (`ros2controlcli`)
 - driver e descricao oficiais da Universal Robots
 - descricao OnRobot RG2/RG6 fixada por commit e adaptada a `gz_ros2_control`
+- driver Modbus OnRobot RG2/RG6 fixado por commit para Tool I/O ou Compute Box
 - simulacao oficial `ur_simulation_gz` 2.5.0, da linha compatível com Jazzy,
   sem o caminho opcional do MoveIt
 
@@ -76,6 +78,18 @@ make init
 make diagnose
 ```
 
+O `make init` cria ou migra o `.env` automaticamente. As chaves gerenciadas nesta
+revisao ficam sempre em:
+
+```dotenv
+IMAGE_TAG=0.2.0
+ONROBOT_TYPE=rg2
+```
+
+Valores locais ja configurados, como `ROBOT_IP`, `ROS_DOMAIN_ID` e os parametros
+da Compute Box, sao preservados. Novas chaves recebem os valores padrao de
+`.env.example`; portanto nao e necessario editar o arquivo manualmente.
+
 O diagnostico deve exibir o caminho absoluto do `docker/Dockerfile` e uma linha
 contendo `existing_group`. Se aparecer apenas `groupadd --gid`, a copia local ainda
 corresponde a versao 0.1.0.
@@ -93,7 +107,13 @@ A descricao OnRobot e fixada no commit:
 29180b3fa9cba6555f3e515e789b8ccd34252fab
 ```
 
-Edite `.env` se necessario. Os campos principais sao:
+O driver do RG real e fixado no commit:
+
+```text
+b99abaccfbbe90f2096feff833f4c0849757a587
+```
+
+Os campos principais sao:
 
 ```dotenv
 UR_TYPE=ur3e
@@ -102,16 +122,33 @@ ROBOT_IP=192.168.0.10
 ROS_DOMAIN_ID=42
 ```
 
-Para preparar o UR5e no futuro, altere apenas:
+Para gravar o IP do UR e manter a conexao serial padrao sem editar `.env`:
 
-```dotenv
-UR_TYPE=ur5e
+```bash
+make configure-real ROBOT_IP=192.168.0.10
 ```
 
-Para usar a RG6, selecione:
+Para usar uma OnRobot Compute Box por Modbus TCP:
 
-```dotenv
-ONROBOT_TYPE=rg6
+```bash
+make configure-real \
+  ROBOT_IP=192.168.0.10 \
+  ONROBOT_CONNECTION_TYPE=tcp \
+  ONROBOT_IP=192.168.1.1 \
+  ONROBOT_PORT=502
+```
+
+Para um ensaio pontual com UR5e, sem modificar arquivos:
+
+```bash
+make sim UR_TYPE=ur5e
+```
+
+A RG2 e a configuracao consolidada. O suporte parametrico da simulacao a RG6
+permanece disponivel para comparacao pontual com:
+
+```bash
+make sim ONROBOT_TYPE=rg6
 ```
 
 ## 3. Construir e verificar
@@ -201,10 +238,9 @@ Para RG6, os mesmos comandos sao validos; seu intervalo completo e de 0 a
 `0.218 m` (RG2) e `0.268 m` (RG6) da base da gripper.
 
 O repositório [OnRobot_ROS2_Driver](https://github.com/tonydle/OnRobot_ROS2_Driver)
-fica definido como backend do hardware real. Nesta revisao, somente a descricao
-MIT do mesmo autor e usada na simulacao. O plugin de simulacao original do
+e compilado como backend do hardware real. O plugin de simulacao original do
 driver utiliza Gazebo Classic; a composicao deste projeto usa exclusivamente
-Gazebo Harmonic e `gz_ros2_control`.
+Gazebo Harmonic e `gz_ros2_control` no backend simulado.
 
 As tags `mimic` da descricao upstream sao removidas durante a construcao da
 imagem e substituidas por comandos articulares explicitos. Isso evita depender
@@ -213,15 +249,62 @@ colisoes dos dedos no Gazebo.
 
 ## 5. Executar com o robo real
 
-O host Ubuntu e o controlador do robo devem estar na mesma rede IP. Configure
-`ROBOT_IP` em `.env`, instale o External Control URCap no robo e execute:
+O host Ubuntu e o controlador do robo devem estar na mesma rede IP. Instale o
+External Control URCap no UR. Para a conexao serial do RG2 pelo Tool I/O, instale
+tambem o RS485 Daemon URCap exigido pelo driver OnRobot e configure uma vez:
+
+```bash
+make configure-real ROBOT_IP=192.168.0.10
+make build
+make check
+```
+
+O modo serial e o padrao. O launch ativa automaticamente
+`use_tool_communication`, cria `/tmp/ttyUR` e usa 1 Mbaud, paridade par, um stop
+bit e 24 V. Depois de preparar a instalacao fisica e manter o acionamento do
+robo desabilitado durante a inspecao inicial, execute:
 
 ```bash
 make real
 ```
 
 O perfil real usa rede Docker do tipo `host`, necessaria para as conexoes do driver
-com o controlador Universal Robots.
+com o controlador Universal Robots. O braco usa `/controller_manager`; o RG2
+usa `/onrobot/controller_manager`. A interface externa permanece identica a da
+simulacao: `/finger_width_controller/commands` recebe uma largura total em metros.
+
+Em outro terminal, entre no ambiente e valide sem comandar movimento:
+
+```bash
+make shell
+
+ros2 control list_controllers
+ros2 control list_controllers -c /onrobot/controller_manager
+ros2 topic echo /onrobot/joint_states --once
+ros2 topic info /finger_width_controller/commands
+```
+
+O resultado esperado inclui `forward_velocity_controller` ativo no gerenciador
+do UR e `finger_width_controller` ativo no gerenciador OnRobot. Somente depois
+dessa verificacao, com area livre e parada de emergencia acessivel, teste uma
+abertura intermediaria do RG2:
+
+```bash
+ros2 topic pub --once /finger_width_controller/commands \
+  std_msgs/msg/Float64MultiArray "{data: [0.08]}"
+```
+
+O adaptador rejeita valores nao finitos, vetores com dimensao diferente de um e
+larguras fora de `[0, 0.110] m`. O driver upstream atualmente aplica internamente
+metade da forca maxima do modelo; a forca ainda nao e um parametro ROS exposto.
+
+Para testar apenas o UR, sem iniciar o RG2:
+
+```bash
+docker compose --env-file .env -f docker/compose.yaml --profile dev run --rm \
+  ur_cbf_dev ros2 launch ur_cbf_bringup real.launch.py \
+  ur_type:=ur3e robot_ip:=192.168.0.10 launch_gripper:=false
+```
 
 Antes de qualquer teste de movimento real:
 
@@ -229,7 +312,7 @@ Antes de qualquer teste de movimento real:
 2. limite velocidades e aceleracoes;
 3. mantenha o botao de emergencia acessivel;
 4. teste inicialmente sem carga e em velocidade reduzida;
-5. implemente watchdog para enviar velocidade nula se o controlador parar.
+5. confirme o watchdog que envia velocidade articular nula se o controlador parar.
 
 ## 6. Recompilar o workspace
 

@@ -21,8 +21,19 @@ Data da definicao do ambiente: 17 de julho de 2026.
   motor DART do Gazebo Harmonic.
 - Preserva o `forward_velocity_controller` do braco e nao introduz MoveIt na
   arquitetura.
-- Registra `tonydle/OnRobot_ROS2_Driver` como backend escolhido para a futura
-  integracao com o hardware real, mantida fora desta etapa de simulacao.
+- Integra `tonydle/OnRobot_ROS2_Driver` como backend do hardware real e o
+  compila no commit
+  `b99abaccfbbe90f2096feff833f4c0849757a587`.
+- Integra o RG2 real em `/onrobot/controller_manager`, preservando como interface
+  externa comum `/finger_width_controller/commands` e mantendo o gerenciador do
+  braco isolado em `/controller_manager`.
+- Suporta Modbus serial pelo Tool I/O do UR, com 1 Mbaud, paridade par, um stop
+  bit e 24 V, ou Modbus TCP pela OnRobot Compute Box.
+- Atrasa a inicializacao do driver RG para permitir a criacao de `/tmp/ttyUR` e
+  publica a geometria real acoplada a `tool0` a partir da largura medida.
+- Faz `make init` migrar o `.env` automaticamente para `IMAGE_TAG=0.2.0` e
+  `ONROBOT_TYPE=rg2`, preservando configuracoes locais, e adiciona
+  `make configure-real` para gravar os parametros de rede sem edicao manual.
 - Atualiza a imagem para `ur-cbf-jazzy:0.2.0` e adiciona testes dos limites,
   TCPs e selecao dos modelos RG2/RG6.
 

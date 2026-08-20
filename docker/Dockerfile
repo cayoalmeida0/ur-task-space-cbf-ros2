@@ -8,9 +8,9 @@ ARG USER_UID=1000
 ARG USER_GID=1000
 # Tag oficial 2.5.0, ancestral da branch kilted usada para ROS 2 Jazzy.
 ARG UR_SIMULATION_GZ_COMMIT=048c80cd1faf87a2c74e14baadb65bd22b564d8f
-# Descricao MIT dos modelos OnRobot RG2/RG6. O driver de hardware e mantido
-# separado porque a camada de simulacao upstream usa Gazebo Classic.
+# Descricao MIT dos modelos OnRobot RG2/RG6 e driver Modbus do hardware real.
 ARG ONROBOT_DESCRIPTION_COMMIT=29180b3fa9cba6555f3e515e789b8ccd34252fab
+ARG ONROBOT_DRIVER_COMMIT=b99abaccfbbe90f2096feff833f4c0849757a587
 
 ENV LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8 \
@@ -86,6 +86,11 @@ RUN mkdir -p /opt/ur_vendor_ws/src \
     && cd /opt/ur_vendor_ws/src/OnRobot_ROS2_Description \
     && git checkout ${ONROBOT_DESCRIPTION_COMMIT} \
     && sed -i '/<mimic joint=/d' urdf/rg2_macro.xacro urdf/rg6_macro.xacro \
+    && git clone --recurse-submodules https://github.com/tonydle/OnRobot_ROS2_Driver.git \
+      /opt/ur_vendor_ws/src/OnRobot_ROS2_Driver \
+    && cd /opt/ur_vendor_ws/src/OnRobot_ROS2_Driver \
+    && git checkout ${ONROBOT_DRIVER_COMMIT} \
+    && git submodule update --init --recursive \
     && source /opt/ros/${ROS_DISTRO}/setup.bash \
     && cd /opt/ur_vendor_ws \
     && apt-get update \

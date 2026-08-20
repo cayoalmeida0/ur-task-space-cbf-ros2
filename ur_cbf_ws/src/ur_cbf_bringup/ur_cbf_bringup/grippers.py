@@ -6,6 +6,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class GripperSpec:
     description_file: str
+    visual_description_file: str
     maximum_width_m: float
     tcp_offset_m: float
     maximum_effort_n: float
@@ -42,6 +43,7 @@ class GripperSpec:
 GRIPPER_SPECS = {
     "rg2": GripperSpec(
         description_file="ur_rg2_gz.urdf.xacro",
+        visual_description_file="onrobot_rg2_visual.urdf.xacro",
         maximum_width_m=0.110,
         tcp_offset_m=0.218,
         maximum_effort_n=40.0,
@@ -50,6 +52,7 @@ GRIPPER_SPECS = {
     ),
     "rg6": GripperSpec(
         description_file="ur_rg6_gz.urdf.xacro",
+        visual_description_file="onrobot_rg6_visual.urdf.xacro",
         maximum_width_m=0.160,
         tcp_offset_m=0.268,
         maximum_effort_n=120.0,

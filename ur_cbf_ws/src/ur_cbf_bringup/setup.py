@@ -27,6 +27,8 @@ setup(
         "console_scripts": [
             "onrobot_width_adapter = "
             "ur_cbf_bringup.onrobot_width_adapter:main",
+            "onrobot_real_adapter = "
+            "ur_cbf_bringup.onrobot_real_adapter:main",
         ],
     },
 )

@@ -33,6 +33,7 @@ def test_model_parameters_match_upstream_description(
     assert spec.tcp_offset_m == tcp_offset_m
     assert spec.maximum_effort_n == maximum_effort_n
     assert (PACKAGE_ROOT / "urdf" / spec.description_file).is_file()
+    assert (PACKAGE_ROOT / "urdf" / spec.visual_description_file).is_file()
     positions_closed = spec.joint_positions(0.0)
     positions_open = spec.joint_positions(maximum_width_m)
     assert positions_closed[0] == 0.0
@@ -57,6 +58,10 @@ def test_width_outside_physical_range_is_rejected(model):
 def test_every_model_has_a_unique_description():
     descriptions = [spec.description_file for spec in GRIPPER_SPECS.values()]
     assert len(descriptions) == len(set(descriptions))
+    visual_descriptions = [
+        spec.visual_description_file for spec in GRIPPER_SPECS.values()
+    ]
+    assert len(visual_descriptions) == len(set(visual_descriptions))
 
 
 @pytest.mark.parametrize("model", SUPPORTED_ONROBOT_TYPES)
@@ -84,3 +89,14 @@ def test_gripper_controller_contains_all_explicit_joints():
     for spec in GRIPPER_SPECS.values():
         for joint_name in spec.joint_names:
             assert f"- {joint_name}" in controller_config
+
+
+@pytest.mark.parametrize("model", SUPPORTED_ONROBOT_TYPES)
+def test_real_visual_xacro_attaches_gripper_to_tool0(model):
+    visual = PACKAGE_ROOT / "urdf" / get_gripper_spec(model).visual_description_file
+    text = visual.read_text(encoding="utf-8")
+
+    assert '<parent link="$(arg tf_prefix)tool0"/>' in text
+    assert '<child link="$(arg tf_prefix)onrobot_base_link"/>' in text
+    assert "gz_ros2_control" not in text
+    assert "gazebo_ros2_control" not in text

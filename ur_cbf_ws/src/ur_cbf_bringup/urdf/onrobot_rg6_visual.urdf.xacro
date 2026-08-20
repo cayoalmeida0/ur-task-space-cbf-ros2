@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="onrobot_rg6_visual">
+  <xacro:arg name="tf_prefix" default=""/>
+  <xacro:property name="prefix" value="$(arg tf_prefix)"/>
+  <xacro:include filename="$(find onrobot_description)/urdf/rg6_macro.xacro"/>
+
+  <!-- tool0 e publicado pelo robot_state_publisher do Universal Robots. -->
+  <link name="$(arg tf_prefix)tool0"/>
+  <xacro:onrobot_rg6 prefix="$(arg tf_prefix)"/>
+  <joint name="$(arg tf_prefix)onrobot_base_link_joint" type="fixed">
+    <parent link="$(arg tf_prefix)tool0"/>
+    <child link="$(arg tf_prefix)onrobot_base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 ${-pi/2}"/>
+  </joint>
+</robot>

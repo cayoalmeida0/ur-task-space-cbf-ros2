@@ -57,7 +57,7 @@ print(f"Python ROS {sys.executable}: acesso ao UAIbot {ub.__version__}: OK")
 print(f"Python ROS {sys.executable}: acesso ao OSQP {osqp.__version__}: OK")
 PY
 
-for package in onrobot_description ur_description ur_controllers ur_robot_driver ur_simulation_gz ur_cbf_bringup; do
+for package in onrobot_description onrobot_driver ur_description ur_controllers ur_robot_driver ur_simulation_gz ur_cbf_bringup; do
   if ! ros2 pkg prefix "${package}" >/dev/null 2>&1; then
     echo "ERRO: pacote ROS nao encontrado no ambiente: ${package}" >&2
     echo "AMENT_PREFIX_PATH=${AMENT_PREFIX_PATH:-nao definido}" >&2
@@ -86,6 +86,13 @@ if ! ros2 pkg executables ur_cbf_bringup \
   exit 1
 fi
 echo "Adaptador de largura OnRobot encontrado: OK"
+
+if ! ros2 pkg executables ur_cbf_bringup \
+    | grep -q 'ur_cbf_bringup onrobot_real_adapter'; then
+  echo "ERRO: executavel onrobot_real_adapter nao encontrado." >&2
+  exit 1
+fi
+echo "Adaptador do RG real encontrado: OK"
 
 # Distingue a ausencia do pacote Debian de uma falha no registro da extensao
 # Python do comando ros2.

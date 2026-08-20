@@ -18,6 +18,10 @@ x-ur-cbf-common: &ur-cbf-common
     ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-42}
     UR_TYPE: ${UR_TYPE:-ur3e}
     ONROBOT_TYPE: ${ONROBOT_TYPE:-rg2}
+    ONROBOT_CONNECTION_TYPE: ${ONROBOT_CONNECTION_TYPE:-serial}
+    ONROBOT_DEVICE: ${ONROBOT_DEVICE:-/tmp/ttyUR}
+    ONROBOT_IP: ${ONROBOT_IP:-192.168.1.1}
+    ONROBOT_PORT: ${ONROBOT_PORT:-502}
   volumes:
     - ..:/workspace:rw
     - /tmp/.X11-unix:/tmp/.X11-unix:rw
@@ -49,3 +53,8 @@ services:
       - real.launch.py
       - ur_type:=${UR_TYPE:-ur3e}
       - robot_ip:=${ROBOT_IP}
+      - onrobot_type:=${ONROBOT_TYPE:-rg2}
+      - onrobot_connection_type:=${ONROBOT_CONNECTION_TYPE:-serial}
+      - onrobot_device:=${ONROBOT_DEVICE:-/tmp/ttyUR}
+      - onrobot_ip:=${ONROBOT_IP:-192.168.1.1}
+      - onrobot_port:=${ONROBOT_PORT:-502}

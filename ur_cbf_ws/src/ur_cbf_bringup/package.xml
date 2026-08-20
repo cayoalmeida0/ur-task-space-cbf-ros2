@@ -3,7 +3,7 @@
 <package format="3">
   <name>ur_cbf_bringup</name>
   <version>0.2.0</version>
-  <description>Bringup UR para Gazebo e hardware, com simulacao OnRobot RG2/RG6.</description>
+  <description>Bringup UR para Gazebo e hardware real, com OnRobot RG2/RG6.</description>
   <maintainer email="cayoalmeida0@users.noreply.github.com">Cayo Sousa</maintainer>
   <license>Apache-2.0</license>
 
@@ -13,7 +13,10 @@
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
   <exec_depend>onrobot_description</exec_depend>
+  <exec_depend>onrobot_driver</exec_depend>
   <exec_depend>rclpy</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>ur_robot_driver</exec_depend>
   <exec_depend>ur_simulation_gz</exec_depend>
