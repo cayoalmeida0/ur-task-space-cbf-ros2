@@ -28,6 +28,10 @@ from ur_cbf_control.kinematics import UaibotKinematics
 from ur_cbf_control.nominal_control import compute_position_control
 from ur_cbf_control.nominal_control import NominalControlError
 from ur_cbf_control.nominal_control import reorder_vector
+from ur_cbf_control.qp_control import BoxConstrainedQpSolver
+from ur_cbf_control.qp_control import compute_qp_position_control
+from ur_cbf_control.qp_control import QpControlError
+from ur_cbf_control.qp_control import QpDiagnostics
 from ur_cbf_control.safety import JointStateValidationError
 from ur_cbf_control.safety import OrderedJointState
 from ur_cbf_control.safety import is_state_stale
@@ -66,6 +70,12 @@ class CartesianPositionTest(Node):
         self.declare_parameter("target_offset", [0.0, 0.0, 0.01])
         self.declare_parameter("position_gains", [1.0, 1.0, 1.0])
         self.declare_parameter("damping", 0.05)
+        self.declare_parameter("controller_mode", "qp")
+        self.declare_parameter("qp_absolute_tolerance", 1e-6)
+        self.declare_parameter("qp_relative_tolerance", 1e-6)
+        self.declare_parameter("qp_max_iterations", 4000)
+        self.declare_parameter("qp_time_limit", 0.01)
+        self.declare_parameter("qp_polishing", False)
         self.declare_parameter("max_cartesian_speed", 0.01)
         self.declare_parameter("max_abs_joint_velocity", 0.10)
         self.declare_parameter("position_tolerance", 0.001)
@@ -106,6 +116,24 @@ class CartesianPositionTest(Node):
             float(value) for value in self.get_parameter("position_gains").value
         )
         self.damping = float(self.get_parameter("damping").value)
+        self.controller_mode = str(
+            self.get_parameter("controller_mode").value
+        ).lower()
+        self.qp_absolute_tolerance = float(
+            self.get_parameter("qp_absolute_tolerance").value
+        )
+        self.qp_relative_tolerance = float(
+            self.get_parameter("qp_relative_tolerance").value
+        )
+        self.qp_max_iterations = int(
+            self.get_parameter("qp_max_iterations").value
+        )
+        self.qp_time_limit = float(
+            self.get_parameter("qp_time_limit").value
+        )
+        self.qp_polishing = bool(
+            self.get_parameter("qp_polishing").value
+        )
         self.max_cartesian_speed = float(
             self.get_parameter("max_cartesian_speed").value
         )
@@ -146,6 +174,13 @@ class CartesianPositionTest(Node):
             model_joint_names=self.model_joint_names,
             eef_offset_xyz=self.eef_offset_xyz,
             mode=self.uaibot_mode,
+        )
+        self.qp_solver = BoxConstrainedQpSolver(
+            absolute_tolerance=self.qp_absolute_tolerance,
+            relative_tolerance=self.qp_relative_tolerance,
+            max_iterations=self.qp_max_iterations,
+            time_limit=self.qp_time_limit,
+            polishing=self.qp_polishing,
         )
 
         self.finished = False
@@ -209,13 +244,16 @@ class CartesianPositionTest(Node):
         else:
             self.get_logger().info(
                 f"Ensaio {self.experiment_id} armado; ur_type={self.ur_type}; "
-                f"seed={self.random_seed}; pacote=0.3.2; "
-                "imagem esperada=ur-cbf-jazzy:0.1.8."
+                f"modo={self.controller_mode}; seed={self.random_seed}; "
+                "pacote=0.4.0; imagem esperada=ur-cbf-jazzy:0.1.9."
             )
 
     def _validate_parameters(self) -> None:
         positive_values = {
             "damping": self.damping,
+            "qp_absolute_tolerance": self.qp_absolute_tolerance,
+            "qp_relative_tolerance": self.qp_relative_tolerance,
+            "qp_time_limit": self.qp_time_limit,
             "max_cartesian_speed": self.max_cartesian_speed,
             "max_abs_joint_velocity": self.max_abs_joint_velocity,
             "position_tolerance": self.position_tolerance,
@@ -231,6 +269,10 @@ class CartesianPositionTest(Node):
         for name, value in positive_values.items():
             if not math.isfinite(value) or value <= 0.0:
                 raise ValueError(f"{name} deve ser finito e positivo.")
+        if self.controller_mode not in {"dls", "qp"}:
+            raise ValueError("controller_mode deve ser dls ou qp.")
+        if self.qp_max_iterations <= 0:
+            raise ValueError("qp_max_iterations deve ser positivo.")
         if len(self.model_joint_names) == 0:
             raise ValueError("model_joint_names deve ser configurado explicitamente.")
         if len(set(self.model_joint_names)) != len(self.model_joint_names):
@@ -395,7 +437,9 @@ class CartesianPositionTest(Node):
         command: tuple[float, ...],
         phase: str,
         cartesian_saturated: bool,
-        joint_saturated: bool,
+        joint_saturated: bool = False,
+        joint_constraint_active: bool = False,
+        qp_diagnostics: QpDiagnostics | None = None,
     ) -> None:
         self._trace_samples.append(
             {
@@ -407,8 +451,48 @@ class CartesianPositionTest(Node):
                 "controller_velocity": [float(value) for value in command],
                 "cartesian_saturated": bool(cartesian_saturated),
                 "joint_saturated": bool(joint_saturated),
+                "joint_constraint_active": bool(joint_constraint_active),
+                "qp": (
+                    None
+                    if qp_diagnostics is None
+                    else qp_diagnostics.to_record()
+                ),
             }
         )
+
+    def _qp_summary(self) -> dict[str, object] | None:
+        samples = [
+            sample["qp"]
+            for sample in self._trace_samples
+            if sample.get("qp") is not None
+        ]
+        if not samples:
+            return None
+        statuses: dict[str, int] = {}
+        for sample in samples:
+            status = str(sample["status"])
+            statuses[status] = statuses.get(status, 0) + 1
+        iterations = [int(sample["iterations"]) for sample in samples]
+        solve_times = [float(sample["solve_time"]) for sample in samples]
+        run_times = [float(sample["run_time"]) for sample in samples]
+        return {
+            "solution_count": len(samples),
+            "status_counts": statuses,
+            "constraint_active_samples": sum(
+                bool(sample["active_lower"] or sample["active_upper"])
+                for sample in samples
+            ),
+            "mean_iterations": float(np.mean(iterations)),
+            "max_iterations": max(iterations),
+            "mean_solve_time": float(np.mean(solve_times)),
+            "max_solve_time": max(solve_times),
+            "mean_run_time": float(np.mean(run_times)),
+            "max_run_time": max(run_times),
+            "max_bound_violation": max(
+                float(sample["max_bound_violation"])
+                for sample in samples
+            ),
+        }
 
     def _result_record(
         self,
@@ -423,13 +507,15 @@ class CartesianPositionTest(Node):
             simulated_seconds = self._trace_samples[-1]["simulated_seconds"]
             wall_seconds = self._trace_samples[-1]["wall_seconds"]
         return {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "experiment_id": self.experiment_id,
             "result": result,
             "reason": reason,
             "software": {
-                "docker_image": "ur-cbf-jazzy:0.1.8",
-                "control_package": "ur_cbf_control:0.3.2",
+                "docker_image": "ur-cbf-jazzy:0.1.9",
+                "control_package": "ur_cbf_control:0.4.0",
+                "controller_mode": self.controller_mode,
+                "osqp": self.qp_solver.solver_version,
                 "ros_distro": os.environ.get("ROS_DISTRO", "unknown"),
                 "ur_type": self.ur_type,
             },
@@ -469,11 +555,18 @@ class CartesianPositionTest(Node):
                     self._tolerance_simulated_seconds
                 ),
                 "time_to_tolerance_wall": self._tolerance_wall_seconds,
+                "qp": self._qp_summary(),
             },
             "parameters": {
                 "target_offset": self.target_offset.tolist(),
                 "position_gains": list(self.position_gains),
                 "damping": self.damping,
+                "controller_mode": self.controller_mode,
+                "qp_absolute_tolerance": self.qp_absolute_tolerance,
+                "qp_relative_tolerance": self.qp_relative_tolerance,
+                "qp_max_iterations": self.qp_max_iterations,
+                "qp_time_limit": self.qp_time_limit,
+                "qp_polishing": self.qp_polishing,
                 "max_cartesian_speed": self.max_cartesian_speed,
                 "max_abs_joint_velocity": self.max_abs_joint_velocity,
                 "position_tolerance": self.position_tolerance,
@@ -576,6 +669,7 @@ class CartesianPositionTest(Node):
             ExperimentDataError,
             KinematicsError,
             NominalControlError,
+            QpControlError,
             ValueError,
         ) as error:
             self.request_abort(f"Falha de controle: {error}")
@@ -713,16 +807,29 @@ class CartesianPositionTest(Node):
                     "Tempo real maximo de seguranca do controle excedido."
                 )
                 return
-            result = compute_position_control(
-                error=error,
-                translational_jacobian=state.translational_jacobian,
-                model_joint_names=self.model_joint_names,
-                controller_joint_names=self.controller_joints,
-                gains=self.position_gains,
-                damping=self.damping,
-                max_cartesian_speed=self.max_cartesian_speed,
-                max_abs_joint_velocity=self.max_abs_joint_velocity,
-            )
+            qp_diagnostics = None
+            joint_constraint_active = False
+            joint_saturated = False
+            common_arguments = {
+                "error": error,
+                "translational_jacobian": state.translational_jacobian,
+                "model_joint_names": self.model_joint_names,
+                "controller_joint_names": self.controller_joints,
+                "gains": self.position_gains,
+                "damping": self.damping,
+                "max_cartesian_speed": self.max_cartesian_speed,
+                "max_abs_joint_velocity": self.max_abs_joint_velocity,
+            }
+            if self.controller_mode == "qp":
+                result = compute_qp_position_control(
+                    **common_arguments,
+                    solver=self.qp_solver,
+                )
+                qp_diagnostics = result.diagnostics
+                joint_constraint_active = result.joint_constraint_active
+            else:
+                result = compute_position_control(**common_arguments)
+                joint_saturated = result.joint_saturated
             self._publish(result.controller_velocity)
             self._maximum_command = max(
                 self._maximum_command,
@@ -734,7 +841,9 @@ class CartesianPositionTest(Node):
                 command=result.controller_velocity,
                 phase="controlling",
                 cartesian_saturated=result.cartesian_saturated,
-                joint_saturated=result.joint_saturated,
+                joint_saturated=joint_saturated,
+                joint_constraint_active=joint_constraint_active,
+                qp_diagnostics=qp_diagnostics,
             )
             if now - self._last_progress_log >= 1.0:
                 real_time_factor = (
@@ -742,10 +851,20 @@ class CartesianPositionTest(Node):
                     if timing.wall_seconds > 0.0
                     else 0.0
                 )
+                qp_progress = (
+                    ""
+                    if qp_diagnostics is None
+                    else (
+                        f"qp_iter={qp_diagnostics.iterations}; "
+                        f"qp_us={1e6 * qp_diagnostics.solve_time:.1f}; "
+                    )
+                )
                 self.get_logger().info(
                     f"erro={result.error_norm:.6f} m; "
                     f"cart_sat={result.cartesian_saturated}; "
-                    f"joint_sat={result.joint_saturated}; "
+                    f"joint_sat={joint_saturated}; "
+                    f"joint_active={joint_constraint_active}; "
+                    f"{qp_progress}"
                     f"t_sim={timing.simulated_seconds:.3f} s; "
                     f"t_real={timing.wall_seconds:.3f} s; "
                     f"RTF={real_time_factor:.3f}."

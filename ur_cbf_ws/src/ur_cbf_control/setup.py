@@ -6,7 +6,7 @@ package_name = "ur_cbf_control"
 
 setup(
     name=package_name,
-    version="0.3.2",
+    version="0.4.0",
     packages=find_packages(exclude=["test"]),
     data_files=[
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
@@ -14,7 +14,7 @@ setup(
         (f"share/{package_name}/config", glob("config/*.yaml")),
         (f"share/{package_name}/launch", glob("launch/*.launch.py")),
     ],
-    install_requires=["setuptools"],
+    install_requires=["osqp==1.1.3", "setuptools"],
     extras_require={
         "test": ["pytest"],
     },

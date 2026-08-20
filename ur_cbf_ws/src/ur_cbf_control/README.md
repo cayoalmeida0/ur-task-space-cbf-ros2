@@ -1,8 +1,8 @@
 # `ur_cbf_control`
 
-Pacote de controle seguro desenvolvido sobre a infraestrutura Docker `v0.1.8`.
-Ele contem o ensaio da cadeia de velocidades articulares e a primeira regulacao
-cartesiana nominal de posicao, ainda sem QP ou CBF.
+Pacote de controle seguro desenvolvido sobre a infraestrutura Docker `v0.1.9`.
+Ele contem o ensaio da cadeia de velocidades articulares e a regulacao cartesiana
+nominal por DLS ou QP. As CBFs ainda nao fazem parte desta revisao.
 
 ## Protecoes do ensaio de pulso
 
@@ -48,12 +48,23 @@ O executavel nao deve ser usado com `make real`.
 ## Controlador cartesiano nominal
 
 Para a posicao do efetuador `p`, referencia `p_d` e Jacobiano translacional `J_v`,
-o comando nominal implementa:
+o modo de referencia DLS implementa:
 
 ```text
 v = K_p (p_d - p)
 qdot = J_v^T (J_v J_v^T + lambda^2 I)^-1 v
 ```
+
+O modo QP minimiza:
+
+```text
+1/2 ||J_v qdot - v||^2 + 1/2 lambda^2 ||qdot||^2
+```
+
+sujeito a `-qdot_max <= qdot <= qdot_max`. Quando as restricoes estao inativas,
+essa solucao coincide numericamente com DLS. O OSQP 1.1.3 reutiliza o workspace e
+o warm start entre iteracoes; qualquer status diferente de `solved` ou
+`solved inaccurate` causa comando nulo e reprova o ensaio.
 
 O UAIbot 1.2.7 fornece `p` e `J_v`. O vetor `q` vem exclusivamente de
 `/joint_states`, cuja ordem e convertida explicitamente para a ordem configurada
@@ -64,7 +75,7 @@ Protecoes adicionais:
 
 - referencia relativa ao estado estabilizado, inicialmente `10 mm` em `z`;
 - limitacao da norma da velocidade cartesiana;
-- saturacao simetrica das velocidades articulares;
+- saturacao simetrica no modo DLS e limites internos ao otimizador no modo QP;
 - inversa amortecida para manter solucao finita em singularidades;
 - watchdog baseado no instante monotonicamente crescente de recepcao do estado;
 - comando nulo durante espera, estabilizacao, parada e falhas;
@@ -82,11 +93,25 @@ Com `make sim` ativo em outro terminal:
 ```bash
 ros2 launch ur_cbf_control cartesian_position.launch.py \
   ur_type:=ur3e \
+  controller_mode:=qp \
+  experiment_id:=cartesian_qp_ur3e_001 \
+  execute_test:=true
+```
+
+Referencia DLS comparavel:
+
+```bash
+ros2 launch ur_cbf_control cartesian_position.launch.py \
+  ur_type:=ur3e \
+  controller_mode:=dls \
+  experiment_id:=cartesian_dls_ur3e_001 \
   execute_test:=true
 ```
 
 O terminal informa `t_sim`, `t_real` e `RTF`. Ao finalizar, o diretorio
-`/workspace/results` recebe um JSON com o resumo e a serie temporal completa:
+`/workspace/results` recebe um JSON com o resumo e a serie temporal completa. No
+modo QP, o registro inclui status, iteracoes, tempos, residuos, limites ativos e
+violacao numerica maxima das restricoes:
 
 ```bash
 ls -1t /workspace/results/*.json | head -n 1
@@ -103,3 +128,15 @@ frame DH ao ponto controlado e explicita em `eef_offset_xyz`; o valor inicial
 Esta revisao suporta o UR3e no adaptador UAIbot. Modelos adicionais devem declarar
 sua fabrica e a ordem de juntas correspondente; a execucao e recusada se o modelo
 nao estiver implementado.
+
+## Referencias metodologicas
+
+- WAMPLER, C. W. *Manipulator inverse kinematic solutions based on vector
+  formulations and damped least-squares methods*. IEEE Transactions on Systems,
+  Man, and Cybernetics, 1986. DOI: https://doi.org/10.1109/TSMC.1986.289285.
+- STELLATO, B. et al. *OSQP: an operator splitting solver for quadratic programs*.
+  Mathematical Programming Computation, 2020.
+  DOI: https://doi.org/10.1007/s12532-020-00179-2.
+- AMES, A. D. et al. *Control barrier function based quadratic programs for
+  safety critical systems*. IEEE Transactions on Automatic Control, 2017.
+  DOI: https://doi.org/10.1109/TAC.2016.2638961.

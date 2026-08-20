@@ -32,23 +32,29 @@ if [[ "${python_version}" != ${expected_python_prefix}* ]]; then
 fi
 
 python3 - <<'PY'
+import osqp
 import uaibot as ub
 
 assert ub.__version__ == "1.2.7", ub.__version__
+assert osqp.__version__ == "1.1.3", osqp.__version__
 assert hasattr(ub.Robot, "create_ur_ur3e")
 robot = ub.Robot.create_ur_ur3e(name="ur3e_check")
 assert len(robot.links) == 6
 print(f"UAIbot {ub.__version__}: UR3e criado com {len(robot.links)} elos")
+print(f"OSQP {osqp.__version__}: resolvedor QP encontrado")
 PY
 
 # Reproduz o interpretador gravado nos executaveis Python gerados pelo colcon.
 # Isso evita aprovar uma imagem na qual apenas o Python do venv importa UAIbot.
 PYTHONNOUSERSITE=1 /usr/bin/python3 - <<'PY'
 import sys
+import osqp
 import uaibot as ub
 
 assert ub.__version__ == "1.2.7", ub.__version__
+assert osqp.__version__ == "1.1.3", osqp.__version__
 print(f"Python ROS {sys.executable}: acesso ao UAIbot {ub.__version__}: OK")
+print(f"Python ROS {sys.executable}: acesso ao OSQP {osqp.__version__}: OK")
 PY
 
 for package in ur_description ur_controllers ur_robot_driver ur_simulation_gz ur_cbf_bringup; do

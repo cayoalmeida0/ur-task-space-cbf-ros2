@@ -2,6 +2,24 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao 0.4.0 / infraestrutura 0.1.9 — 20 de agosto de 2026
+
+- Adiciona o OSQP 1.1.3 e formula o controlador cartesiano nominal como um QP
+  convexo com regularizacao equivalente ao amortecimento da solucao DLS.
+- Impoe os limites simetricos de velocidade articular dentro do otimizador.
+- Preserva `controller_mode:=dls` para comparacoes na mesma imagem e usa
+  `controller_mode:=qp` como modo padrao.
+- Reutiliza o workspace e o warm start do OSQP quando a dimensao e preservada.
+- Publica comando nulo e reprova o ensaio se o resolvedor falhar, exceder o limite
+  de tempo, retornar estado invalido ou violar limites acima da tolerancia.
+- Registra por amostra o status do QP, iteracoes, tempos, residuos, restricoes
+  ativas e violacao numerica maxima, com resumo agregado no JSON experimental.
+- Adiciona oito testes unitarios para equivalencia QP-DLS, limites, reuso,
+  dimensao variavel, mapeamento por nomes e falhas do resolvedor, elevando o
+  total do pacote para 38 testes.
+- Atualiza a imagem para `ur-cbf-jazzy:0.1.9`, o pacote `ur_cbf_bringup` para
+  `0.1.9` e o pacote `ur_cbf_control` para `0.4.0`.
+
 ## Revisao 0.3.2 — 20 de agosto de 2026
 
 - Mede o limite dinamico de `30 s` pelo relogio ROS/Gazebo, tornando o criterio

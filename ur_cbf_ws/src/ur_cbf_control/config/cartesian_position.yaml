@@ -19,6 +19,12 @@ cartesian_position_test:
     target_offset: [0.0, 0.0, 0.01]
     position_gains: [1.0, 1.0, 1.0]
     damping: 0.05
+    controller_mode: qp
+    qp_absolute_tolerance: 1.0e-6
+    qp_relative_tolerance: 1.0e-6
+    qp_max_iterations: 4000
+    qp_time_limit: 0.01
+    qp_polishing: false
     max_cartesian_speed: 0.01
     max_abs_joint_velocity: 0.10
     position_tolerance: 0.001

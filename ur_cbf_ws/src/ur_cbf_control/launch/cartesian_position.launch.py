@@ -10,6 +10,7 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     execute_test = LaunchConfiguration("execute_test")
     ur_type = LaunchConfiguration("ur_type")
+    controller_mode = LaunchConfiguration("controller_mode")
     max_control_duration = LaunchConfiguration("max_control_duration")
     max_wall_control_duration = LaunchConfiguration(
         "max_wall_control_duration"
@@ -32,6 +33,12 @@ def generate_launch_description():
                 "ur_type",
                 default_value="ur3e",
                 description="Modelo que deve coincidir com a simulacao ativa.",
+            ),
+            DeclareLaunchArgument(
+                "controller_mode",
+                default_value="qp",
+                choices=["dls", "qp"],
+                description="Resolvedor nominal usado no ensaio comparativo.",
             ),
             DeclareLaunchArgument(
                 "max_control_duration",
@@ -66,6 +73,7 @@ def generate_launch_description():
                             value_type=bool,
                         ),
                         "ur_type": ur_type,
+                        "controller_mode": controller_mode,
                         "max_control_duration": ParameterValue(
                             max_control_duration,
                             value_type=float,

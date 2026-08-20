@@ -5,9 +5,9 @@ CBFs, QPs e metricas de distancia diferenciaveis. A interface de controle e a me
 na simulacao e no hardware real: velocidades articulares publicadas em
 `/forward_velocity_controller/commands`.
 
-> **Estado do projeto:** infraestrutura Docker `v0.1.8` e pacote de controle
-> nominal `ur_cbf_control` na revisao `0.3.2`. A formulacao QP/CBF sera
-> desenvolvida sobre esta base.
+> **Estado do projeto:** infraestrutura Docker `v0.1.9` e pacote de controle
+> `ur_cbf_control` na revisao `0.4.0`. O controlador nominal pode operar por DLS
+> ou por QP com limites articulares; as CBFs serao adicionadas na proxima etapa.
 
 ## Arquitetura
 
@@ -29,6 +29,7 @@ flowchart TD
 - ROS 2 Jazzy
 - Python 3.12
 - UAIbot 1.2.7
+- OSQP 1.1.3
 - Gazebo Harmonic
 - RViz 2
 - `ros2_control` e `gz_ros2_control`
@@ -106,10 +107,10 @@ make check
 
 O alvo `make build` ativa explicitamente o perfil de desenvolvimento e constroi
 o servico `ur_cbf_dev`. A imagem resultante usa a tag definida por `IMAGE_TAG`
-no arquivo `.env`; nesta revisao, `ur-cbf-jazzy:0.1.8`.
+no arquivo `.env`; nesta revisao, `ur-cbf-jazzy:0.1.9`.
 
-O diagnostico verifica ROS 2 Jazzy, Python 3.12, UAIbot, criacao do modelo UR3e,
-Gazebo, os pacotes da Universal Robots, o pacote local `ur_cbf_bringup` e a
+O diagnostico verifica ROS 2 Jazzy, Python 3.12, UAIbot, OSQP, criacao do modelo
+UR3e, Gazebo, os pacotes da Universal Robots, o pacote local `ur_cbf_bringup` e a
 instalacao do pacote `ros-jazzy-ros2controlcli`, alem da extensao de linha de
 comando `ros2 control`. O UAIbot e testado tanto pelo Python do ambiente virtual
 quanto por `/usr/bin/python3`, interpretador gravado nos executaveis gerados pelo
@@ -226,19 +227,41 @@ O teste e desarmado por padrao e recusa execucao se `/gz_ros_control` nao estive
 presente. Consulte os criterios completos em
 `ur_cbf_ws/src/ur_cbf_control/README.md`.
 
-## 9. Regulacao cartesiana nominal de posicao
+## 9. Regulacao cartesiana nominal por DLS e QP
 
-A serie `0.3` introduz o primeiro controlador cartesiano, ainda sem QP e sem CBF.
-A revisao `0.3.2` consolida o ensaio validado. O UAIbot calcula a posicao do
-efetuador e o Jacobiano translacional a partir das juntas medidas no Gazebo. A
-velocidade articular nominal usa inversa amortecida, com limites cartesiano e
-articular antes da publicacao.
+A serie `0.3` consolidou a regulacao cartesiana por minimos quadrados amortecidos
+(DLS). A revisao `0.4.0` acrescenta um QP convexo que minimiza o mesmo erro
+cartesiano amortecido, mas incorpora os limites de velocidade articular como
+restricoes do problema. Ainda nao existem CBFs nesta revisao.
+
+O UAIbot calcula a posicao do efetuador e o Jacobiano translacional a partir das
+juntas medidas no Gazebo. O OSQP resolve, em cada iteracao:
+
+```text
+min_qdot  1/2 ||J_v qdot - v||^2 + 1/2 lambda^2 ||qdot||^2
+sujeito a -qdot_max <= qdot <= qdot_max
+```
+
+Sem restricoes ativas, a solucao QP e numericamente equivalente a DLS. O parametro
+`controller_mode` permite executar os dois modos na mesma imagem para comparacao.
 
 Com a simulacao ativa e os testes unitarios aprovados:
 
 ```bash
 ros2 launch ur_cbf_control cartesian_position.launch.py \
   ur_type:=ur3e \
+  controller_mode:=qp \
+  experiment_id:=cartesian_qp_ur3e_001 \
+  execute_test:=true
+```
+
+Para produzir a referencia DLS no mesmo ambiente:
+
+```bash
+ros2 launch ur_cbf_control cartesian_position.launch.py \
+  ur_type:=ur3e \
+  controller_mode:=dls \
+  experiment_id:=cartesian_dls_ur3e_001 \
   execute_test:=true
 ```
 
@@ -251,7 +274,9 @@ segundo limite de `180 s` reais protege contra travamento ou lentidao extrema.
 
 Cada execucao grava em `results/` um JSON com parametros, versoes, seed, ordem
 das juntas, posicoes, erro final, tempos simulado/real e a serie temporal de erro
-e comandos. O log tambem apresenta o fator de tempo real aproximado (`RTF`).
+e comandos. No modo QP, cada amostra inclui estado, iteracoes, tempo de solucao,
+residuos primal/dual e restricoes ativas do OSQP. O log tambem apresenta o fator
+de tempo real aproximado (`RTF`).
 
 ## Estrutura
 
@@ -279,7 +304,7 @@ do versionamento.
 
 A interface ROS e os backends Gazebo/real ja sao independentes do modelo. Entretanto,
 o UAIbot 1.2.7 oferece atualmente a fabrica `Robot.create_ur_ur3e()`, mas nao uma
-fabrica equivalente para o UR5e. O adaptador da revisao `0.3.2` rejeita modelos sem
+fabrica equivalente para o UR5e. O adaptador da revisao `0.4.0` rejeita modelos sem
 implementacao explicita, em vez de aplicar parametros UR3e silenciosamente. Para
 outro manipulador, deve-se adicionar seu adaptador cinetostatico preservando a
 interface do controlador.
