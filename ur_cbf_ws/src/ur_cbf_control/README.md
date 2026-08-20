@@ -1,6 +1,6 @@
 # `ur_cbf_control`
 
-Pacote de controle seguro desenvolvido sobre a infraestrutura Docker `v0.1.7`.
+Pacote de controle seguro desenvolvido sobre a infraestrutura Docker `v0.1.8`.
 Ele contem o ensaio da cadeia de velocidades articulares e a primeira regulacao
 cartesiana nominal de posicao, ainda sem QP ou CBF.
 
@@ -71,6 +71,10 @@ Protecoes adicionais:
 - armamento explicito e bloqueio quando `/gz_ros_control` esta ausente;
 - identificador, seed e parametros registrados no log do ensaio;
 - rejeicao explicita de modelos sem adaptador cinetico UAIbot.
+
+O tempo maximo de regulacao e `30 s`. Esse valor evita interromper a convergencia
+em configuracoes nas quais o amortecimento reduz a velocidade efetiva da tarefa,
+mantendo inalterados os ganhos e os limites de velocidade do ensaio inicial.
 
 Com `make sim` ativo em outro terminal:
 

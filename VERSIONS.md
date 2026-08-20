@@ -2,6 +2,21 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao 0.3.1 / infraestrutura 0.1.8 — 20 de agosto de 2026
+
+- Disponibiliza o `site-packages` do ambiente virtual do UAIbot aos executaveis
+  ROS gerados pelo `colcon`, que usam `/usr/bin/python3` no shebang.
+- Preserva a precedencia dos prefixos Python do ROS e acrescenta o ambiente
+  virtual ao final de `PYTHONPATH` no entrypoint.
+- Amplia o diagnostico para importar UAIbot 1.2.7 diretamente com o interpretador
+  do ROS, evitando validar somente o Python do ambiente virtual.
+- Atualiza a imagem para `ur-cbf-jazzy:0.1.8` e o pacote `ur_cbf_bringup` para
+  `0.1.8`.
+- Atualiza o pacote `ur_cbf_control` para `0.3.1` e o tempo maximo do ensaio
+  cartesiano de `8 s` para `30 s`.
+- O ajuste de tempo preserva ganhos, amortecimento, referencia, limites e criterio
+  de tolerancia. O ensaio com `30 s` atingiu o criterio de convergencia no Gazebo.
+
 ## Revisao 0.3.0 — 20 de agosto de 2026
 
 - Adiciona a regulacao cartesiana nominal de posicao antes da introducao do QP e

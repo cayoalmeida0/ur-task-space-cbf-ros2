@@ -67,7 +67,7 @@ class CartesianPositionTest(Node):
         self.declare_parameter("settle_duration", 0.5)
         self.declare_parameter("success_hold_duration", 0.5)
         self.declare_parameter("zero_hold_duration", 0.5)
-        self.declare_parameter("max_control_duration", 8.0)
+        self.declare_parameter("max_control_duration", 30.0)
         self.declare_parameter("state_timeout", 0.25)
         self.declare_parameter("startup_timeout", 15.0)
         self.declare_parameter("command_rate", 50.0)
@@ -184,7 +184,7 @@ class CartesianPositionTest(Node):
         else:
             self.get_logger().info(
                 f"Ensaio {self.experiment_id} armado; ur_type={self.ur_type}; "
-                f"seed={self.random_seed}; imagem esperada=ur-cbf-jazzy:0.1.7."
+                f"seed={self.random_seed}; imagem esperada=ur-cbf-jazzy:0.1.8."
             )
 
     def _validate_parameters(self) -> None:

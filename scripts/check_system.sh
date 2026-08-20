@@ -41,6 +41,16 @@ assert len(robot.links) == 6
 print(f"UAIbot {ub.__version__}: UR3e criado com {len(robot.links)} elos")
 PY
 
+# Reproduz o interpretador gravado nos executaveis Python gerados pelo colcon.
+# Isso evita aprovar uma imagem na qual apenas o Python do venv importa UAIbot.
+PYTHONNOUSERSITE=1 /usr/bin/python3 - <<'PY'
+import sys
+import uaibot as ub
+
+assert ub.__version__ == "1.2.7", ub.__version__
+print(f"Python ROS {sys.executable}: acesso ao UAIbot {ub.__version__}: OK")
+PY
+
 for package in ur_description ur_controllers ur_robot_driver ur_simulation_gz ur_cbf_bringup; do
   if ! ros2 pkg prefix "${package}" >/dev/null 2>&1; then
     echo "ERRO: pacote ROS nao encontrado no ambiente: ${package}" >&2

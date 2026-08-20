@@ -5,7 +5,7 @@ x-ur-cbf-common: &ur-cbf-common
     args:
       USER_UID: ${HOST_UID:-1000}
       USER_GID: ${HOST_GID:-1000}
-  image: ur-cbf-jazzy:${IMAGE_TAG:-0.1.7}
+  image: ur-cbf-jazzy:${IMAGE_TAG:-0.1.8}
   network_mode: host
   ipc: host
   stdin_open: true

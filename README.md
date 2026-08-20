@@ -5,8 +5,8 @@ CBFs, QPs e metricas de distancia diferenciaveis. A interface de controle e a me
 na simulacao e no hardware real: velocidades articulares publicadas em
 `/forward_velocity_controller/commands`.
 
-> **Estado do projeto:** infraestrutura Docker `v0.1.7` validada e pacote de
-> controle nominal `ur_cbf_control` na revisao `0.3.0`. A formulacao QP/CBF sera
+> **Estado do projeto:** infraestrutura Docker `v0.1.8` e pacote de controle
+> nominal `ur_cbf_control` na revisao `0.3.1`. A formulacao QP/CBF sera
 > desenvolvida sobre esta base.
 
 ## Arquitetura
@@ -106,13 +106,15 @@ make check
 
 O alvo `make build` ativa explicitamente o perfil de desenvolvimento e constroi
 o servico `ur_cbf_dev`. A imagem resultante usa a tag definida por `IMAGE_TAG`
-no arquivo `.env`; nesta revisao, `ur-cbf-jazzy:0.1.7`.
+no arquivo `.env`; nesta revisao, `ur-cbf-jazzy:0.1.8`.
 
 O diagnostico verifica ROS 2 Jazzy, Python 3.12, UAIbot, criacao do modelo UR3e,
 Gazebo, os pacotes da Universal Robots, o pacote local `ur_cbf_bringup` e a
 instalacao do pacote `ros-jazzy-ros2controlcli`, alem da extensao de linha de
-comando `ros2 control`. O script carrega explicitamente
-`ur_cbf_ws/install/setup.bash` antes de consultar o indice de pacotes ROS.
+comando `ros2 control`. O UAIbot e testado tanto pelo Python do ambiente virtual
+quanto por `/usr/bin/python3`, interpretador gravado nos executaveis gerados pelo
+`colcon`. O script carrega explicitamente `ur_cbf_ws/install/setup.bash` antes de
+consultar o indice de pacotes ROS.
 
 ## 4. Executar a simulacao
 
@@ -226,10 +228,11 @@ presente. Consulte os criterios completos em
 
 ## 9. Regulacao cartesiana nominal de posicao
 
-A revisao `0.3.0` introduz o primeiro controlador cartesiano, ainda sem QP e sem
-CBF. O UAIbot calcula a posicao do efetuador e o Jacobiano translacional a partir
-das juntas medidas no Gazebo. A velocidade articular nominal usa inversa
-amortecida, com limites cartesiano e articular antes da publicacao.
+A serie `0.3` introduz o primeiro controlador cartesiano, ainda sem QP e sem CBF.
+A revisao `0.3.1` consolida o ensaio validado. O UAIbot calcula a posicao do
+efetuador e o Jacobiano translacional a partir das juntas medidas no Gazebo. A
+velocidade articular nominal usa inversa amortecida, com limites cartesiano e
+articular antes da publicacao.
 
 Com a simulacao ativa e os testes unitarios aprovados:
 
@@ -242,7 +245,8 @@ ros2 launch ur_cbf_control cartesian_position.launch.py \
 O ensaio inicial define uma referencia relativa de `0.01 m` no eixo `z` do
 cenario UAIbot, limita a velocidade cartesiana a `0.01 m/s` e a velocidade de
 cada junta a `0.10 rad/s`. Ele e desarmado por padrao, exige `/gz_ros_control` e
-publica comando nulo em timeout, interrupcao ou falha numerica.
+publica comando nulo em timeout, interrupcao ou falha numerica. O tempo maximo
+padrao e `30 s`, definido a partir do primeiro ensaio de convergencia no Gazebo.
 
 ## Estrutura
 
@@ -269,7 +273,7 @@ artigos usados como referencia nao fazem parte do versionamento.
 
 A interface ROS e os backends Gazebo/real ja sao independentes do modelo. Entretanto,
 o UAIbot 1.2.7 oferece atualmente a fabrica `Robot.create_ur_ur3e()`, mas nao uma
-fabrica equivalente para o UR5e. O adaptador da revisao `0.3.0` rejeita modelos sem
+fabrica equivalente para o UR5e. O adaptador da revisao `0.3.1` rejeita modelos sem
 implementacao explicita, em vez de aplicar parametros UR3e silenciosamente. Para
 outro manipulador, deve-se adicionar seu adaptador cinetostatico preservando a
 interface do controlador.

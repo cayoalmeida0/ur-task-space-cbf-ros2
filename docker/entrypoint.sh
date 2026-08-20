@@ -35,5 +35,29 @@ if [[ -d "${workspace}/src" ]]; then
   fi
 fi
 
+# Os executaveis Python instalados pelo colcon preservam o interpretador que
+# executa /usr/bin/colcon, normalmente /usr/bin/python3. O UAIbot, por sua vez,
+# fica isolado no ambiente virtual da imagem. Anexe seu site-packages depois dos
+# prefixos ROS para disponibiliza-lo aos nos sem sombrear os pacotes do sistema.
+venv_python="${VIRTUAL_ENV:-/opt/ur_cbf_venv}/bin/python3"
+if [[ ! -x "${venv_python}" ]]; then
+  echo "Ambiente virtual Python nao encontrado: ${venv_python}" >&2
+  exit 1
+fi
+venv_site_packages="$(
+  "${venv_python}" -c 'import sysconfig; print(sysconfig.get_path("purelib"))'
+)"
+if [[ ! -d "${venv_site_packages}" ]]; then
+  echo "Diretorio site-packages nao encontrado: ${venv_site_packages}" >&2
+  exit 1
+fi
+case ":${PYTHONPATH:-}:" in
+  *":${venv_site_packages}:"*)
+    ;;
+  *)
+    export PYTHONPATH="${PYTHONPATH:+${PYTHONPATH}:}${venv_site_packages}"
+    ;;
+esac
+
 cd /workspace
 exec "$@"
