@@ -2,6 +2,15 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao 0.2.1 — 20 de agosto de 2026
+
+- Corrige a descoberta dos testes do pacote `ament_python` pelo `colcon`,
+  declarando `pytest` no grupo opcional `test` de `setup.py`.
+- Substitui a dependencia de teste do manifesto por `python3-pytest`, conforme o
+  mecanismo utilizado pelo executor Python do `colcon` no ROS 2 Jazzy.
+- Mantem inalterados o comportamento do ensaio, seus parametros de seguranca e a
+  imagem Docker consolidada `ur-cbf-jazzy:0.1.7`.
+
 ## Revisao 0.2.0 — 20 de agosto de 2026
 
 - Adiciona o pacote ROS 2 `ur_cbf_control` para iniciar a validacao da camada de

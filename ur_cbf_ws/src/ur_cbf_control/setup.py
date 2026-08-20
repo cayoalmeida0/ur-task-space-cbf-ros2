@@ -6,7 +6,7 @@ package_name = "ur_cbf_control"
 
 setup(
     name=package_name,
-    version="0.2.0",
+    version="0.2.1",
     packages=find_packages(exclude=["test"]),
     data_files=[
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
@@ -15,6 +15,9 @@ setup(
         (f"share/{package_name}/launch", glob("launch/*.launch.py")),
     ],
     install_requires=["setuptools"],
+    extras_require={
+        "test": ["pytest"],
+    },
     zip_safe=True,
     maintainer="Cayo Sousa",
     maintainer_email="cayoalmeida0@users.noreply.github.com",

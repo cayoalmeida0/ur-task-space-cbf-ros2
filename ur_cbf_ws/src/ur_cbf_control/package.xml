@@ -5,7 +5,7 @@
 ?>
 <package format="3">
   <name>ur_cbf_control</name>
-  <version>0.2.0</version>
+  <version>0.2.1</version>
   <description>
     Controladores seguros no espaco de tarefa para manipuladores Universal Robots.
   </description>
@@ -21,7 +21,7 @@
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>
 
-  <test_depend>ament_pytest</test_depend>
+  <test_depend>python3-pytest</test_depend>
 
   <export>
     <build_type>ament_python</build_type>
