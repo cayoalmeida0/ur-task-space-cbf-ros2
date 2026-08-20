@@ -2,6 +2,30 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Infraestrutura 0.2.0 / bringup 0.2.0 — 20 de agosto de 2026
+
+- Adiciona as descricoes OnRobot RG2 e RG6, selecionaveis por
+  `ONROBOT_TYPE`, fixadas no commit
+  `29180b3fa9cba6555f3e515e789b8ccd34252fab`.
+- Acopla a gripper ao `tool0` do Universal Robots e publica o frame
+  `gripper_tcp` fornecido pela descricao upstream.
+- Adapta a simulacao ao Gazebo Harmonic com
+  `gz_ros2_control/GazeboSimSystem`, sem carregar o plugin Gazebo Classic do
+  projeto OnRobot.
+- Adiciona e ativa o controlador interno
+  `onrobot_joint_position_controller` e um adaptador deterministico cuja
+  interface comum recebe a largura em metros por
+  `/finger_width_controller/commands`.
+- Remove as tags `mimic` somente da copia instalada na imagem e comanda
+  explicitamente as sete juntas da gripper, preservando o movimento fisico no
+  motor DART do Gazebo Harmonic.
+- Preserva o `forward_velocity_controller` do braco e nao introduz MoveIt na
+  arquitetura.
+- Registra `tonydle/OnRobot_ROS2_Driver` como backend escolhido para a futura
+  integracao com o hardware real, mantida fora desta etapa de simulacao.
+- Atualiza a imagem para `ur-cbf-jazzy:0.2.0` e adiciona testes dos limites,
+  TCPs e selecao dos modelos RG2/RG6.
+
 ## Revisao 0.4.0 / infraestrutura 0.1.9 — 20 de agosto de 2026
 
 - Adiciona o OSQP 1.1.3 e formula o controlador cartesiano nominal como um QP
@@ -165,6 +189,7 @@ Data da definicao do ambiente: 17 de julho de 2026.
 | UAIbot | 1.2.7 |
 | Gazebo | Harmonic |
 | Simulacao UR | tag `2.5.0`, commit `048c80cd1faf87a2c74e14baadb65bd22b564d8f` |
+| Descricao OnRobot | commit `29180b3fa9cba6555f3e515e789b8ccd34252fab` |
 | Controlador ROS | `forward_velocity_controller` |
 
 ## Evidencia de compatibilidade do UAIbot

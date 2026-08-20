@@ -5,9 +5,10 @@ CBFs, QPs e metricas de distancia diferenciaveis. A interface de controle e a me
 na simulacao e no hardware real: velocidades articulares publicadas em
 `/forward_velocity_controller/commands`.
 
-> **Estado do projeto:** infraestrutura Docker `v0.1.9` e pacote de controle
+> **Estado do projeto:** infraestrutura Docker `v0.2.0` e pacote de controle
 > `ur_cbf_control` na revisao `0.4.0`. O controlador nominal pode operar por DLS
-> ou por QP com limites articulares; as CBFs serao adicionadas na proxima etapa.
+> ou por QP com limites articulares. A simulacao inclui uma OnRobot RG2/RG6
+> selecionavel; as CBFs serao adicionadas na proxima etapa.
 
 ## Arquitetura
 
@@ -21,6 +22,7 @@ flowchart TD
     T --> S["Gazebo + gz_ros2_control"]
     T --> R["UR real + ur_robot_driver"]
     G["UAIbot: cinemática e geometria"] --> C
+    H["/finger_width_controller/commands"] --> S
 ```
 
 ## Componentes
@@ -35,6 +37,7 @@ flowchart TD
 - `ros2_control` e `gz_ros2_control`
 - interface de linha de comando `ros2 control` (`ros2controlcli`)
 - driver e descricao oficiais da Universal Robots
+- descricao OnRobot RG2/RG6 fixada por commit e adaptada a `gz_ros2_control`
 - simulacao oficial `ur_simulation_gz` 2.5.0, da linha compatível com Jazzy,
   sem o caminho opcional do MoveIt
 
@@ -78,16 +81,23 @@ contendo `existing_group`. Se aparecer apenas `groupadd --gid`, a copia local ai
 corresponde a versao 0.1.0.
 
 O diagnóstico também mostra o commit da simulação UR. Para esta revisão, o valor
-esperado é:
+esperado e:
 
 ```text
 048c80cd1faf87a2c74e14baadb65bd22b564d8f
+```
+
+A descricao OnRobot e fixada no commit:
+
+```text
+29180b3fa9cba6555f3e515e789b8ccd34252fab
 ```
 
 Edite `.env` se necessario. Os campos principais sao:
 
 ```dotenv
 UR_TYPE=ur3e
+ONROBOT_TYPE=rg2
 ROBOT_IP=192.168.0.10
 ROS_DOMAIN_ID=42
 ```
@@ -96,6 +106,12 @@ Para preparar o UR5e no futuro, altere apenas:
 
 ```dotenv
 UR_TYPE=ur5e
+```
+
+Para usar a RG6, selecione:
+
+```dotenv
+ONROBOT_TYPE=rg6
 ```
 
 ## 3. Construir e verificar
@@ -107,7 +123,7 @@ make check
 
 O alvo `make build` ativa explicitamente o perfil de desenvolvimento e constroi
 o servico `ur_cbf_dev`. A imagem resultante usa a tag definida por `IMAGE_TAG`
-no arquivo `.env`; nesta revisao, `ur-cbf-jazzy:0.1.9`.
+no arquivo `.env`; nesta revisao, `ur-cbf-jazzy:0.2.0`.
 
 O diagnostico verifica ROS 2 Jazzy, Python 3.12, UAIbot, OSQP, criacao do modelo
 UR3e, Gazebo, os pacotes da Universal Robots, o pacote local `ur_cbf_bringup` e a
@@ -127,8 +143,11 @@ Antes de iniciar o container, esse alvo verifica `DISPLAY` e `xhost` e autoriza
 automaticamente a conexao X11/XWayland apenas para o usuario local que executou
 o comando. Nao e necessario criar ou montar manualmente `~/.Xauthority`.
 
-O launch inicia Gazebo, RViz, `joint_state_broadcaster` e
-`forward_velocity_controller` para o modelo definido por `UR_TYPE`.
+O launch inicia Gazebo, RViz, `joint_state_broadcaster`,
+`forward_velocity_controller`, o controlador interno
+`onrobot_joint_position_controller` e o adaptador de largura. A gripper definida
+por `ONROBOT_TYPE` e acoplada ao frame `tool0`; o frame terminal publicado pelo
+modelo e `gripper_tcp`.
 
 Se a interface grafica for recusada pelo servidor X, a autorizacao pode ser
 reaplicada manualmente antes de repetir o comando:
@@ -151,6 +170,46 @@ ros2 control list_controllers
 ros2 topic echo /joint_states
 ros2 topic info /forward_velocity_controller/commands
 ```
+
+### Primeiro ensaio da gripper
+
+Confirme que ambos os controladores estao ativos:
+
+```bash
+ros2 control list_controllers
+```
+
+O resultado deve conter `forward_velocity_controller`,
+`joint_state_broadcaster` e `onrobot_joint_position_controller` como `active`.
+A interface externa da gripper recebe uma largura total em metros por
+`Float64MultiArray`; o adaptador converte esse valor para as sete juntas fisicas
+do mecanismo. Para RG2, teste primeiro uma abertura intermediaria de 80 mm e
+depois 20 mm:
+
+```bash
+ros2 topic pub --once /finger_width_controller/commands \
+  std_msgs/msg/Float64MultiArray "{data: [0.08]}"
+
+ros2 topic echo /joint_states --once
+
+ros2 topic pub --once /finger_width_controller/commands \
+  std_msgs/msg/Float64MultiArray "{data: [0.02]}"
+```
+
+Para RG6, os mesmos comandos sao validos; seu intervalo completo e de 0 a
+`0.160 m`, enquanto o RG2 aceita de 0 a `0.110 m`. A descricao fornece TCPs a
+`0.218 m` (RG2) e `0.268 m` (RG6) da base da gripper.
+
+O repositório [OnRobot_ROS2_Driver](https://github.com/tonydle/OnRobot_ROS2_Driver)
+fica definido como backend do hardware real. Nesta revisao, somente a descricao
+MIT do mesmo autor e usada na simulacao. O plugin de simulacao original do
+driver utiliza Gazebo Classic; a composicao deste projeto usa exclusivamente
+Gazebo Harmonic e `gz_ros2_control`.
+
+As tags `mimic` da descricao upstream sao removidas durante a construcao da
+imagem e substituidas por comandos articulares explicitos. Isso evita depender
+do suporte a restricoes `mimic` do motor fisico e preserva o movimento e as
+colisoes dos dedos no Gazebo.
 
 ## 5. Executar com o robo real
 

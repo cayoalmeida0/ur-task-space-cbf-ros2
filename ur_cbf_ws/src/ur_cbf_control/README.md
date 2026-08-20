@@ -1,6 +1,6 @@
 # `ur_cbf_control`
 
-Pacote de controle seguro desenvolvido sobre a infraestrutura Docker `v0.1.9`.
+Pacote de controle seguro desenvolvido sobre a infraestrutura Docker `v0.2.0`.
 Ele contem o ensaio da cadeia de velocidades articulares e a regulacao cartesiana
 nominal por DLS ou QP. As CBFs ainda nao fazem parte desta revisao.
 

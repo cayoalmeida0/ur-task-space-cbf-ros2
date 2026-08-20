@@ -245,7 +245,7 @@ class CartesianPositionTest(Node):
             self.get_logger().info(
                 f"Ensaio {self.experiment_id} armado; ur_type={self.ur_type}; "
                 f"modo={self.controller_mode}; seed={self.random_seed}; "
-                "pacote=0.4.0; imagem esperada=ur-cbf-jazzy:0.1.9."
+                "pacote=0.4.0; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
 
     def _validate_parameters(self) -> None:
@@ -512,7 +512,7 @@ class CartesianPositionTest(Node):
             "result": result,
             "reason": reason,
             "software": {
-                "docker_image": "ur-cbf-jazzy:0.1.9",
+                "docker_image": "ur-cbf-jazzy:0.2.0",
                 "control_package": "ur_cbf_control:0.4.0",
                 "controller_mode": self.controller_mode,
                 "osqp": self.qp_solver.solver_version,

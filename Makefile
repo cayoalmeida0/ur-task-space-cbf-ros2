@@ -9,7 +9,7 @@ diagnose: init
 	@echo "Projeto: $(CURDIR)"
 	@echo "Dockerfile: $$(realpath docker/Dockerfile)"
 	@echo "Imagem: $$($(COMPOSE) --profile dev config --images)"
-	@grep -n -E 'UR_SIMULATION_GZ_COMMIT|apt-get update|existing_group|groupadd --gid' docker/Dockerfile
+	@grep -n -E 'UR_SIMULATION_GZ_COMMIT|ONROBOT_DESCRIPTION_COMMIT|apt-get update|existing_group|groupadd --gid' docker/Dockerfile
 
 build: init
 	$(COMPOSE) --profile dev build ur_cbf_dev

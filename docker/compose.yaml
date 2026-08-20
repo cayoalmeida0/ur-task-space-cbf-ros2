@@ -5,7 +5,7 @@ x-ur-cbf-common: &ur-cbf-common
     args:
       USER_UID: ${HOST_UID:-1000}
       USER_GID: ${HOST_GID:-1000}
-  image: ur-cbf-jazzy:${IMAGE_TAG:-0.1.9}
+  image: ur-cbf-jazzy:${IMAGE_TAG:-0.2.0}
   network_mode: host
   ipc: host
   stdin_open: true
@@ -17,6 +17,7 @@ x-ur-cbf-common: &ur-cbf-common
     LIBGL_ALWAYS_SOFTWARE: ${LIBGL_ALWAYS_SOFTWARE:-1}
     ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-42}
     UR_TYPE: ${UR_TYPE:-ur3e}
+    ONROBOT_TYPE: ${ONROBOT_TYPE:-rg2}
   volumes:
     - ..:/workspace:rw
     - /tmp/.X11-unix:/tmp/.X11-unix:rw
@@ -36,6 +37,7 @@ services:
       - ur_cbf_bringup
       - simulation.launch.py
       - ur_type:=${UR_TYPE:-ur3e}
+      - onrobot_type:=${ONROBOT_TYPE:-rg2}
 
   ur_cbf_real:
     <<: *ur-cbf-common
