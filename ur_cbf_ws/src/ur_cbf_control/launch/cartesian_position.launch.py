@@ -1,26 +1,57 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
+from launch.actions import OpaqueFunction
+from launch.substitutions import EnvironmentVariable
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
+from ur_cbf_control.task_frames import SUPPORTED_ONROBOT_TYPES
+from ur_cbf_control.task_frames import get_task_frame_spec
 
-def generate_launch_description():
-    execute_test = LaunchConfiguration("execute_test")
-    ur_type = LaunchConfiguration("ur_type")
-    controller_mode = LaunchConfiguration("controller_mode")
-    max_control_duration = LaunchConfiguration("max_control_duration")
-    max_wall_control_duration = LaunchConfiguration(
-        "max_wall_control_duration"
-    )
-    experiment_id = LaunchConfiguration("experiment_id")
-    result_directory = LaunchConfiguration("result_directory")
+
+def launch_setup(context):
+    onrobot_type = LaunchConfiguration("onrobot_type").perform(context)
+    get_task_frame_spec(onrobot_type)
     config_file = PathJoinSubstitution(
         [FindPackageShare("ur_cbf_control"), "config", "cartesian_position.yaml"]
     )
 
+    return [
+        Node(
+            package="ur_cbf_control",
+            executable="cartesian_position_test",
+            name="cartesian_position_test",
+            output="screen",
+            parameters=[
+                config_file,
+                {
+                    "execute_test": ParameterValue(
+                        LaunchConfiguration("execute_test"),
+                        value_type=bool,
+                    ),
+                    "ur_type": LaunchConfiguration("ur_type"),
+                    "onrobot_type": onrobot_type,
+                    "controller_mode": LaunchConfiguration("controller_mode"),
+                    "max_control_duration": ParameterValue(
+                        LaunchConfiguration("max_control_duration"),
+                        value_type=float,
+                    ),
+                    "max_wall_control_duration": ParameterValue(
+                        LaunchConfiguration("max_wall_control_duration"),
+                        value_type=float,
+                    ),
+                    "experiment_id": LaunchConfiguration("experiment_id"),
+                    "result_directory": LaunchConfiguration("result_directory"),
+                },
+            ],
+        )
+    ]
+
+
+def generate_launch_description():
     return LaunchDescription(
         [
             DeclareLaunchArgument(
@@ -33,6 +64,15 @@ def generate_launch_description():
                 "ur_type",
                 default_value="ur3e",
                 description="Modelo que deve coincidir com a simulacao ativa.",
+            ),
+            DeclareLaunchArgument(
+                "onrobot_type",
+                default_value=EnvironmentVariable(
+                    "ONROBOT_TYPE",
+                    default_value="rg2",
+                ),
+                choices=SUPPORTED_ONROBOT_TYPES,
+                description="Gripper que define o frame cartesiano controlado.",
             ),
             DeclareLaunchArgument(
                 "controller_mode",
@@ -60,32 +100,6 @@ def generate_launch_description():
                 default_value="/workspace/results",
                 description="Diretorio dos arquivos JSON experimentais.",
             ),
-            Node(
-                package="ur_cbf_control",
-                executable="cartesian_position_test",
-                name="cartesian_position_test",
-                output="screen",
-                parameters=[
-                    config_file,
-                    {
-                        "execute_test": ParameterValue(
-                            execute_test,
-                            value_type=bool,
-                        ),
-                        "ur_type": ur_type,
-                        "controller_mode": controller_mode,
-                        "max_control_duration": ParameterValue(
-                            max_control_duration,
-                            value_type=float,
-                        ),
-                        "max_wall_control_duration": ParameterValue(
-                            max_wall_control_duration,
-                            value_type=float,
-                        ),
-                        "experiment_id": experiment_id,
-                        "result_directory": result_directory,
-                    },
-                ],
-            ),
+            OpaqueFunction(function=launch_setup),
         ]
     )

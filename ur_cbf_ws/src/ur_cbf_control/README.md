@@ -93,6 +93,7 @@ Com `make sim` ativo em outro terminal:
 ```bash
 ros2 launch ur_cbf_control cartesian_position.launch.py \
   ur_type:=ur3e \
+  onrobot_type:=rg2 \
   controller_mode:=qp \
   experiment_id:=cartesian_qp_ur3e_001 \
   execute_test:=true
@@ -103,6 +104,7 @@ Referencia DLS comparavel:
 ```bash
 ros2 launch ur_cbf_control cartesian_position.launch.py \
   ur_type:=ur3e \
+  onrobot_type:=rg2 \
   controller_mode:=dls \
   experiment_id:=cartesian_dls_ur3e_001 \
   execute_test:=true
@@ -121,9 +123,11 @@ Cada nova execucao usa uma referencia relativa de `10 mm` a partir de sua propri
 posicao inicial; portanto, repetir o comando cria um novo alvo, em vez de retomar
 o alvo absoluto da execucao anterior.
 
-Os parametros estao em `config/cartesian_position.yaml`. A transformacao do ultimo
-frame DH ao ponto controlado e explicita em `eef_offset_xyz`; o valor inicial
-`[0.0, 0.0, 0.2]` preserva o ponto de efetuador da fabrica UR3e do UAIbot 1.2.7.
+Os parametros estao em `config/cartesian_position.yaml`. O ponto controlado e
+`gripper_tcp`, localizado no centro dos dedos fechados. A transformacao rigida
+do ultimo frame DH, equivalente a `tool0`, e selecionada por `onrobot_type`: RG2
+usa translacao `[0.0, 0.0, 0.218] m` e RG6 usa `[0.0, 0.0, 0.268] m`; ambas usam
+RPY `[0.0, 0.0, -pi/2]`, coerente com a montagem descrita no Xacro.
 
 Esta revisao suporta o UR3e no adaptador UAIbot. Modelos adicionais devem declarar
 sua fabrica e a ordem de juntas correspondente; a execucao e recusada se o modelo

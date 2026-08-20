@@ -15,7 +15,7 @@ cartesian_position_test:
       - wrist_2_joint
       - wrist_3_joint
     uaibot_mode: auto
-    eef_offset_xyz: [0.0, 0.0, 0.2]
+    onrobot_type: rg2
     target_offset: [0.0, 0.0, 0.01]
     position_gains: [1.0, 1.0, 1.0]
     damping: 0.05

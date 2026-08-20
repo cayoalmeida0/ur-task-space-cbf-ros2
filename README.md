@@ -6,7 +6,7 @@ na simulacao e no hardware real: velocidades articulares publicadas em
 `/forward_velocity_controller/commands`.
 
 > **Estado do projeto:** infraestrutura Docker `v0.2.0` e pacote de controle
-> `ur_cbf_control` na revisao `0.4.0`. O controlador nominal pode operar por DLS
+> `ur_cbf_control` na revisao `0.5.0`. O controlador nominal pode operar por DLS
 > ou por QP com limites articulares. A simulacao inclui uma OnRobot RG2/RG6
 > selecionavel; as CBFs serao adicionadas na proxima etapa.
 
@@ -382,7 +382,11 @@ cartesiano amortecido, mas incorpora os limites de velocidade articular como
 restricoes do problema. Ainda nao existem CBFs nesta revisao.
 
 O UAIbot calcula a posicao do efetuador e o Jacobiano translacional a partir das
-juntas medidas no Gazebo. O OSQP resolve, em cada iteracao:
+juntas medidas no Gazebo. O frame controlado e `gripper_tcp`, no centro dos
+dedos da gripper fechada, e nao o flange `tool0`. A selecao vem automaticamente
+de `ONROBOT_TYPE`: a transformacao usa `0.218 m` para RG2 ou `0.268 m` para RG6,
+incluindo a orientacao rigida definida pela descricao da ferramenta. O OSQP
+resolve, em cada iteracao:
 
 ```text
 min_qdot  1/2 ||J_v qdot - v||^2 + 1/2 lambda^2 ||qdot||^2
@@ -397,6 +401,7 @@ Com a simulacao ativa e os testes unitarios aprovados:
 ```bash
 ros2 launch ur_cbf_control cartesian_position.launch.py \
   ur_type:=ur3e \
+  onrobot_type:=rg2 \
   controller_mode:=qp \
   experiment_id:=cartesian_qp_ur3e_001 \
   execute_test:=true
@@ -407,6 +412,7 @@ Para produzir a referencia DLS no mesmo ambiente:
 ```bash
 ros2 launch ur_cbf_control cartesian_position.launch.py \
   ur_type:=ur3e \
+  onrobot_type:=rg2 \
   controller_mode:=dls \
   experiment_id:=cartesian_dls_ur3e_001 \
   execute_test:=true
@@ -451,7 +457,7 @@ do versionamento.
 
 A interface ROS e os backends Gazebo/real ja sao independentes do modelo. Entretanto,
 o UAIbot 1.2.7 oferece atualmente a fabrica `Robot.create_ur_ur3e()`, mas nao uma
-fabrica equivalente para o UR5e. O adaptador da revisao `0.4.0` rejeita modelos sem
+fabrica equivalente para o UR5e. O adaptador da revisao `0.5.0` rejeita modelos sem
 implementacao explicita, em vez de aplicar parametros UR3e silenciosamente. Para
 outro manipulador, deve-se adicionar seu adaptador cinetostatico preservando a
 interface do controlador.

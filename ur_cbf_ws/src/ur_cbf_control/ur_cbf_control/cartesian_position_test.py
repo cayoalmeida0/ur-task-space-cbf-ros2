@@ -37,6 +37,7 @@ from ur_cbf_control.safety import OrderedJointState
 from ur_cbf_control.safety import is_state_stale
 from ur_cbf_control.safety import reorder_joint_state
 from ur_cbf_control.safety import zero_velocity_command
+from ur_cbf_control.task_frames import get_task_frame_spec
 
 
 class Phase(Enum):
@@ -66,7 +67,7 @@ class CartesianPositionTest(Node):
             Parameter.Type.STRING_ARRAY,
         )
         self.declare_parameter("uaibot_mode", "auto")
-        self.declare_parameter("eef_offset_xyz", [0.0, 0.0, 0.2])
+        self.declare_parameter("onrobot_type", "rg2")
         self.declare_parameter("target_offset", [0.0, 0.0, 0.01])
         self.declare_parameter("position_gains", [1.0, 1.0, 1.0])
         self.declare_parameter("damping", 0.05)
@@ -105,9 +106,11 @@ class CartesianPositionTest(Node):
         model_names_value = self.get_parameter("model_joint_names").value
         self.model_joint_names = tuple(model_names_value or ())
         self.uaibot_mode = str(self.get_parameter("uaibot_mode").value)
-        self.eef_offset_xyz = tuple(
-            float(value) for value in self.get_parameter("eef_offset_xyz").value
-        )
+        self.onrobot_type = str(self.get_parameter("onrobot_type").value)
+        self.task_frame = get_task_frame_spec(self.onrobot_type)
+        self.controlled_frame = self.task_frame.controlled_frame
+        self.eef_offset_xyz = self.task_frame.eef_offset_xyz
+        self.eef_offset_rpy = self.task_frame.eef_offset_rpy
         self.target_offset = np.asarray(
             self.get_parameter("target_offset").value,
             dtype=float,
@@ -173,6 +176,7 @@ class CartesianPositionTest(Node):
             ur_type=self.ur_type,
             model_joint_names=self.model_joint_names,
             eef_offset_xyz=self.eef_offset_xyz,
+            eef_offset_rpy=self.eef_offset_rpy,
             mode=self.uaibot_mode,
         )
         self.qp_solver = BoxConstrainedQpSolver(
@@ -244,8 +248,10 @@ class CartesianPositionTest(Node):
         else:
             self.get_logger().info(
                 f"Ensaio {self.experiment_id} armado; ur_type={self.ur_type}; "
+                f"onrobot_type={self.onrobot_type}; "
+                f"frame={self.controlled_frame}; "
                 f"modo={self.controller_mode}; seed={self.random_seed}; "
-                "pacote=0.4.0; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.5.0; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
 
     def _validate_parameters(self) -> None:
@@ -281,6 +287,10 @@ class CartesianPositionTest(Node):
             math.isfinite(value) for value in self.eef_offset_xyz
         ):
             raise ValueError("eef_offset_xyz deve conter tres valores finitos.")
+        if len(self.eef_offset_rpy) != 3 or not all(
+            math.isfinite(value) for value in self.eef_offset_rpy
+        ):
+            raise ValueError("eef_offset_rpy deve conter tres valores finitos.")
         if self.target_offset.size != 3 or not np.all(
             np.isfinite(self.target_offset)
         ):
@@ -507,17 +517,18 @@ class CartesianPositionTest(Node):
             simulated_seconds = self._trace_samples[-1]["simulated_seconds"]
             wall_seconds = self._trace_samples[-1]["wall_seconds"]
         return {
-            "schema_version": "1.1",
+            "schema_version": "1.2",
             "experiment_id": self.experiment_id,
             "result": result,
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.4.0",
+                "control_package": "ur_cbf_control:0.5.0",
                 "controller_mode": self.controller_mode,
                 "osqp": self.qp_solver.solver_version,
                 "ros_distro": os.environ.get("ROS_DISTRO", "unknown"),
                 "ur_type": self.ur_type,
+                "onrobot_type": self.onrobot_type,
             },
             "random_seed": self.random_seed,
             "joint_order": {
@@ -574,6 +585,8 @@ class CartesianPositionTest(Node):
                 "max_wall_control_duration": self.max_wall_control_duration,
                 "command_rate": self.command_rate,
                 "eef_offset_xyz": list(self.eef_offset_xyz),
+                "eef_offset_rpy": list(self.eef_offset_rpy),
+                "controlled_frame": self.controlled_frame,
                 "uaibot_mode": self.uaibot_mode,
             },
             "samples": self._trace_samples,

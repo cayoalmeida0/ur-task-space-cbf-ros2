@@ -5,6 +5,7 @@ import numpy as np
 
 from ur_cbf_control.kinematics import KinematicsError
 from ur_cbf_control.kinematics import UaibotKinematics
+from ur_cbf_control.kinematics import homogeneous_transform_from_xyz_rpy
 
 
 class FakeRobot:
@@ -33,15 +34,34 @@ class UaibotKinematicsTest(unittest.TestCase):
             robot=robot,
             model_joint_names=("joint_a", "joint_b"),
             eef_offset_xyz=(0.0, 0.0, 0.15),
+            eef_offset_rpy=(0.0, 0.0, -np.pi / 2.0),
             mode="python",
         )
         np.testing.assert_allclose(robot.htm_n_eef[:3, 3], (0.0, 0.0, 0.15))
+        np.testing.assert_allclose(
+            robot.htm_n_eef[:3, :3],
+            ((0.0, 1.0, 0.0), (-1.0, 0.0, 0.0), (0.0, 0.0, 1.0)),
+            atol=1e-12,
+        )
+
+    def test_rpy_transform_uses_urdf_fixed_axis_convention(self):
+        transform = homogeneous_transform_from_xyz_rpy(
+            (0.1, 0.2, 0.3),
+            (np.pi / 2.0, 0.0, 0.0),
+        )
+        np.testing.assert_allclose(transform[:3, 3], (0.1, 0.2, 0.3))
+        np.testing.assert_allclose(
+            transform[:3, :3],
+            ((1.0, 0.0, 0.0), (0.0, 0.0, -1.0), (0.0, 1.0, 0.0)),
+            atol=1e-12,
+        )
 
     def test_evaluate_derives_jacobian_width_from_model(self):
         adapter = UaibotKinematics(
             robot=FakeRobot(joint_count=4),
             model_joint_names=("j1", "j2", "j3", "j4"),
             eef_offset_xyz=(0.0, 0.0, 0.0),
+            eef_offset_rpy=(0.0, 0.0, 0.0),
         )
         state = adapter.evaluate((0.0, 0.0, 0.0, 0.0))
         self.assertEqual(state.position, (0.1, 0.2, 0.3))
@@ -53,6 +73,7 @@ class UaibotKinematicsTest(unittest.TestCase):
                 robot=FakeRobot(joint_count=3),
                 model_joint_names=("joint_a", "joint_b"),
                 eef_offset_xyz=(0.0, 0.0, 0.0),
+                eef_offset_rpy=(0.0, 0.0, 0.0),
             )
 
     def test_rejects_non_finite_configuration(self):
@@ -60,6 +81,7 @@ class UaibotKinematicsTest(unittest.TestCase):
             robot=FakeRobot(joint_count=2),
             model_joint_names=("joint_a", "joint_b"),
             eef_offset_xyz=(0.0, 0.0, 0.0),
+            eef_offset_rpy=(0.0, 0.0, 0.0),
         )
         with self.assertRaisesRegex(KinematicsError, "NaN"):
             adapter.evaluate((0.0, np.nan))
@@ -79,7 +101,17 @@ class UaibotKinematicsTest(unittest.TestCase):
                     ur_type="ur5e",
                     model_joint_names=("joint_a", "joint_b"),
                     eef_offset_xyz=(0.0, 0.0, 0.0),
+                    eef_offset_rpy=(0.0, 0.0, 0.0),
                 )
+
+    def test_rejects_invalid_end_effector_orientation(self):
+        with self.assertRaisesRegex(KinematicsError, "eef_offset_rpy"):
+            UaibotKinematics(
+                robot=FakeRobot(joint_count=2),
+                model_joint_names=("joint_a", "joint_b"),
+                eef_offset_xyz=(0.0, 0.0, 0.0),
+                eef_offset_rpy=(0.0, np.nan, 0.0),
+            )
 
 
 if __name__ == "__main__":

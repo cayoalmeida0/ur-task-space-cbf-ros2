@@ -2,6 +2,20 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao 0.5.0 / infraestrutura 0.2.0 — 20 de agosto de 2026
+
+- Substitui o deslocamento generico de `0.2 m` da fabrica UR3e do UAIbot pelo
+  frame operacional `gripper_tcp`, localizado no centro dos dedos fechados.
+- Seleciona automaticamente a transformacao rigida a partir de `onrobot_type`:
+  `0.218 m` para RG2 e `0.268 m` para RG6, com a orientacao de montagem
+  `RPY=[0, 0, -pi/2]` definida na descricao OnRobot.
+- Faz posicao e Jacobiano translacional do controlador DLS/QP referenciarem o
+  TCP real da gripper, mantendo `tool0` somente como flange mecanica.
+- Registra modelo da gripper, frame controlado e transformacao completa no JSON
+  experimental, cujo esquema passa para `1.2`.
+- Atualiza `ur_cbf_control` para `0.5.0` e adiciona testes das transformacoes RG2,
+  RG6 e da convencao RPY fixa usada pelo URDF.
+
 ## Infraestrutura 0.2.0 / bringup 0.2.0 — 20 de agosto de 2026
 
 - Adiciona as descricoes OnRobot RG2 e RG6, selecionaveis por

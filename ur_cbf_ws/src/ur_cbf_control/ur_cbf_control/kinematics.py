@@ -18,6 +18,37 @@ class KinematicState:
     translational_jacobian: np.ndarray
 
 
+def homogeneous_transform_from_xyz_rpy(
+    xyz: Sequence[float],
+    rpy: Sequence[float],
+) -> np.ndarray:
+    """Cria uma HTM usando a convencao URDF Rz(yaw) Ry(pitch) Rx(roll)."""
+
+    translation = np.asarray(xyz, dtype=float).reshape(-1)
+    angles = np.asarray(rpy, dtype=float).reshape(-1)
+    if translation.size != 3 or not np.all(np.isfinite(translation)):
+        raise KinematicsError("eef_offset_xyz deve conter tres valores finitos.")
+    if angles.size != 3 or not np.all(np.isfinite(angles)):
+        raise KinematicsError("eef_offset_rpy deve conter tres valores finitos.")
+
+    roll, pitch, yaw = angles
+    cr, sr = np.cos(roll), np.sin(roll)
+    cp, sp = np.cos(pitch), np.sin(pitch)
+    cy, sy = np.cos(yaw), np.sin(yaw)
+    rotation = np.array(
+        (
+            (cy * cp, cy * sp * sr - sy * cr, cy * sp * cr + sy * sr),
+            (sy * cp, sy * sp * sr + cy * cr, sy * sp * cr - cy * sr),
+            (-sp, cp * sr, cp * cr),
+        ),
+        dtype=float,
+    )
+    transform = np.eye(4)
+    transform[:3, :3] = rotation
+    transform[:3, 3] = translation
+    return transform
+
+
 class UaibotKinematics:
     """Encapsula a API do UAIbot e explicita a ordem das juntas do modelo."""
 
@@ -26,6 +57,7 @@ class UaibotKinematics:
         robot: Any,
         model_joint_names: Sequence[str],
         eef_offset_xyz: Sequence[float],
+        eef_offset_rpy: Sequence[float],
         mode: str = "auto",
     ) -> None:
         self.robot = robot
@@ -38,14 +70,13 @@ class UaibotKinematics:
             raise KinematicsError(
                 "Quantidade de juntas configuradas difere dos elos do modelo UAIbot."
             )
-        offset = np.asarray(eef_offset_xyz, dtype=float).reshape(-1)
-        if offset.size != 3 or not np.all(np.isfinite(offset)):
-            raise KinematicsError("eef_offset_xyz deve conter tres valores finitos.")
         if mode not in {"auto", "python", "c++"}:
             raise KinematicsError("Modo UAIbot deve ser auto, python ou c++.")
         self.mode = mode
-        htm_n_eef = np.eye(4)
-        htm_n_eef[:3, 3] = offset
+        htm_n_eef = homogeneous_transform_from_xyz_rpy(
+            eef_offset_xyz,
+            eef_offset_rpy,
+        )
         self.robot.set_htm_to_eef(htm_n_eef)
 
     @classmethod
@@ -55,6 +86,7 @@ class UaibotKinematics:
         ur_type: str,
         model_joint_names: Sequence[str],
         eef_offset_xyz: Sequence[float],
+        eef_offset_rpy: Sequence[float],
         mode: str = "auto",
     ) -> "UaibotKinematics":
         """Cria o modelo solicitado e rejeita explicitamente modelos sem adaptador."""
@@ -77,7 +109,13 @@ class UaibotKinematics:
             name=f"{ur_type}_control_model",
             eef_frame_visible=False,
         )
-        return cls(robot, model_joint_names, eef_offset_xyz, mode)
+        return cls(
+            robot,
+            model_joint_names,
+            eef_offset_xyz,
+            eef_offset_rpy,
+            mode,
+        )
 
     def evaluate(self, model_positions: Sequence[float]) -> KinematicState:
         """Calcula posição e Jacobiano translacional para uma configuração."""
