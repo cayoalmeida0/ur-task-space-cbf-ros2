@@ -40,6 +40,7 @@ def test_docker_pins_onrobot_driver_revision():
         "ONROBOT_DRIVER_COMMIT="
         "b99abaccfbbe90f2096feff833f4c0849757a587" in dockerfile
     )
+    assert "libnet1-dev" in dockerfile
     assert "git submodule update --init --recursive" in dockerfile
 
 

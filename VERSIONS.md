@@ -29,6 +29,8 @@ Data da definicao do ambiente: 17 de julho de 2026.
   braco isolado em `/controller_manager`.
 - Suporta Modbus serial pelo Tool I/O do UR, com 1 Mbaud, paridade par, um stop
   bit e 24 V, ou Modbus TCP pela OnRobot Compute Box.
+- Instala explicitamente `libnet1-dev`, dependencia nativa da implementacao
+  Modbus TCP que nao e declarada ao `rosdep` pelo driver OnRobot upstream.
 - Atrasa a inicializacao do driver RG para permitir a criacao de `/tmp/ttyUR` e
   publica a geometria real acoplada a `tool0` a partir da largura medida.
 - Faz `make init` migrar o `.env` automaticamente para `IMAGE_TAG=0.2.0` e
