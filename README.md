@@ -5,9 +5,9 @@ CBFs, QPs e metricas de distancia diferenciaveis. A interface de controle e a me
 na simulacao e no hardware real: velocidades articulares publicadas em
 `/forward_velocity_controller/commands`.
 
-> **Estado do projeto:** infraestrutura `v0.1.7` validada em Ubuntu 24.04 em
-> 23 de julho de 2026. Os controladores CBF/QP ainda serao desenvolvidos sobre
-> esta base.
+> **Estado do projeto:** infraestrutura Docker `v0.1.7` validada e pacote de
+> controle nominal `ur_cbf_control` na revisao `0.3.0`. A formulacao QP/CBF sera
+> desenvolvida sobre esta base.
 
 ## Arquitetura
 
@@ -224,6 +224,26 @@ O teste e desarmado por padrao e recusa execucao se `/gz_ros_control` nao estive
 presente. Consulte os criterios completos em
 `ur_cbf_ws/src/ur_cbf_control/README.md`.
 
+## 9. Regulacao cartesiana nominal de posicao
+
+A revisao `0.3.0` introduz o primeiro controlador cartesiano, ainda sem QP e sem
+CBF. O UAIbot calcula a posicao do efetuador e o Jacobiano translacional a partir
+das juntas medidas no Gazebo. A velocidade articular nominal usa inversa
+amortecida, com limites cartesiano e articular antes da publicacao.
+
+Com a simulacao ativa e os testes unitarios aprovados:
+
+```bash
+ros2 launch ur_cbf_control cartesian_position.launch.py \
+  ur_type:=ur3e \
+  execute_test:=true
+```
+
+O ensaio inicial define uma referencia relativa de `0.01 m` no eixo `z` do
+cenario UAIbot, limita a velocidade cartesiana a `0.01 m/s` e a velocidade de
+cada junta a `0.10 rad/s`. Ele e desarmado por padrao, exige `/gz_ros_control` e
+publica comando nulo em timeout, interrupcao ou falha numerica.
+
 ## Estrutura
 
 ```text
@@ -249,6 +269,7 @@ artigos usados como referencia nao fazem parte do versionamento.
 
 A interface ROS e os backends Gazebo/real ja sao independentes do modelo. Entretanto,
 o UAIbot 1.2.7 oferece atualmente a fabrica `Robot.create_ur_ur3e()`, mas nao uma
-fabrica equivalente para o UR5e. Se o manipulador for alterado, o futuro modulo de
-geometria devera fornecer um adaptador UR5e com seus parametros cinetostaticos e
-primitivas de colisao, preservando a interface do controlador.
+fabrica equivalente para o UR5e. O adaptador da revisao `0.3.0` rejeita modelos sem
+implementacao explicita, em vez de aplicar parametros UR3e silenciosamente. Para
+outro manipulador, deve-se adicionar seu adaptador cinetostatico preservando a
+interface do controlador.

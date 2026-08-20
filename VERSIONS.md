@@ -2,6 +2,22 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao 0.3.0 — 20 de agosto de 2026
+
+- Adiciona a regulacao cartesiana nominal de posicao antes da introducao do QP e
+  das CBFs.
+- Usa o UAIbot 1.2.7 para calcular a posicao do efetuador e o Jacobiano
+  translacional a partir do estado articular medido no Gazebo.
+- Implementa inversa de minimo quadrado amortecida, limitacao da velocidade
+  cartesiana e saturacao simetrica das velocidades articulares.
+- Torna explicitas em YAML a ordem das juntas do modelo, a transformacao do ponto
+  controlado, ganhos, amortecimento, limites, frequencia e tolerancias.
+- Acrescenta watchdog, parada nula, armamento explicito e bloqueio do ensaio fora
+  do backend `/gz_ros_control`.
+- Adiciona testes de singularidade, dimensao variavel, mapeamento por nomes,
+  saturacoes, falhas numericas e rejeicao de modelos sem adaptador.
+- Mantem a imagem Docker consolidada `ur-cbf-jazzy:0.1.7`.
+
 ## Revisao 0.2.1 — 20 de agosto de 2026
 
 - Corrige a descoberta dos testes do pacote `ament_python` pelo `colcon`,
