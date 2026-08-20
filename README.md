@@ -219,9 +219,10 @@ ros2 control list_controllers
 O resultado deve conter `forward_velocity_controller`,
 `joint_state_broadcaster` e `onrobot_joint_position_controller` como `active`.
 A interface externa da gripper recebe uma largura total em metros por
-`Float64MultiArray`; o adaptador converte esse valor para as sete juntas fisicas
-do mecanismo. Para RG2, teste primeiro uma abertura intermediaria de 80 mm e
-depois 20 mm:
+`Float64MultiArray`; o adaptador converte esse valor para as seis juntas fisicas
+exportadas pelo Gazebo. A junta virtual `finger_width` permanece somente na
+abstracao de largura e na descricao visual. Para RG2, teste primeiro uma abertura
+intermediaria de 80 mm e depois 20 mm:
 
 ```bash
 ros2 topic pub --once /finger_width_controller/commands \
@@ -241,6 +242,10 @@ O repositório [OnRobot_ROS2_Driver](https://github.com/tonydle/OnRobot_ROS2_Dri
 e compilado como backend do hardware real. O plugin de simulacao original do
 driver utiliza Gazebo Classic; a composicao deste projeto usa exclusivamente
 Gazebo Harmonic e `gz_ros2_control` no backend simulado.
+
+O launch acrescenta o diretorio `share` que contem `onrobot_description` a
+`GZ_SIM_RESOURCE_PATH`; assim, os meshes `package://` da gripper sao resolvidos
+tanto no Gazebo quanto no RViz.
 
 As tags `mimic` da descricao upstream sao removidas durante a construcao da
 imagem e substituidas por comandos articulares explicitos. Isso evita depender

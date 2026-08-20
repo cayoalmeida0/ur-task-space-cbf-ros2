@@ -15,6 +15,8 @@ class GripperSpec:
 
     @property
     def joint_names(self) -> tuple[str, ...]:
+        """Juntas usadas na descricao visual, incluindo a largura virtual."""
+
         return (
             "finger_width",
             "finger_joint",
@@ -25,8 +27,14 @@ class GripperSpec:
             "right_inner_finger_joint",
         )
 
+    @property
+    def simulated_joint_names(self) -> tuple[str, ...]:
+        """Juntas fisicas que o Gazebo exporta para o ros2_control."""
+
+        return self.joint_names[1:]
+
     def joint_positions(self, width_m: float) -> tuple[float, ...]:
-        """Converte a largura total para as sete juntas do mecanismo paralelo."""
+        """Converte a largura para a junta virtual e as seis juntas fisicas."""
 
         if not 0.0 <= width_m <= self.maximum_width_m:
             raise ValueError(
@@ -38,6 +46,11 @@ class GripperSpec:
             + self.finger_angle_per_width_rad_m * width_m
         )
         return (width_m, angle, -angle, angle, -angle, -angle, angle)
+
+    def simulated_joint_positions(self, width_m: float) -> tuple[float, ...]:
+        """Converte a largura para as seis interfaces fisicas do Gazebo."""
+
+        return self.joint_positions(width_m)[1:]
 
 
 GRIPPER_SPECS = {

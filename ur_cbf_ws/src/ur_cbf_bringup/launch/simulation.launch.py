@@ -3,6 +3,7 @@ from pathlib import Path
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (
+    AppendEnvironmentVariable,
     DeclareLaunchArgument,
     IncludeLaunchDescription,
     OpaqueFunction,
@@ -25,8 +26,14 @@ def launch_setup(context):
 
     gripper_spec = get_gripper_spec(onrobot_type)
     bringup_share = Path(get_package_share_directory("ur_cbf_bringup"))
+    onrobot_share = Path(get_package_share_directory("onrobot_description"))
     description_file = bringup_share / "urdf" / gripper_spec.description_file
     controllers_file = bringup_share / "config" / "ur_onrobot_controllers.yaml"
+
+    gazebo_onrobot_resources = AppendEnvironmentVariable(
+        name="GZ_SIM_RESOURCE_PATH",
+        value=str(onrobot_share.parent),
+    )
 
     upstream_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -61,7 +68,12 @@ def launch_setup(context):
         parameters=[{"use_sim_time": True, "onrobot_type": onrobot_type}],
     )
 
-    return [upstream_launch, gripper_controller_spawner, gripper_width_adapter]
+    return [
+        gazebo_onrobot_resources,
+        upstream_launch,
+        gripper_controller_spawner,
+        gripper_width_adapter,
+    ]
 
 
 def generate_launch_description():

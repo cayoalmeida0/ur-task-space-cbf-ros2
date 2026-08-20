@@ -39,6 +39,8 @@ def test_model_parameters_match_upstream_description(
     assert positions_closed[0] == 0.0
     assert positions_open[0] == maximum_width_m
     assert len(positions_open) == len(spec.joint_names) == 7
+    assert spec.simulated_joint_names == spec.joint_names[1:]
+    assert len(spec.simulated_joint_positions(maximum_width_m)) == 6
 
 
 def test_unknown_gripper_model_is_rejected():
@@ -75,8 +77,10 @@ def test_combined_xacro_is_well_formed_and_uses_harmonic(model):
     assert "gz_ros2_control::GazeboSimROS2ControlPlugin" in text
     assert "gazebo_ros2_control/GazeboSystem" not in text
     assert "libgazebo_ros2_control.so" not in text
-    for joint_name in get_gripper_spec(model).joint_names:
+    spec = get_gripper_spec(model)
+    for joint_name in spec.simulated_joint_names:
         assert f'joint="{joint_name}"' in text
+    assert 'joint="finger_width"' not in text
 
 
 def test_gripper_controller_contains_all_explicit_joints():
@@ -87,8 +91,19 @@ def test_gripper_controller_contains_all_explicit_joints():
     assert "onrobot_joint_position_controller:" in controller_config
     assert "position_controllers/JointGroupPositionController" in controller_config
     for spec in GRIPPER_SPECS.values():
-        for joint_name in spec.joint_names:
+        for joint_name in spec.simulated_joint_names:
             assert f"- {joint_name}" in controller_config
+    assert "- finger_width" not in controller_config
+
+
+def test_simulation_exposes_onrobot_meshes_to_gazebo():
+    launch_text = (PACKAGE_ROOT / "launch" / "simulation.launch.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "AppendEnvironmentVariable" in launch_text
+    assert 'name="GZ_SIM_RESOURCE_PATH"' in launch_text
+    assert "str(onrobot_share.parent)" in launch_text
 
 
 @pytest.mark.parametrize("model", SUPPORTED_ONROBOT_TYPES)

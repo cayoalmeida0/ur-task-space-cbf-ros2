@@ -88,7 +88,6 @@
     <hardware>
       <plugin>gz_ros2_control/GazeboSimSystem</plugin>
     </hardware>
-    <xacro:onrobot_simulated_joint joint="finger_width" initial_value="0.160"/>
     <xacro:onrobot_simulated_joint joint="finger_joint" initial_value="-0.47752244"/>
     <xacro:onrobot_simulated_joint joint="left_inner_knuckle_joint" initial_value="0.47752244"/>
     <xacro:onrobot_simulated_joint joint="left_inner_finger_joint" initial_value="-0.47752244"/>

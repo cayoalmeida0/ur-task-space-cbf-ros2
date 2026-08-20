@@ -17,8 +17,12 @@ Data da definicao do ambiente: 17 de julho de 2026.
   interface comum recebe a largura em metros por
   `/finger_width_controller/commands`.
 - Remove as tags `mimic` somente da copia instalada na imagem e comanda
-  explicitamente as sete juntas da gripper, preservando o movimento fisico no
-  motor DART do Gazebo Harmonic.
+  explicitamente as seis juntas fisicas da gripper. A junta virtual
+  `finger_width` permanece na interface abstrata e na visualizacao, mas nao e
+  registrada como hardware inexistente no Gazebo.
+- Adiciona o prefixo `share` do pacote `onrobot_description` a
+  `GZ_SIM_RESOURCE_PATH`, permitindo que o Gazebo Harmonic resolva os meshes
+  `package://` da RG2/RG6 alem da visualizacao ja disponivel no RViz.
 - Preserva o `forward_velocity_controller` do braco e nao introduz MoveIt na
   arquitetura.
 - Integra `tonydle/OnRobot_ROS2_Driver` como backend do hardware real e o

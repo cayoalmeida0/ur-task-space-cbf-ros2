@@ -53,7 +53,7 @@ class OnRobotWidthAdapter(Node):
             self.get_logger().error("Comando da gripper deve ser finito.")
             return
         try:
-            self._spec.joint_positions(width_m)
+            self._spec.simulated_joint_positions(width_m)
         except ValueError as error:
             self.get_logger().error(str(error))
             return
@@ -62,7 +62,9 @@ class OnRobotWidthAdapter(Node):
 
     def _publish_joint_command(self):
         message = Float64MultiArray()
-        message.data = list(self._spec.joint_positions(self._desired_width_m))
+        message.data = list(
+            self._spec.simulated_joint_positions(self._desired_width_m)
+        )
         self._publisher.publish(message)
 
 
