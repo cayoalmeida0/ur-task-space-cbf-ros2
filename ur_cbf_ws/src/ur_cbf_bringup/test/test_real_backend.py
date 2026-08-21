@@ -74,3 +74,4 @@ def test_environment_migration_preserves_local_values(tmp_path):
     assert values["ROS_DOMAIN_ID"] == "77"
     assert values["ONROBOT_CONNECTION_TYPE"] == "serial"
     assert values["CBF_VOLUMES"] == "true"
+    assert values["CBF_VOLUMES_GAZEBO"] == "true"

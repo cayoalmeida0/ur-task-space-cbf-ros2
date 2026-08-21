@@ -5,10 +5,10 @@ CBFs, QPs e metricas de distancia diferenciaveis. A interface de controle e a me
 na simulacao e no hardware real: velocidades articulares publicadas em
 `/forward_velocity_controller/commands`.
 
-> **Estado do projeto:** infraestrutura Docker `v0.2.0`, bringup `v0.2.1` e
+> **Estado do projeto:** infraestrutura Docker `v0.2.0`, bringup `v0.2.2` e
 > pacote de controle `ur_cbf_control` na revisao `0.5.1`. O controlador nominal
 > pode operar por DLS ou por QP com limites articulares. A simulacao inclui uma
-> OnRobot RG2/RG6 selecionavel e a revisao visual `0.5.2` introduz os volumes
+> OnRobot RG2/RG6 selecionavel e a revisao visual `0.5.3` introduz os volumes
 > geometricos que servirao de base para as CBFs.
 
 ## Arquitetura
@@ -251,10 +251,23 @@ tanto no Gazebo quanto no RViz.
 
 ### Volumes geometricos para as CBFs
 
-Com `UR_TYPE=ur3e` e `ONROBOT_TYPE=rg2`, a descricao inclui nove aproximacoes
+Com `UR_TYPE=ur3e` e `ONROBOT_TYPE=rg2`, a descricao inclui dez aproximacoes
 semitransparentes presas aos respectivos elos: esferas na base, ombro, cotovelo e
-punhos; capsulas no braco e antebraco; e uma unica capsula envolvendo toda a RG2.
-Elas aparecem tanto no RViz quanto no Gazebo e acompanham o movimento do robo.
+punhos; capsulas no braco e antebraco; um conector da extremidade do antebraco ao
+`wrist_1_link`; e uma unica capsula envolvendo toda a RG2. Elas aparecem tanto no
+RViz quanto no Gazebo e acompanham o movimento do robo.
+
+As capsulas longas nao sao centradas diretamente sobre os eixos DH. Elas seguem
+os deslocamentos fisicos da descricao oficial do UR3e: `0.120 m` no corpo do braco
+e `0.027 m` no antebraco. O conector da junta 4 cobre os `0.10405 m` restantes
+entre a linha central fisica do antebraco e o frame `wrist_1_link`, localizado a
+`0.13105 m` no eixo local correspondente.
+
+Os valores foram extraidos de
+[`physical_parameters.yaml`](https://github.com/UniversalRobots/Universal_Robots_ROS2_Description/blob/jazzy/config/ur3e/physical_parameters.yaml)
+e
+[`default_kinematics.yaml`](https://github.com/UniversalRobots/Universal_Robots_ROS2_Description/blob/jazzy/config/ur3e/default_kinematics.yaml)
+da descricao oficial da Universal Robots para ROS 2 Jazzy.
 
 Esses links possuem somente elementos `<visual>`: nao contem `<collision>`, massa
 ou interfaces de controle e, portanto, nao alteram contato, inercia ou dinamica.
@@ -268,6 +281,26 @@ e necessario editar `.env`:
 make down
 make sim CBF_VOLUMES=false
 ```
+
+Tambem e possivel mante-los no RViz e oculta-los somente no Gazebo:
+
+```bash
+make down
+make sim CBF_VOLUMES_GAZEBO=false
+```
+
+| `CBF_VOLUMES` | `CBF_VOLUMES_GAZEBO` | RViz | Gazebo |
+|---|---|---|---|
+| `true` | `true` | visiveis | visiveis |
+| `true` | `false` | visiveis | ocultos |
+| `false` | qualquer valor | ausentes | ausentes |
+
+A opcao exclusiva do Gazebo usa `visibility_flags=0` no SDFormat gerado. O
+`robot_description` continua contendo os elementos `<visual>`, portanto o
+`RobotModel` do RViz permanece inalterado. A semantica da mascara e definida na
+[especificacao oficial do elemento visual do SDFormat](https://sdformat.org/spec/1.12/visual/).
+Como a descricao e processada durante a inicializacao, altere a chave apos
+`make down` e reinicie a simulacao.
 
 Para reativa-los:
 

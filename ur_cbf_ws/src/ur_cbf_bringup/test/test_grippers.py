@@ -127,7 +127,9 @@ def test_cbf_visual_volumes_are_visual_only_and_cover_ur3e_rg2():
     assert "<collision" not in text
     assert "<inertial" not in text
     assert text.count("<xacro:cbf_sphere_visual") == 6
-    assert text.count("<xacro:cbf_capsule_visual") == 3
+    assert text.count("<xacro:cbf_capsule_visual") == 4
+    assert text.count("<visibility_flags>0</visibility_flags>") == 2
+    assert text.count('<xacro:unless value="${gazebo_visible}">') == 2
     for parent in (
         "base_link",
         "shoulder_link",
@@ -145,6 +147,21 @@ def test_cbf_visual_volumes_are_visual_only_and_cover_ur3e_rg2():
     assert "rg2_finger" not in text
 
 
+def test_ur3e_body_capsules_use_official_physical_offsets():
+    volumes = (PACKAGE_ROOT / "urdf" / "cbf_visual_volumes.urdf.xacro").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'name="shoulder_body_offset" value="0.120"' in volumes
+    assert 'name="elbow_body_offset" value="0.027"' in volumes
+    assert 'name="wrist_1_joint_offset" value="0.13105"' in volumes
+    assert 'center="-0.121775 0 ${shoulder_body_offset}"' in volumes
+    assert 'center="-0.1066 0 ${elbow_body_offset}"' in volumes
+    assert 'name="${prefix}wrist_1_connector"' in volumes
+    assert 'center="-0.2132 0 0.079025"' in volumes
+    assert 'radius="0.060" length="0.10405"' in volumes
+
+
 def test_rg2_uses_one_gripper_capsule_and_rg6_does_not_reuse_it():
     rg2 = (PACKAGE_ROOT / "urdf" / "ur_rg2_gz.urdf.xacro").read_text(
         encoding="utf-8"
@@ -156,7 +173,9 @@ def test_rg2_uses_one_gripper_capsule_and_rg6_does_not_reuse_it():
     for description in (rg2, rg6):
         assert "cbf_visual_volumes.urdf.xacro" in description
         assert 'name="show_cbf_volumes"' in description
+        assert 'name="show_cbf_volumes_gazebo"' in description
         assert "<xacro:ur3e_cbf_visual_volumes" in description
+        assert 'gazebo_visible="$(arg show_cbf_volumes_gazebo)"' in description
         assert "selected_ur_type == 'ur3e'" in description
     assert rg2.count("<xacro:rg2_cbf_visual_volume") == 1
     assert "<xacro:rg2_cbf_visual_volume" not in rg6
@@ -170,7 +189,12 @@ def test_cbf_visual_volumes_can_be_toggled_without_editing_env():
     env_example = (REPOSITORY_ROOT / ".env.example").read_text(encoding="utf-8")
 
     assert "CBF_VOLUMES: ${CBF_VOLUMES:-true}" in compose
+    assert "CBF_VOLUMES_GAZEBO: ${CBF_VOLUMES_GAZEBO:-true}" in compose
     assert "CBF_VOLUMES ?= true" in makefile
-    assert 'CBF_VOLUMES="$(CBF_VOLUMES)" $(COMPOSE)' in makefile
+    assert "CBF_VOLUMES_GAZEBO ?= true" in makefile
+    assert 'CBF_VOLUMES="$(CBF_VOLUMES)" \\' in makefile
+    assert 'CBF_VOLUMES_GAZEBO="$(CBF_VOLUMES_GAZEBO)" \\' in makefile
     assert "CBF_VOLUMES=true" in env_example
+    assert "CBF_VOLUMES_GAZEBO=true" in env_example
     assert "make sim CBF_VOLUMES=false" in env_example
+    assert "make sim CBF_VOLUMES_GAZEBO=false" in env_example

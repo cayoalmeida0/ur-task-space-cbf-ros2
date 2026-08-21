@@ -2,6 +2,21 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao visual 0.5.3 / bringup 0.2.2 — 21 de agosto de 2026
+
+- Desloca a capsula do braco em `0.120 m` e a do antebraco em `0.027 m`, seguindo
+  `shoulder_offset` e `elbow_offset` da descricao fisica oficial do UR3e Jazzy.
+- Preserva as esferas nos frames articulares, distinguindo os eixos DH da linha
+  central dos corpos mecanicos deslocados.
+- Adiciona uma capsula de `0.10405 m` na extremidade do antebraco para completar
+  a cobertura ate `wrist_1_link`, posterior a junta 4.
+- Mantem todos os novos elementos exclusivamente visuais, sem alterar colisao,
+  inercia ou interfaces do `ros2_control`.
+- Adiciona `CBF_VOLUMES_GAZEBO=false` para ocultar as aproximacoes somente no
+  Gazebo por `visibility_flags=0`, preservando o `RobotModel` completo no RViz.
+- Atualiza `ur_cbf_bringup` para `0.2.2` e adiciona regressao para os tres offsets
+  oficiais e para os controles independentes de visualizacao.
+
 ## Revisao visual 0.5.2 / bringup 0.2.1 — 21 de agosto de 2026
 
 - Adiciona aproximacoes geometricas sem colisao para inspecao no RViz e no

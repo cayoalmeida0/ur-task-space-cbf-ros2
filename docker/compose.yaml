@@ -23,6 +23,7 @@ x-ur-cbf-common: &ur-cbf-common
     ONROBOT_IP: ${ONROBOT_IP:-192.168.1.1}
     ONROBOT_PORT: ${ONROBOT_PORT:-502}
     CBF_VOLUMES: ${CBF_VOLUMES:-true}
+    CBF_VOLUMES_GAZEBO: ${CBF_VOLUMES_GAZEBO:-true}
   volumes:
     - ..:/workspace:rw
     - /tmp/.X11-unix:/tmp/.X11-unix:rw

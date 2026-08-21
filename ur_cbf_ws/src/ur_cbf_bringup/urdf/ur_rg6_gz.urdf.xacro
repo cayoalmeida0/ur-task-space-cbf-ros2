@@ -19,6 +19,7 @@
   <xacro:arg name="simulation_controllers" default=""/>
   <xacro:arg name="ros_namespace" default=""/>
   <xacro:arg name="show_cbf_volumes" default="$(optenv CBF_VOLUMES true)"/>
+  <xacro:arg name="show_cbf_volumes_gazebo" default="$(optenv CBF_VOLUMES_GAZEBO true)"/>
   <!-- O Xacro upstream declara gripper_tcp no escopo da inclusao. -->
   <xacro:property name="prefix" value="$(arg tf_prefix)"/>
 
@@ -66,7 +67,9 @@
   <xacro:if value="$(arg show_cbf_volumes)">
     <xacro:property name="selected_ur_type" value="$(arg ur_type)"/>
     <xacro:if value="${selected_ur_type == 'ur3e'}">
-      <xacro:ur3e_cbf_visual_volumes prefix="$(arg tf_prefix)"/>
+      <xacro:ur3e_cbf_visual_volumes
+        prefix="$(arg tf_prefix)"
+        gazebo_visible="$(arg show_cbf_volumes_gazebo)"/>
     </xacro:if>
   </xacro:if>
 
