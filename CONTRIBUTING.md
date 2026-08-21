@@ -21,6 +21,10 @@ colcon test-result --verbose
 
 O script `check_system.sh` deve ser executado dentro do container.
 
+O workflow `Repository checks` executa uma verificacao rapida em pull requests,
+mas nao substitui o teste acima: apenas o container do projeto possui o conjunto
+completo de dependencias ROS 2, Xacro e Gazebo.
+
 ## Requisitos de seguranca
 
 - Publique comando nulo quando o estado ou a solucao do QP estiverem obsoletos.

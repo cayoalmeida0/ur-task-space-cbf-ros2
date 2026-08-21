@@ -57,7 +57,17 @@ print(f"Python ROS {sys.executable}: acesso ao UAIbot {ub.__version__}: OK")
 print(f"Python ROS {sys.executable}: acesso ao OSQP {osqp.__version__}: OK")
 PY
 
-for package in onrobot_description onrobot_driver ur_description ur_controllers ur_robot_driver ur_simulation_gz ur_cbf_bringup; do
+packages=(
+  onrobot_description
+  onrobot_driver
+  ur_description
+  ur_controllers
+  ur_robot_driver
+  ur_simulation_gz
+  ur_cbf_bringup
+  ur_cbf_control
+)
+for package in "${packages[@]}"; do
   if ! ros2 pkg prefix "${package}" >/dev/null 2>&1; then
     echo "ERRO: pacote ROS nao encontrado no ambiente: ${package}" >&2
     echo "AMENT_PREFIX_PATH=${AMENT_PREFIX_PATH:-nao definido}" >&2

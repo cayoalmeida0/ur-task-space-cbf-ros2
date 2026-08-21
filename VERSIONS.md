@@ -2,6 +2,23 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao de consolidacao 0.5.7 — 21 de agosto de 2026
+
+- Reorganiza a documentacao em uma entrada rapida e guias dedicados para
+  instalacao, simulacao e hardware real, preservando os procedimentos validados.
+- Atualiza o estado do projeto, a estrutura do repositorio, a citacao cientifica
+  e os avisos de licencas das dependencias fixadas.
+- Corrige o aviso do driver OnRobot: o backend Modbus real e compilado na imagem
+  Docker desde a infraestrutura `0.2.0`.
+- Amplia `check_system.sh` para exigir tambem o pacote local `ur_cbf_control`.
+- Reduz o contexto enviado ao Docker e exclui resultados, caches de teste e
+  configuracoes de IDE.
+- Adiciona uma verificacao rapida no GitHub para sintaxe Bash/Python, XML/Xacro e
+  testes unitarios independentes do ROS; a validacao completa permanece no
+  container Jazzy.
+- Mantem inalteradas as versoes funcionais da imagem (`0.2.0`), do bringup
+  (`0.2.4`) e do controle (`0.5.1`).
+
 ## Revisao experimental 0.5.6 / bringup 0.2.4 — 21 de agosto de 2026
 
 - Ajusta somente o roteiro `make test-cbf-motion` para
