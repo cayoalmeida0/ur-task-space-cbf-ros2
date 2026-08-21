@@ -65,22 +65,26 @@ plugin Gazebo Classic do driver OnRobot.
 
 ## Volumes geométricos para as CBFs
 
-Na combinação UR3e/RG2, nove volumes sem colisão são presos aos elos do robô:
+O UR3e apresenta 19 volumes sem colisão copiados da fábrica UAIbot 1.2.7:
 
-- esferas na base, ombro e punhos;
-- cápsulas no braço e antebraço;
-- cilindro entre a extremidade do antebraço e `wrist_1_link`;
-- cápsula única envolvendo a RG2.
+- 14 cilindros;
+- duas esferas;
+- três caixas, usadas no corpo e nos dedos da garra genérica.
 
-As cápsulas longas incorporam os deslocamentos físicos da descrição oficial do
-UR3e: `0.120 m` no braço e `0.027 m` no antebraço. O conector da junta 4 cobre os
-`0.10405 m` restantes até `wrist_1_link`. A esfera explícita do cotovelo foi
-removida porque as cápsulas adjacentes já cobrem essa região.
+As matrizes `htm_obj` do UAIbot são relativas aos frames DH posteriores às
+juntas. Antes da transcrição para `<origin>`, elas foram convertidas aos frames
+`shoulder_link`, `upper_arm_link`, `forearm_link` e `wrist_1/2/3_link` da
+descrição oficial Jazzy. A fonte está fixada no commit
+[`1acb5ed`](https://github.com/UAIbot/UAIbotPy/blob/1acb5ed637738aca4ea05945e6c065c3757bc13d/uaibot/robot/_create_ur_ur3e.py).
 
 Esses elementos possuem apenas `<visual>`: não têm `<collision>`, massa, inércia
-ou interfaces de controle. Portanto, não alteram contato ou dinâmica. Ainda são
-uma representação para inspeção; a geometria matemática das CBFs será
-implementada separadamente.
+ou interfaces de controle. Portanto, não alteram contato ou dinâmica. Suas
+formas, dimensões e poses representam a mesma geometria usada por
+`compute_dist_auto`; as cores e transparências são apenas recursos de inspeção.
+
+A geometria distal copiada é a garra genérica do UAIbot, não o contorno exato da
+RG2/RG6 mostrada pelos meshes. Essa escolha garante coerência entre visualização
+e cálculo, mas a fidelidade física deverá ser refinada em uma etapa posterior.
 
 As dimensões físicas foram confrontadas com os arquivos oficiais:
 
@@ -185,6 +189,25 @@ O limite de controle é `30 s` simulados e o limite absoluto é `180 s` reais. O
 resultado JSON é salvo em `/workspace/results` e inclui parâmetros, versões,
 seed, ordem das juntas, erros e comandos. No QP, inclui também diagnóstico do
 OSQP.
+
+### Monitor da primeira CBF de autocolisão
+
+Antes de impor a restrição, execute o mesmo ensaio em modo de observação:
+
+```bash
+ros2 launch ur_cbf_control cartesian_position.launch.py \
+  ur_type:=ur3e \
+  onrobot_type:=rg2 \
+  controller_mode:=qp \
+  self_collision_cbf_mode:=monitor \
+  experiment_id:=self_collision_monitor_ur3e_001 \
+  execute_test:=true
+```
+
+O log deve informar `d_self_min`, `h_self_min`, `cbf_ms` e `par`. Esse modo não
+altera o comando. Os volumes transparentes reproduzem o mesmo conjunto de
+objetos usado pelo UAIbot; o roteiro de validação está documentado em
+[SELF_COLLISION_CBF.md](SELF_COLLISION_CBF.md).
 
 Consulte a [documentação de `ur_cbf_control`](../ur_cbf_ws/src/ur_cbf_control/README.md)
 para a formulação, proteções e critérios completos.

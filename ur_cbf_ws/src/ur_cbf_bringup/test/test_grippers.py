@@ -1,6 +1,8 @@
 import xml.etree.ElementTree as ET
+import math
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from ur_cbf_bringup.grippers import (
@@ -119,7 +121,7 @@ def test_real_visual_xacro_attaches_gripper_to_tool0(model):
     assert "gazebo_ros2_control" not in text
 
 
-def test_cbf_visual_volumes_are_visual_only_and_cover_ur3e_rg2():
+def test_cbf_visual_volumes_copy_uaibot_model_and_remain_visual_only():
     volumes = PACKAGE_ROOT / "urdf" / "cbf_visual_volumes.urdf.xacro"
     root = ET.parse(volumes).getroot()
     text = volumes.read_text(encoding="utf-8")
@@ -127,48 +129,186 @@ def test_cbf_visual_volumes_are_visual_only_and_cover_ur3e_rg2():
     assert root.tag == "robot"
     assert "<collision" not in text
     assert "<inertial" not in text
-    assert text.count("<xacro:cbf_sphere_visual") == 5
-    assert text.count("<xacro:cbf_capsule_visual") == 3
-    assert text.count("<xacro:cbf_cylinder_visual") == 1
+    assert text.count("<xacro:cbf_sphere_visual") == 2
+    assert text.count("<xacro:cbf_cylinder_visual") == 14
+    assert text.count("<xacro:cbf_box_visual") == 3
+    assert "cbf_capsule_visual" not in text
+    assert "1acb5ed637738aca4ea05945e6c065c3757bc13d" in text
     assert "<visibility_flags>" not in text
     assert "gazebo_visible" not in text
     for parent in (
-        "base_link",
         "shoulder_link",
         "upper_arm_link",
         "forearm_link",
         "wrist_1_link",
         "wrist_2_link",
         "wrist_3_link",
-        "onrobot_base_link",
     ):
         assert f'parent="${{prefix}}{parent}"' in text
 
-    assert 'name="${prefix}rg2"' in text
-    assert 'radius="0.090" length="0.110"' in text
-    assert "rg2_finger" not in text
-    assert 'name="${prefix}elbow"' not in text
+    for object_name in (
+        "c0", "c11", "c12", "c13", "c21", "c22", "c23", "c31", "c32",
+        "c41", "c42", "c51", "c52", "c53", "c54", "c55", "c56", "c57",
+        "c58",
+    ):
+        assert f'name="${{prefix}}uaibot_{object_name}"' in text
 
 
-def test_ur3e_body_capsules_use_official_physical_offsets():
-    volumes = (PACKAGE_ROOT / "urdf" / "cbf_visual_volumes.urdf.xacro").read_text(
-        encoding="utf-8"
+def test_uaibot_visual_primitives_preserve_converted_origins_and_sizes():
+    volumes = PACKAGE_ROOT / "urdf" / "cbf_visual_volumes.urdf.xacro"
+    root = ET.parse(volumes).getroot()
+    namespace = "{http://wiki.ros.org/xacro}"
+    calls = {
+        element.attrib["name"].replace("${prefix}uaibot_", ""): (
+            element.tag.removeprefix(namespace).replace("cbf_", "").replace(
+                "_visual", ""
+            ),
+            element.attrib,
+        )
+        for element in root.iter()
+        if element.tag in {
+            f"{namespace}cbf_sphere_visual",
+            f"{namespace}cbf_cylinder_visual",
+            f"{namespace}cbf_box_visual",
+        }
+    }
+    expected = {
+        "c0": ("cylinder", "shoulder_link", "0 0 -0.0469", "0 0 0", "0.067", "0.21"),
+        "c11": ("cylinder", "upper_arm_link", "0.00185 0 0.118", "0 0 1.570796326795", "0.052", "0.13"),
+        "c12": ("cylinder", "upper_arm_link", "-0.11815 0 0.12", "-1.570796326795 0 1.570796326795", "0.05", "0.2"),
+        "c13": ("cylinder", "upper_arm_link", "-0.24315 0 0.118", "0 0 1.570796326795", "0.05", "0.12"),
+        "c21": ("sphere", "forearm_link", "-0.0246 0 0.05", None, "0.05", None),
+        "c22": ("cylinder", "forearm_link", "-0.1046 0 0.05", "-1.570796326795 0 1.570796326795", "0.04", "0.2"),
+        "c23": ("cylinder", "forearm_link", "-0.2146 0 0.045", "0 0 1.570796326795", "0.035", "0.09"),
+        "c31": ("cylinder", "wrist_1_link", "0 -0.0014 0.0039", "0 0 3.14159265359", "0.035", "0.09"),
+        "c32": ("cylinder", "wrist_1_link", "0 -0.0414 -0.0011", "-1.570796326795 0 -3.14159265359", "0.035", "0.045"),
+        "c41": ("cylinder", "wrist_2_link", "0.0011 0 -0.034", "0 0 -1.570796326795", "0.035", "0.025"),
+        "c42": ("cylinder", "wrist_2_link", "0.0011 -0.0025 -0.004", "1.570796326795 1.570796326795 0", "0.038", "0.098"),
+        "c51": ("cylinder", "wrist_3_link", "0.0011 0.004 -0.0231", "3.14159265359 0 1.570796326795", "0.038", "0.046"),
+        "c52": ("cylinder", "wrist_3_link", "0.0011 -0.021 -0.0201", "1.570796326795 1.570796326795 0", "0.01", "0.028"),
+        "c53": ("sphere", "wrist_3_link", "0.0011 0.004 0.0279", None, "0.05", None),
+        "c54": ("box", "wrist_3_link", "0.0011 -0.006 0.1079", "1.570796326795 1.570796326795 0", "0.09 0.07 0.06", None),
+        "c55": ("box", "wrist_3_link", "-0.0389 -0.001 0.1529", "1.570796326795 0.785398163397 0", "0.075 0.04 0.035", None),
+        "c56": ("box", "wrist_3_link", "0.0411 -0.001 0.1529", "-1.570796326795 0.785398163397 -3.14159265359", "0.075 0.04 0.035", None),
+        "c57": ("cylinder", "wrist_3_link", "0.0511 -0.001 0.1979", "3.14159265359 0 1.570796326795", "0.021", "0.04"),
+        "c58": ("cylinder", "wrist_3_link", "-0.0489 -0.001 0.1979", "3.14159265359 0 1.570796326795", "0.021", "0.04"),
+    }
+
+    assert set(calls) == set(expected)
+    for name, (primitive, parent, xyz, rpy, dimension_a, dimension_b) in expected.items():
+        actual_primitive, attributes = calls[name]
+        assert actual_primitive == primitive
+        assert attributes["parent"] == f"${{prefix}}{parent}"
+        assert attributes["xyz"] == xyz
+        if rpy is not None:
+            assert attributes["rpy"] == rpy
+        if primitive == "sphere":
+            assert attributes["radius"] == dimension_a
+        elif primitive == "box":
+            assert attributes["size"] == dimension_a
+        else:
+            assert attributes["radius"] == dimension_a
+            assert attributes["length"] == dimension_b
+
+
+def test_uaibot_dh_to_urdf_link_maps_are_configuration_independent():
+    def rotation_x(angle):
+        cosine, sine = math.cos(angle), math.sin(angle)
+        result = np.eye(4)
+        result[:3, :3] = (
+            (1.0, 0.0, 0.0),
+            (0.0, cosine, -sine),
+            (0.0, sine, cosine),
+        )
+        return result
+
+    def rotation_z(angle):
+        cosine, sine = math.cos(angle), math.sin(angle)
+        result = np.eye(4)
+        result[:3, :3] = (
+            (cosine, -sine, 0.0),
+            (sine, cosine, 0.0),
+            (0.0, 0.0, 1.0),
+        )
+        return result
+
+    def rotation_y(angle):
+        cosine, sine = math.cos(angle), math.sin(angle)
+        result = np.eye(4)
+        result[:3, :3] = (
+            (cosine, 0.0, sine),
+            (0.0, 1.0, 0.0),
+            (-sine, 0.0, cosine),
+        )
+        return result
+
+    def translation(x, y, z):
+        result = np.eye(4)
+        result[:3, 3] = (x, y, z)
+        return result
+
+    def standard_dh(theta, d, a, alpha):
+        return (
+            rotation_z(theta)
+            @ translation(0.0, 0.0, d)
+            @ translation(a, 0.0, 0.0)
+            @ rotation_x(alpha)
+        )
+
+    pi = math.pi
+    d_values = (0.15185, 0.0, 0.0, 0.13105, 0.08535, 0.0921)
+    a_values = (0.0, -0.24355, -0.2132, 0.0, 0.0, 0.0)
+    alpha_values = (pi / 2.0, 0.0, 0.0, pi / 2.0, -pi / 2.0, 0.0)
+    urdf_origins = (
+        translation(0.0, 0.0, 0.15185),
+        rotation_x(pi / 2.0),
+        translation(-0.24355, 0.0, 0.0),
+        translation(-0.2132, 0.0, 0.13105),
+        translation(0.0, -0.08535, 0.0) @ rotation_x(pi / 2.0),
+        translation(0.0, 0.0921, 0.0)
+        @ rotation_z(pi)
+        @ rotation_y(pi)
+        @ rotation_x(pi / 2.0),
+    )
+    expected_link_from_dh = (
+        rotation_x(pi / 2.0),
+        translation(-0.24355, 0.0, 0.0),
+        translation(-0.2132, 0.0, 0.0),
+        rotation_x(pi / 2.0),
+        rotation_x(-pi / 2.0),
+        np.eye(4),
     )
 
-    assert 'name="shoulder_body_offset" value="0.120"' in volumes
-    assert 'name="elbow_body_offset" value="0.027"' in volumes
-    assert 'name="wrist_1_joint_offset" value="0.13105"' in volumes
-    assert 'center="-0.121775 0 ${shoulder_body_offset}"' in volumes
-    assert 'center="-0.1066 0 ${elbow_body_offset}"' in volumes
-    assert 'name="${prefix}wrist_1_connector"' in volumes
-    assert '<xacro:cbf_cylinder_visual\n      name="${prefix}wrist_1_connector"' in volumes
-    assert 'center="-0.2132 0 0.079025"' in volumes
-    assert 'radius="0.060" length="0.10405"' in volumes
-    assert 'cap_a="-0.2132 0 ${elbow_body_offset}"' not in volumes
-    assert 'cap_b="-0.2132 0 ${wrist_1_joint_offset}"' not in volumes
+    for joint_positions in (
+        (0.0, -pi / 2.0, 0.0, -pi / 2.0, -pi / 2.0, 0.0),
+        (0.2, -0.7, 0.4, 1.1, -0.6, 0.3),
+    ):
+        uaibot_transform = np.eye(4)
+        urdf_transform = np.eye(4)
+        for index in range(6):
+            uaibot_transform = uaibot_transform @ standard_dh(
+                joint_positions[index],
+                d_values[index],
+                a_values[index],
+                alpha_values[index],
+            )
+            urdf_transform = (
+                urdf_transform
+                @ urdf_origins[index]
+                @ rotation_z(joint_positions[index])
+            )
+            actual_link_from_dh = (
+                np.linalg.inv(urdf_transform) @ uaibot_transform
+            )
+            np.testing.assert_allclose(
+                actual_link_from_dh,
+                expected_link_from_dh[index],
+                atol=5e-10,
+                rtol=0.0,
+            )
 
 
-def test_rg2_uses_one_gripper_capsule_and_rg6_does_not_reuse_it():
+def test_rg2_and_rg6_use_the_same_uaibot_link_5_geometry():
     rg2 = (PACKAGE_ROOT / "urdf" / "ur_rg2_gz.urdf.xacro").read_text(
         encoding="utf-8"
     )
@@ -181,8 +321,8 @@ def test_rg2_uses_one_gripper_capsule_and_rg6_does_not_reuse_it():
         assert 'name="show_cbf_volumes"' in description
         assert "<xacro:ur3e_cbf_visual_volumes" in description
         assert "selected_ur_type == 'ur3e'" in description
-    assert rg2.count("<xacro:rg2_cbf_visual_volume") == 1
-    assert "<xacro:rg2_cbf_visual_volume" not in rg6
+    assert "rg2_cbf_visual_volume" not in rg2
+    assert "rg2_cbf_visual_volume" not in rg6
 
 
 def test_cbf_visual_volumes_can_be_toggled_without_editing_env():

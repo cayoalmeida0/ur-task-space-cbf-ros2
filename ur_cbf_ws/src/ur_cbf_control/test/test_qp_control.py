@@ -59,6 +59,24 @@ class QpControlTest(unittest.TestCase):
         self.assertEqual(diagnostics.active_lower, (1,))
         self.assertLessEqual(diagnostics.max_bound_violation, 1e-5)
 
+    def test_enforces_affine_cbf_lower_bound_inside_qp(self):
+        solution, diagnostics = BoxConstrainedQpSolver(
+            absolute_tolerance=1e-8,
+            relative_tolerance=1e-8,
+        ).solve(
+            jacobian=np.eye(2),
+            task_velocity=(-1.0, 0.0),
+            damping=0.01,
+            max_abs_joint_velocity=1.0,
+            cbf_matrix=((1.0, 0.0),),
+            cbf_lower_bound=(0.2,),
+        )
+        self.assertAlmostEqual(solution[0], 0.2, places=6)
+        self.assertEqual(diagnostics.active_cbf, (0,))
+        self.assertTrue(diagnostics.cbf_constraint_active)
+        self.assertLessEqual(diagnostics.max_cbf_violation, 1e-7)
+        self.assertFalse(diagnostics.constraint_active)
+
     def test_reuses_workspace_and_accepts_dimension_change(self):
         solver = BoxConstrainedQpSolver()
         _, first = solver.solve(
@@ -89,6 +107,34 @@ class QpControlTest(unittest.TestCase):
             atol=2e-7,
         )
         self.assertEqual(solution.shape, (4,))
+
+    def test_rebuilds_workspace_when_cbf_count_changes(self):
+        solver = BoxConstrainedQpSolver()
+        _, first = solver.solve(
+            jacobian=np.eye(2),
+            task_velocity=(0.0, 0.0),
+            damping=0.05,
+            max_abs_joint_velocity=0.1,
+            cbf_matrix=((1.0, 0.0),),
+            cbf_lower_bound=(-0.1,),
+        )
+        _, second = solver.solve(
+            jacobian=np.eye(2),
+            task_velocity=(0.0, 0.0),
+            damping=0.05,
+            max_abs_joint_velocity=0.1,
+            cbf_matrix=((0.0, 1.0),),
+            cbf_lower_bound=(-0.1,),
+        )
+        _, third = solver.solve(
+            jacobian=np.eye(2),
+            task_velocity=(0.0, 0.0),
+            damping=0.05,
+            max_abs_joint_velocity=0.1,
+        )
+        self.assertFalse(first.reused_workspace)
+        self.assertTrue(second.reused_workspace)
+        self.assertFalse(third.reused_workspace)
 
     def test_controller_reorders_solution_by_joint_name(self):
         result = compute_qp_position_control(
@@ -139,6 +185,17 @@ class QpControlTest(unittest.TestCase):
                 task_velocity=(0.0, 0.0, 0.0),
                 damping=0.05,
                 max_abs_joint_velocity=(0.1, 0.1),
+            )
+
+    def test_rejects_incompatible_cbf_dimensions(self):
+        with self.assertRaisesRegex(QpControlError, "Matriz CBF"):
+            BoxConstrainedQpSolver().solve(
+                jacobian=np.eye(2),
+                task_velocity=(0.0, 0.0),
+                damping=0.05,
+                max_abs_joint_velocity=0.1,
+                cbf_matrix=((1.0, 0.0, 0.0),),
+                cbf_lower_bound=(0.0,),
             )
 
     def test_solver_failure_is_reported(self):

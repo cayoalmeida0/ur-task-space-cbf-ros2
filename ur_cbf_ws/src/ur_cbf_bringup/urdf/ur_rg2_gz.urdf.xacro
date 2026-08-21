@@ -69,8 +69,6 @@
       <xacro:ur3e_cbf_visual_volumes
         prefix="$(arg tf_prefix)"/>
     </xacro:if>
-    <xacro:rg2_cbf_visual_volume
-      prefix="$(arg tf_prefix)"/>
   </xacro:if>
 
   <gazebo reference="world"/>

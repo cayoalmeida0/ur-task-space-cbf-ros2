@@ -37,6 +37,9 @@ from ur_cbf_control.safety import OrderedJointState
 from ur_cbf_control.safety import is_state_stale
 from ur_cbf_control.safety import reorder_joint_state
 from ur_cbf_control.safety import zero_velocity_command
+from ur_cbf_control.self_collision_cbf import formulate_self_collision_cbf
+from ur_cbf_control.self_collision_cbf import SelfCollisionCbfConstraints
+from ur_cbf_control.self_collision_cbf import SelfCollisionCbfError
 from ur_cbf_control.task_frames import get_task_frame_spec
 
 
@@ -77,6 +80,11 @@ class CartesianPositionTest(Node):
         self.declare_parameter("qp_max_iterations", 4000)
         self.declare_parameter("qp_time_limit", 0.01)
         self.declare_parameter("qp_polishing", False)
+        self.declare_parameter("self_collision_cbf_mode", "off")
+        self.declare_parameter("self_collision_safe_distance", 0.03)
+        self.declare_parameter("self_collision_cbf_gain", 5.0)
+        self.declare_parameter("self_collision_distance_tolerance", 5e-4)
+        self.declare_parameter("self_collision_distance_max_iterations", 20)
         self.declare_parameter("max_cartesian_speed", 0.01)
         self.declare_parameter("max_abs_joint_velocity", 0.10)
         self.declare_parameter("position_tolerance", 0.001)
@@ -137,6 +145,21 @@ class CartesianPositionTest(Node):
         self.qp_polishing = bool(
             self.get_parameter("qp_polishing").value
         )
+        self.self_collision_cbf_mode = str(
+            self.get_parameter("self_collision_cbf_mode").value
+        ).lower()
+        self.self_collision_safe_distance = float(
+            self.get_parameter("self_collision_safe_distance").value
+        )
+        self.self_collision_cbf_gain = float(
+            self.get_parameter("self_collision_cbf_gain").value
+        )
+        self.self_collision_distance_tolerance = float(
+            self.get_parameter("self_collision_distance_tolerance").value
+        )
+        self.self_collision_distance_max_iterations = int(
+            self.get_parameter("self_collision_distance_max_iterations").value
+        )
         self.max_cartesian_speed = float(
             self.get_parameter("max_cartesian_speed").value
         )
@@ -172,6 +195,7 @@ class CartesianPositionTest(Node):
         )
 
         self._validate_parameters()
+        np.random.seed(self.random_seed)
         self.kinematics = UaibotKinematics.create(
             ur_type=self.ur_type,
             model_joint_names=self.model_joint_names,
@@ -219,6 +243,7 @@ class CartesianPositionTest(Node):
         self._tolerance_wall_seconds: float | None = None
         self._trace_samples: list[dict[str, object]] = []
         self._result_path: str | None = None
+        self._last_self_collision_cbf: SelfCollisionCbfConstraints | None = None
 
         command_qos = QoSProfile(
             depth=1,
@@ -260,10 +285,11 @@ class CartesianPositionTest(Node):
                 f"onrobot_type={self.onrobot_type}; "
                 f"frame={self.controlled_frame}; "
                 f"modo={self.controller_mode}; "
+                f"self_collision_cbf={self.self_collision_cbf_mode}; "
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.5.1; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.0; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
 
     def _validate_parameters(self) -> None:
@@ -283,14 +309,34 @@ class CartesianPositionTest(Node):
             "state_timeout": self.state_timeout,
             "startup_timeout": self.startup_timeout,
             "command_rate": self.command_rate,
+            "self_collision_safe_distance": self.self_collision_safe_distance,
+            "self_collision_cbf_gain": self.self_collision_cbf_gain,
+            "self_collision_distance_tolerance": (
+                self.self_collision_distance_tolerance
+            ),
         }
         for name, value in positive_values.items():
             if not math.isfinite(value) or value <= 0.0:
                 raise ValueError(f"{name} deve ser finito e positivo.")
         if self.controller_mode not in {"dls", "qp"}:
             raise ValueError("controller_mode deve ser dls ou qp.")
+        if self.self_collision_cbf_mode not in {"off", "monitor", "enforce"}:
+            raise ValueError(
+                "self_collision_cbf_mode deve ser off, monitor ou enforce."
+            )
+        if (
+            self.self_collision_cbf_mode == "enforce"
+            and self.controller_mode != "qp"
+        ):
+            raise ValueError(
+                "self_collision_cbf_mode=enforce requer controller_mode=qp."
+            )
         if self.qp_max_iterations <= 0:
             raise ValueError("qp_max_iterations deve ser positivo.")
+        if self.self_collision_distance_max_iterations <= 0:
+            raise ValueError(
+                "self_collision_distance_max_iterations deve ser positivo."
+            )
         if len(self.model_joint_names) == 0:
             raise ValueError("model_joint_names deve ser configurado explicitamente.")
         if len(set(self.model_joint_names)) != len(self.model_joint_names):
@@ -416,10 +462,38 @@ class CartesianPositionTest(Node):
             self.model_joint_names,
         )
 
-    def _evaluate_kinematics(self) -> KinematicState:
-        state = self.kinematics.evaluate(self._model_positions())
+    def _evaluate_kinematics(
+        self,
+        model_positions: tuple[float, ...] | None = None,
+    ) -> KinematicState:
+        positions = (
+            self._model_positions()
+            if model_positions is None
+            else model_positions
+        )
+        state = self.kinematics.evaluate(positions)
         self._last_position = np.asarray(state.position, dtype=float)
         return state
+
+    def _evaluate_self_collision_cbf(
+        self,
+        model_positions: tuple[float, ...],
+    ) -> SelfCollisionCbfConstraints | None:
+        if self.self_collision_cbf_mode == "off":
+            self._last_self_collision_cbf = None
+            return None
+        distances = self.kinematics.evaluate_self_collision(
+            model_positions,
+            tolerance=self.self_collision_distance_tolerance,
+            max_iterations=self.self_collision_distance_max_iterations,
+        )
+        constraints = formulate_self_collision_cbf(
+            distances,
+            safe_distance=self.self_collision_safe_distance,
+            gain=self.self_collision_cbf_gain,
+        )
+        self._last_self_collision_cbf = constraints
+        return constraints
 
     def _simulation_seconds(self) -> float:
         seconds = self.get_clock().now().nanoseconds * 1e-9
@@ -461,7 +535,9 @@ class CartesianPositionTest(Node):
         cartesian_saturated: bool,
         joint_saturated: bool = False,
         joint_constraint_active: bool = False,
+        self_collision_constraint_active: bool = False,
         qp_diagnostics: QpDiagnostics | None = None,
+        self_collision_cbf: SelfCollisionCbfConstraints | None = None,
     ) -> None:
         self._trace_samples.append(
             {
@@ -474,6 +550,14 @@ class CartesianPositionTest(Node):
                 "cartesian_saturated": bool(cartesian_saturated),
                 "joint_saturated": bool(joint_saturated),
                 "joint_constraint_active": bool(joint_constraint_active),
+                "self_collision_constraint_active": bool(
+                    self_collision_constraint_active
+                ),
+                "self_collision_cbf": (
+                    None
+                    if self_collision_cbf is None
+                    else self_collision_cbf.to_record()
+                ),
                 "qp": (
                     None
                     if qp_diagnostics is None
@@ -504,6 +588,9 @@ class CartesianPositionTest(Node):
                 bool(sample["active_lower"] or sample["active_upper"])
                 for sample in samples
             ),
+            "cbf_active_samples": sum(
+                bool(sample["active_cbf"]) for sample in samples
+            ),
             "mean_iterations": float(np.mean(iterations)),
             "max_iterations": max(iterations),
             "mean_solve_time": float(np.mean(solve_times)),
@@ -512,6 +599,10 @@ class CartesianPositionTest(Node):
             "max_run_time": max(run_times),
             "max_bound_violation": max(
                 float(sample["max_bound_violation"])
+                for sample in samples
+            ),
+            "max_cbf_violation": max(
+                float(sample["max_cbf_violation"])
                 for sample in samples
             ),
         }
@@ -529,14 +620,15 @@ class CartesianPositionTest(Node):
             simulated_seconds = self._trace_samples[-1]["simulated_seconds"]
             wall_seconds = self._trace_samples[-1]["wall_seconds"]
         return {
-            "schema_version": "1.3",
+            "schema_version": "1.4",
             "experiment_id": self.experiment_id,
             "result": result,
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.5.1",
+                "control_package": "ur_cbf_control:0.6.0",
                 "controller_mode": self.controller_mode,
+                "self_collision_cbf_mode": self.self_collision_cbf_mode,
                 "osqp": self.qp_solver.solver_version,
                 "ros_distro": os.environ.get("ROS_DISTRO", "unknown"),
                 "ur_type": self.ur_type,
@@ -586,6 +678,11 @@ class CartesianPositionTest(Node):
                 ),
                 "time_to_tolerance_wall": self._tolerance_wall_seconds,
                 "qp": self._qp_summary(),
+                "self_collision_cbf": (
+                    None
+                    if self._last_self_collision_cbf is None
+                    else self._last_self_collision_cbf.to_record()
+                ),
             },
             "parameters": {
                 "target_offset": self.target_offset.tolist(),
@@ -597,6 +694,17 @@ class CartesianPositionTest(Node):
                 "qp_max_iterations": self.qp_max_iterations,
                 "qp_time_limit": self.qp_time_limit,
                 "qp_polishing": self.qp_polishing,
+                "self_collision_cbf_mode": self.self_collision_cbf_mode,
+                "self_collision_safe_distance": (
+                    self.self_collision_safe_distance
+                ),
+                "self_collision_cbf_gain": self.self_collision_cbf_gain,
+                "self_collision_distance_tolerance": (
+                    self.self_collision_distance_tolerance
+                ),
+                "self_collision_distance_max_iterations": (
+                    self.self_collision_distance_max_iterations
+                ),
                 "max_cartesian_speed": self.max_cartesian_speed,
                 "max_abs_joint_velocity": self.max_abs_joint_velocity,
                 "position_tolerance": self.position_tolerance,
@@ -702,6 +810,7 @@ class CartesianPositionTest(Node):
             KinematicsError,
             NominalControlError,
             QpControlError,
+            SelfCollisionCbfError,
             ValueError,
         ) as error:
             self.request_abort(f"Falha de controle: {error}")
@@ -789,7 +898,11 @@ class CartesianPositionTest(Node):
                 now_wall=now,
                 now_simulated=now_simulated,
             )
-            state = self._evaluate_kinematics()
+            model_positions = self._model_positions()
+            state = self._evaluate_kinematics(model_positions)
+            self_collision_cbf = self._evaluate_self_collision_cbf(
+                model_positions
+            )
             error = self.target_position - np.asarray(state.position)
             error_norm = float(np.linalg.norm(error))
             if error_norm <= self.position_tolerance:
@@ -806,6 +919,7 @@ class CartesianPositionTest(Node):
                     phase="tolerance_reached",
                     cartesian_saturated=False,
                     joint_saturated=False,
+                    self_collision_cbf=self_collision_cbf,
                 )
                 self.get_logger().info(
                     f"Tolerancia atingida: erro={error_norm:.6f} m; "
@@ -821,6 +935,7 @@ class CartesianPositionTest(Node):
                     phase="simulated_timeout",
                     cartesian_saturated=False,
                     joint_saturated=False,
+                    self_collision_cbf=self_collision_cbf,
                 )
                 self.request_abort(
                     "Tempo simulado maximo de controle excedido."
@@ -834,6 +949,7 @@ class CartesianPositionTest(Node):
                     phase="wall_timeout",
                     cartesian_saturated=False,
                     joint_saturated=False,
+                    self_collision_cbf=self_collision_cbf,
                 )
                 self.request_abort(
                     "Tempo real maximo de seguranca do controle excedido."
@@ -841,6 +957,7 @@ class CartesianPositionTest(Node):
                 return
             qp_diagnostics = None
             joint_constraint_active = False
+            self_collision_constraint_active = False
             joint_saturated = False
             common_arguments = {
                 "error": error,
@@ -853,12 +970,23 @@ class CartesianPositionTest(Node):
                 "max_abs_joint_velocity": self.max_abs_joint_velocity,
             }
             if self.controller_mode == "qp":
+                if (
+                    self.self_collision_cbf_mode == "enforce"
+                    and self_collision_cbf is not None
+                ):
+                    common_arguments["cbf_matrix"] = self_collision_cbf.matrix
+                    common_arguments["cbf_lower_bound"] = (
+                        self_collision_cbf.lower_bound
+                    )
                 result = compute_qp_position_control(
                     **common_arguments,
                     solver=self.qp_solver,
                 )
                 qp_diagnostics = result.diagnostics
                 joint_constraint_active = result.joint_constraint_active
+                self_collision_constraint_active = (
+                    result.cbf_constraint_active
+                )
             else:
                 result = compute_position_control(**common_arguments)
                 joint_saturated = result.joint_saturated
@@ -875,7 +1003,11 @@ class CartesianPositionTest(Node):
                 cartesian_saturated=result.cartesian_saturated,
                 joint_saturated=joint_saturated,
                 joint_constraint_active=joint_constraint_active,
+                self_collision_constraint_active=(
+                    self_collision_constraint_active
+                ),
                 qp_diagnostics=qp_diagnostics,
+                self_collision_cbf=self_collision_cbf,
             )
             if now - self._last_progress_log >= 1.0:
                 real_time_factor = (
@@ -891,12 +1023,24 @@ class CartesianPositionTest(Node):
                         f"qp_us={1e6 * qp_diagnostics.solve_time:.1f}; "
                     )
                 )
+                cbf_progress = (
+                    ""
+                    if self_collision_cbf is None
+                    else (
+                        f"d_self_min={self_collision_cbf.minimum_distance:.4f} m; "
+                        f"h_self_min={self_collision_cbf.minimum_barrier:.4f} m; "
+                        f"cbf_ms={1e3 * self_collision_cbf.evaluation_time:.1f}; "
+                        f"par={self_collision_cbf.closest_pair}; "
+                    )
+                )
                 self.get_logger().info(
                     f"erro={result.error_norm:.6f} m; "
                     f"cart_sat={result.cartesian_saturated}; "
                     f"joint_sat={joint_saturated}; "
                     f"joint_active={joint_constraint_active}; "
+                    f"self_cbf_active={self_collision_constraint_active}; "
                     f"{qp_progress}"
+                    f"{cbf_progress}"
                     f"t_sim={timing.simulated_seconds:.3f} s; "
                     f"t_real={timing.wall_seconds:.3f} s; "
                     f"RTF={real_time_factor:.3f}."

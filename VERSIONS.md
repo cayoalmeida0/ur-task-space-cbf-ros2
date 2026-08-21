@@ -2,6 +2,30 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao experimental 0.6.0 / controle 0.6.0 / bringup 0.3.0 — 21 de agosto de 2026
+
+- Formula a primeira CBF cinemática de autocolisao como
+  `J_d qdot >= -gamma (d-d_safe)` para pares nao adjacentes.
+- Generaliza o QP OSQP para desigualdades CBF, preservando limites articulares,
+  warm start, diagnostico de restricoes ativas e verificacao de viabilidade.
+- Adiciona os modos `off`, `monitor` e `enforce`; o padrao permanece `off` ate a
+  validacao geometrica e temporal no container.
+- Usa explicitamente `compute_dist_auto` do UAIbot em modo Python e registra a
+  origem da geometria, o par mais proximo, a distancia e o valor da barreira.
+- Substitui as nove aproximacoes visuais anteriores pelas mesmas 19 primitivas
+  da fabrica UR3e do UAIbot: 14 cilindros, duas esferas e tres caixas.
+- Converte as matrizes dos frames DH para os frames de elo da descricao oficial
+  Jazzy e adiciona regressao para nomes, tipos, poses e dimensoes dos 19 objetos.
+- Valida o wheel UAIbot em tempo de execucao e interrompe o modo de autocolisao
+  se contagem, tipo, matriz ou dimensao divergir da copia visual versionada.
+- Remove a capsula RG2 separada: a visualizacao distal passa a exibir a mesma
+  garra generica usada pelo calculo, evitando sobreposicao de modelos distintos.
+- Registra que a coerencia visual/matematica nao certifica fidelidade dimensional
+  da garra generica UAIbot em relacao a RG2 fisica; esta revisao ainda nao esta
+  liberada para o robo real.
+- Atualiza o esquema experimental para `1.4` e adiciona testes da formulacao,
+  conversao das distancias e integracao das desigualdades no QP.
+
 ## Revisao de consolidacao 0.5.7 — 21 de agosto de 2026
 
 - Reorganiza a documentacao em uma entrada rapida e guias dedicados para

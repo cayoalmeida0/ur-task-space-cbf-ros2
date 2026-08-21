@@ -6,11 +6,11 @@ distância diferenciáveis. A mesma interface comanda a planta simulada e o rob�
 real: velocidades articulares em
 `/forward_velocity_controller/commands`.
 
-> **Estado atual — revisão de projeto 0.5.7:** infraestrutura Docker `0.2.0`,
-> `ur_cbf_bringup` `0.2.4` e `ur_cbf_control` `0.5.1`. O controlador nominal
-> opera por DLS ou QP com limites de velocidade. A formulação das CBFs ainda é o
-> próximo marco; os volumes geométricos já podem ser inspecionados no RViz e no
-> Gazebo.
+> **Estado atual — revisão experimental 0.6.0:** infraestrutura Docker `0.2.0`,
+> `ur_cbf_bringup` `0.3.0` e `ur_cbf_control` `0.6.0`. O QP já aceita a primeira
+> CBF cinemática de autocolisão nos modos `monitor` e `enforce`. Os 19 volumes
+> transparentes copiam a mesma geometria interna do UAIbot; o padrão permanece
+> `off` até validarmos poses e custo computacional no container.
 
 ## Visão geral
 
@@ -37,9 +37,10 @@ flowchart TD
 - OnRobot RG2/RG6 no RViz e no Gazebo, com backend real Modbus;
 - interface comum da gripper em `/finger_width_controller/commands`;
 - controle cartesiano nominal por DLS ou QP com OSQP 1.1.3;
+- formulação de autocolisão `J_d qdot >= -gamma (d-d_safe)` integrada ao QP;
 - TCP controlado em `gripper_tcp`, no centro dos dedos fechados;
 - watchdogs, comando nulo em falhas e ensaios explicitamente armados;
-- volumes visuais do UR3e/RG2 que acompanharão a futura geometria das CBFs;
+- 19 volumes visuais idênticos às primitivas de colisão internas do UAIbot;
 - resultados experimentais em JSON com parâmetros, versões, seed e métricas.
 
 ### Escopo dos modelos
@@ -49,7 +50,8 @@ flowchart TD
 | Bringup ROS/Gazebo | `ur_type` é parametrizado; UR3e é o padrão |
 | Gripper | RG2 consolidada; RG6 disponível para comparação |
 | Adaptador cinemático UAIbot | UR3e implementado e validado |
-| Volumes visuais para CBF | dimensões atuais específicas do UR3e com RG2 |
+| CBF de autocolisão | núcleo/QP implementado; backend UAIbot em validação |
+| Volumes visuais para CBF | 19 primitivas UAIbot copiadas para o Xacro |
 | Hardware real | UR via `ur_robot_driver`; RG2 via driver OnRobot |
 
 Modelos sem adaptador ou geometria explícita são recusados, em vez de receberem
@@ -165,6 +167,7 @@ Gazebo e os launches instalados.
 
 - [Instalação, configuração, build e diagnóstico](docs/SETUP.md)
 - [Simulação, gripper, volumes visuais e ensaios](docs/SIMULATION.md)
+- [Formulação e escopo da CBF de autocolisão](docs/SELF_COLLISION_CBF.md)
 - [Preparação e segurança do robô real](docs/REAL_ROBOT.md)
 - [Controle DLS/QP, proteções e metodologia](ur_cbf_ws/src/ur_cbf_control/README.md)
 - [Como contribuir](CONTRIBUTING.md)

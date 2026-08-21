@@ -35,6 +35,9 @@ def launch_setup(context):
                     "ur_type": LaunchConfiguration("ur_type"),
                     "onrobot_type": onrobot_type,
                     "controller_mode": LaunchConfiguration("controller_mode"),
+                    "self_collision_cbf_mode": LaunchConfiguration(
+                        "self_collision_cbf_mode"
+                    ),
                     "max_control_duration": ParameterValue(
                         LaunchConfiguration("max_control_duration"),
                         value_type=float,
@@ -79,6 +82,14 @@ def generate_launch_description():
                 default_value="qp",
                 choices=["dls", "qp"],
                 description="Resolvedor nominal usado no ensaio comparativo.",
+            ),
+            DeclareLaunchArgument(
+                "self_collision_cbf_mode",
+                default_value="off",
+                choices=["off", "monitor", "enforce"],
+                description=(
+                    "Desliga, monitora ou impoe a CBF de autocolisao no QP."
+                ),
             ),
             DeclareLaunchArgument(
                 "max_control_duration",

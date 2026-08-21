@@ -1,9 +1,20 @@
 """Adaptador entre o controlador ROS 2 e a cinemática do UAIbot."""
 
 from dataclasses import dataclass
+import math
+import time
 from typing import Any, Sequence
 
 import numpy as np
+
+from ur_cbf_control.self_collision_cbf import distances_from_uaibot_structure
+from ur_cbf_control.self_collision_cbf import SelfCollisionCbfError
+from ur_cbf_control.self_collision_cbf import SelfCollisionDistances
+from ur_cbf_control.uaibot_collision_model import UAIBOT_GEOMETRY_SOURCE
+from ur_cbf_control.uaibot_collision_model import UaibotCollisionModelError
+from ur_cbf_control.uaibot_collision_model import (
+    validate_uaibot_ur3e_collision_model,
+)
 
 
 class KinematicsError(RuntimeError):
@@ -173,6 +184,7 @@ class UaibotKinematics:
         self.requested_mode = mode if requested_mode is None else requested_mode
         self.model_name = str(model_name)
         self.model_corrections = tuple(model_corrections)
+        self._self_collision_geometry_validated = False
         htm_n_eef = homogeneous_transform_from_xyz_rpy(
             eef_offset_xyz,
             eef_offset_rpy,
@@ -265,3 +277,70 @@ class UaibotKinematics:
             position=position,
             translational_jacobian=jacobian_array[:3, :].copy(),
         )
+
+    def evaluate_self_collision(
+        self,
+        model_positions: Sequence[float],
+        *,
+        tolerance: float = 5e-4,
+        max_iterations: int = 20,
+    ) -> SelfCollisionDistances:
+        """Avalia todos os pares nao adjacentes do modelo interno UAIbot.
+
+        ``max_dist=np.inf`` preserva o conjunto de linhas do QP entre ciclos e
+        evita que um par seja descoberto somente depois de cruzar uma margem de
+        ativacao. O modo Python e obrigatorio devido a correcao DH do UR3e.
+        """
+
+        positions = np.asarray(model_positions, dtype=float).reshape(-1)
+        if positions.size != len(self.model_joint_names):
+            raise KinematicsError(
+                "Dimensao da configuracao difere da ordem de juntas do modelo."
+            )
+        if not np.all(np.isfinite(positions)):
+            raise KinematicsError("Configuracao contém NaN ou infinito.")
+        if not math.isfinite(tolerance) or tolerance <= 0.0:
+            raise KinematicsError(
+                "Tolerancia de distancia deve ser finita e positiva."
+            )
+        if max_iterations <= 0:
+            raise KinematicsError(
+                "Numero maximo de iteracoes de distancia deve ser positivo."
+            )
+        if not hasattr(self.robot, "compute_dist_auto"):
+            raise KinematicsError(
+                "A versao instalada do UAIbot nao oferece compute_dist_auto."
+            )
+
+        if not self._self_collision_geometry_validated:
+            try:
+                validate_uaibot_ur3e_collision_model(self.robot)
+            except UaibotCollisionModelError as error:
+                raise KinematicsError(str(error)) from error
+            self._self_collision_geometry_validated = True
+
+        try:
+            start = time.perf_counter()
+            structure = self.robot.compute_dist_auto(
+                q=positions,
+                old_dist_struct=None,
+                tol=float(tolerance),
+                no_iter_max=int(max_iterations),
+                max_dist=np.inf,
+                h=0.0,
+                eps=0.0,
+                mode="python",
+            )
+            evaluation_time = time.perf_counter() - start
+            return distances_from_uaibot_structure(
+                structure,
+                joint_count=len(self.model_joint_names),
+                evaluation_time=evaluation_time,
+                geometry_source=UAIBOT_GEOMETRY_SOURCE,
+            )
+        except SelfCollisionCbfError as error:
+            raise KinematicsError(str(error)) from error
+        except Exception as error:
+            raise KinematicsError(
+                f"Falha ao calcular distancias de autocolisao UAIbot: {error}"
+            ) from error

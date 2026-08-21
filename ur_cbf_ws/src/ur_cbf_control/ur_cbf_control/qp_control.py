@@ -1,4 +1,4 @@
-"""Nucleo QP do controlador cartesiano nominal com limites articulares."""
+"""Nucleo QP do controlador cartesiano com limites e restricoes CBF."""
 
 from dataclasses import dataclass
 import math
@@ -35,12 +35,22 @@ class QpDiagnostics:
     rho_updates: int
     active_lower: tuple[int, ...]
     active_upper: tuple[int, ...]
+    active_cbf: tuple[int, ...]
     max_bound_violation: float
+    max_cbf_violation: float
     reused_workspace: bool
 
     @property
     def constraint_active(self) -> bool:
+        """Indica ativacao de algum limite articular."""
+
         return bool(self.active_lower or self.active_upper)
+
+    @property
+    def cbf_constraint_active(self) -> bool:
+        """Indica ativacao de alguma desigualdade CBF."""
+
+        return bool(self.active_cbf)
 
     def to_record(self) -> dict[str, object]:
         """Converte o diagnostico para tipos JSON estritos."""
@@ -60,7 +70,9 @@ class QpDiagnostics:
             "rho_updates": self.rho_updates,
             "active_lower": list(self.active_lower),
             "active_upper": list(self.active_upper),
+            "active_cbf": list(self.active_cbf),
             "max_bound_violation": self.max_bound_violation,
+            "max_cbf_violation": self.max_cbf_violation,
             "reused_workspace": self.reused_workspace,
         }
 
@@ -76,6 +88,7 @@ class QpPositionControlResult:
     error_norm: float
     cartesian_saturated: bool
     joint_constraint_active: bool
+    cbf_constraint_active: bool
     diagnostics: QpDiagnostics
 
 
@@ -154,6 +167,7 @@ class BoxConstrainedQpSolver:
         self._solver_factory = solver_factory or osqp.OSQP
         self._solver: Any | None = None
         self._dimension: int | None = None
+        self._cbf_count: int | None = None
 
     @property
     def solver_version(self) -> str:
@@ -176,17 +190,23 @@ class BoxConstrainedQpSolver:
         *,
         quadratic: sparse.csc_matrix,
         linear: np.ndarray,
+        constraint_matrix: sparse.csc_matrix,
         lower: np.ndarray,
         upper: np.ndarray,
+        cbf_count: int,
     ) -> bool:
         dimension = linear.size
-        reused = self._solver is not None and self._dimension == dimension
+        reused = (
+            self._solver is not None
+            and self._dimension == dimension
+            and self._cbf_count == cbf_count
+        )
         if not reused:
             self._solver = self._solver_factory()
             self._solver.setup(
                 P=quadratic,
                 q=linear,
-                A=sparse.eye(dimension, format="csc"),
+                A=constraint_matrix,
                 l=lower,
                 u=upper,
                 verbose=False,
@@ -198,15 +218,47 @@ class BoxConstrainedQpSolver:
                 warm_starting=True,
             )
             self._dimension = dimension
+            self._cbf_count = cbf_count
             return False
 
         self._solver.update(
             Px=quadratic.data,
+            Ax=constraint_matrix.data,
             q=linear,
             l=lower,
             u=upper,
         )
         return True
+
+    @staticmethod
+    def _stack_constraint_matrix(
+        dimension: int,
+        cbf_matrix: np.ndarray,
+    ) -> sparse.csc_matrix:
+        """Cria um padrao CSC fixo para limites e linhas CBF densas."""
+
+        cbf_count = cbf_matrix.shape[0]
+        rows = np.concatenate(
+            (
+                np.arange(dimension),
+                dimension + np.repeat(np.arange(cbf_count), dimension),
+            )
+        )
+        columns = np.concatenate(
+            (
+                np.arange(dimension),
+                np.tile(np.arange(dimension), cbf_count),
+            )
+        )
+        values = np.concatenate((np.ones(dimension), cbf_matrix.reshape(-1)))
+        result = sparse.csc_matrix(
+            (values, (rows, columns)),
+            shape=(dimension + cbf_count, dimension),
+        )
+        expected_entries = dimension * (1 + cbf_count)
+        if result.nnz != expected_entries:
+            raise QpControlError("Padrao esparso das restricoes foi alterado.")
+        return result
 
     def solve(
         self,
@@ -215,8 +267,10 @@ class BoxConstrainedQpSolver:
         task_velocity: Sequence[float],
         damping: float,
         max_abs_joint_velocity: float | Sequence[float],
+        cbf_matrix: Sequence[Sequence[float]] | None = None,
+        cbf_lower_bound: Sequence[float] | None = None,
     ) -> tuple[np.ndarray, QpDiagnostics]:
-        """Minimiza erro cartesiano amortecido sujeito a limites de qdot."""
+        """Minimiza erro cartesiano sujeito a limites e ``C qdot >= b``."""
 
         matrix = _finite_matrix(jacobian, "Jacobiano")
         velocity = _finite_vector(task_velocity, "Velocidade da tarefa")
@@ -229,8 +283,32 @@ class BoxConstrainedQpSolver:
 
         dimension = matrix.shape[1]
         limits = _positive_limits(max_abs_joint_velocity, dimension)
-        lower = -limits
-        upper = limits
+        if cbf_matrix is None and cbf_lower_bound is None:
+            cbf = np.empty((0, dimension), dtype=float)
+            cbf_lower = np.empty(0, dtype=float)
+        elif cbf_matrix is None or cbf_lower_bound is None:
+            raise QpControlError(
+                "Matriz e limite inferior CBF devem ser fornecidos juntos."
+            )
+        else:
+            cbf = np.asarray(cbf_matrix, dtype=float)
+            cbf_lower = np.asarray(cbf_lower_bound, dtype=float).reshape(-1)
+            if cbf.ndim != 2 or cbf.shape[1] != dimension:
+                raise QpControlError(
+                    "Matriz CBF deve ter uma coluna por velocidade articular."
+                )
+            if cbf.shape[0] != cbf_lower.size:
+                raise QpControlError(
+                    "Quantidade de limites CBF difere das linhas da matriz."
+                )
+            if not np.all(np.isfinite(cbf)) or not np.all(np.isfinite(cbf_lower)):
+                raise QpControlError("Restricoes CBF contem NaN ou infinito.")
+
+        lower = np.concatenate((-limits, cbf_lower))
+        upper = np.concatenate(
+            (limits, np.full(cbf_lower.size, np.inf, dtype=float))
+        )
+        constraint_matrix = self._stack_constraint_matrix(dimension, cbf)
         hessian = matrix.T @ matrix + (damping**2) * np.eye(dimension)
         linear = -(matrix.T @ velocity)
         quadratic = self._upper_triangular(hessian)
@@ -239,8 +317,10 @@ class BoxConstrainedQpSolver:
             reused = self._setup_or_update(
                 quadratic=quadratic,
                 linear=linear,
+                constraint_matrix=constraint_matrix,
                 lower=lower,
                 upper=upper,
+                cbf_count=cbf.shape[0],
             )
             result = self._solver.solve(raise_error=False)
         except Exception as error:
@@ -258,34 +338,61 @@ class BoxConstrainedQpSolver:
         if solution.size != dimension or not np.all(np.isfinite(solution)):
             raise QpControlError("OSQP retornou solucao articular invalida.")
 
-        lower_violation = np.maximum(lower - solution, 0.0)
-        upper_violation = np.maximum(solution - upper, 0.0)
-        max_violation = float(
+        constraint_values = np.asarray(constraint_matrix @ solution).reshape(-1)
+        lower_violation = np.maximum(lower - constraint_values, 0.0)
+        upper_violation = np.maximum(constraint_values - upper, 0.0)
+        max_bound_violation = float(
+            max(
+                np.max(lower_violation[:dimension]),
+                np.max(upper_violation[:dimension]),
+            )
+        )
+        max_constraint_violation = float(
             max(np.max(lower_violation), np.max(upper_violation))
         )
         feasibility_tolerance = max(
             10.0 * self.absolute_tolerance,
-            10.0 * self.relative_tolerance * float(np.max(limits)),
+            10.0
+            * self.relative_tolerance
+            * max(float(np.max(limits)), float(np.max(np.abs(lower))), 1.0),
         )
-        if max_violation > feasibility_tolerance:
+        if max_constraint_violation > feasibility_tolerance:
             raise QpControlError(
-                "OSQP violou os limites articulares acima da tolerancia: "
-                f"{max_violation:.3e}."
+                "OSQP violou alguma restricao acima da tolerancia: "
+                f"{max_constraint_violation:.3e}."
             )
-        solution = np.clip(solution, lower, upper)
+        solution = np.clip(solution, -limits, limits)
         active_tolerance = max(feasibility_tolerance, 1e-8)
         active_lower = tuple(
             int(index)
             for index in np.flatnonzero(
-                np.abs(solution - lower) <= active_tolerance
+                np.abs(solution + limits) <= active_tolerance
             )
         )
         active_upper = tuple(
             int(index)
             for index in np.flatnonzero(
-                np.abs(solution - upper) <= active_tolerance
+                np.abs(solution - limits) <= active_tolerance
             )
         )
+        if cbf.shape[0]:
+            cbf_values = np.asarray(cbf @ solution).reshape(-1)
+            cbf_violation = np.maximum(cbf_lower - cbf_values, 0.0)
+            max_cbf_violation = float(np.max(cbf_violation))
+            active_cbf = tuple(
+                int(index)
+                for index in np.flatnonzero(
+                    np.abs(cbf_values - cbf_lower) <= active_tolerance
+                )
+            )
+        else:
+            max_cbf_violation = 0.0
+            active_cbf = ()
+        if max_cbf_violation > feasibility_tolerance:
+            raise QpControlError(
+                "A projecao numerica violou alguma restricao CBF acima da "
+                f"tolerancia: {max_cbf_violation:.3e}."
+            )
         diagnostics = QpDiagnostics(
             status=status,
             status_value=status_value,
@@ -301,7 +408,9 @@ class BoxConstrainedQpSolver:
             rho_updates=int(getattr(info, "rho_updates", 0)),
             active_lower=active_lower,
             active_upper=active_upper,
-            max_bound_violation=max_violation,
+            active_cbf=active_cbf,
+            max_bound_violation=max_bound_violation,
+            max_cbf_violation=max_cbf_violation,
             reused_workspace=reused,
         )
         return solution, diagnostics
@@ -318,6 +427,8 @@ def compute_qp_position_control(
     max_cartesian_speed: float,
     max_abs_joint_velocity: float | Sequence[float],
     solver: BoxConstrainedQpSolver,
+    cbf_matrix: Sequence[Sequence[float]] | None = None,
+    cbf_lower_bound: Sequence[float] | None = None,
 ) -> QpPositionControlResult:
     """Calcula o comando QP e o organiza na ordem do controlador ROS."""
 
@@ -343,6 +454,8 @@ def compute_qp_position_control(
             task_velocity=cartesian_velocity,
             damping=damping,
             max_abs_joint_velocity=max_abs_joint_velocity,
+            cbf_matrix=cbf_matrix,
+            cbf_lower_bound=cbf_lower_bound,
         )
         if model_velocity.size != len(model_joint_names):
             raise QpControlError(
@@ -365,5 +478,6 @@ def compute_qp_position_control(
         error_norm=float(np.linalg.norm(error_vector)),
         cartesian_saturated=cartesian_saturated,
         joint_constraint_active=diagnostics.constraint_active,
+        cbf_constraint_active=diagnostics.cbf_constraint_active,
         diagnostics=diagnostics,
     )

@@ -1,8 +1,8 @@
 # `ur_cbf_control`
 
 Pacote de controle seguro desenvolvido sobre a infraestrutura Docker `v0.2.0`.
-Ele contem o ensaio da cadeia de velocidades articulares e a regulacao cartesiana
-nominal por DLS ou QP. As CBFs ainda nao fazem parte desta revisao.
+Ele contem o ensaio da cadeia de velocidades articulares, a regulacao cartesiana
+por DLS/QP e a primeira CBF cinemática de autocolisao.
 
 ## Protecoes do ensaio de pulso
 
@@ -66,6 +66,24 @@ essa solucao coincide numericamente com DLS. O OSQP 1.1.3 reutiliza o workspace 
 o warm start entre iteracoes; qualquer status diferente de `solved` ou
 `solved inaccurate` causa comando nulo e reprova o ensaio.
 
+## CBF de autocolisao
+
+Para cada par nao adjacente, a barreira e `h(q) = d(q) - d_safe`. Como o
+comando e velocidade articular, a restricao entra diretamente no QP:
+
+```text
+J_d(q) qdot >= -gamma (d(q) - d_safe)
+```
+
+Use `self_collision_cbf_mode:=monitor` para calcular e registrar a distancia
+minima sem alterar o comando. `enforce` acrescenta todas as linhas ao OSQP e so
+e aceito com `controller_mode:=qp`; `off` e o padrao. Os 19 volumes transparentes
+copiam as mesmas primitivas internas do UAIbot, após a conversao fixa dos frames
+DH para os frames URDF. A garra representada continua sendo a geometria generica
+da fabrica UAIbot, nao uma aproximacao dimensional certificada da RG2. Consulte
+[`docs/SELF_COLLISION_CBF.md`](../../../docs/SELF_COLLISION_CBF.md) antes de
+ativar a restricao.
+
 O UAIbot 1.2.7 fornece `p` e `J_v`. O vetor `q` vem exclusivamente de
 `/joint_states`, cuja ordem e convertida explicitamente para a ordem configurada
 do modelo. A saida e convertida novamente para a ordem consultada no parametro
@@ -96,6 +114,18 @@ ros2 launch ur_cbf_control cartesian_position.launch.py \
   onrobot_type:=rg2 \
   controller_mode:=qp \
   experiment_id:=cartesian_qp_ur3e_001 \
+  execute_test:=true
+```
+
+Primeiro ensaio de geometria, sem modificar o comando do QP:
+
+```bash
+ros2 launch ur_cbf_control cartesian_position.launch.py \
+  ur_type:=ur3e \
+  onrobot_type:=rg2 \
+  controller_mode:=qp \
+  self_collision_cbf_mode:=monitor \
+  experiment_id:=self_collision_monitor_ur3e_001 \
   execute_test:=true
 ```
 
