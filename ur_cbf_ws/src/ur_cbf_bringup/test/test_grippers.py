@@ -8,6 +8,7 @@ from ur_cbf_bringup.grippers import (
     SUPPORTED_ONROBOT_TYPES,
     get_gripper_spec,
 )
+from ur_cbf_bringup.visualization import resolve_cbf_visibility
 
 
 PACKAGE_ROOT = Path(__file__).parents[1]
@@ -129,8 +130,8 @@ def test_cbf_visual_volumes_are_visual_only_and_cover_ur3e_rg2():
     assert text.count("<xacro:cbf_sphere_visual") == 5
     assert text.count("<xacro:cbf_capsule_visual") == 3
     assert text.count("<xacro:cbf_cylinder_visual") == 1
-    assert text.count("<visibility_flags>0</visibility_flags>") == 3
-    assert text.count('<xacro:unless value="${gazebo_visible}">') == 3
+    assert "<visibility_flags>" not in text
+    assert "gazebo_visible" not in text
     for parent in (
         "base_link",
         "shoulder_link",
@@ -178,9 +179,7 @@ def test_rg2_uses_one_gripper_capsule_and_rg6_does_not_reuse_it():
     for description in (rg2, rg6):
         assert "cbf_visual_volumes.urdf.xacro" in description
         assert 'name="show_cbf_volumes"' in description
-        assert 'name="show_cbf_volumes_gazebo"' in description
         assert "<xacro:ur3e_cbf_visual_volumes" in description
-        assert 'gazebo_visible="$(arg show_cbf_volumes_gazebo)"' in description
         assert "selected_ur_type == 'ur3e'" in description
     assert rg2.count("<xacro:rg2_cbf_visual_volume") == 1
     assert "<xacro:rg2_cbf_visual_volume" not in rg6
@@ -192,6 +191,9 @@ def test_cbf_visual_volumes_can_be_toggled_without_editing_env():
     )
     makefile = (REPOSITORY_ROOT / "Makefile").read_text(encoding="utf-8")
     env_example = (REPOSITORY_ROOT / ".env.example").read_text(encoding="utf-8")
+    simulation_launch = (PACKAGE_ROOT / "launch" / "simulation.launch.py").read_text(
+        encoding="utf-8"
+    )
 
     assert "CBF_VOLUMES: ${CBF_VOLUMES:-true}" in compose
     assert "CBF_VOLUMES_GAZEBO: ${CBF_VOLUMES_GAZEBO:-true}" in compose
@@ -199,7 +201,48 @@ def test_cbf_visual_volumes_can_be_toggled_without_editing_env():
     assert "CBF_VOLUMES_GAZEBO ?= true" in makefile
     assert 'CBF_VOLUMES="$(CBF_VOLUMES)" \\' in makefile
     assert 'CBF_VOLUMES_GAZEBO="$(CBF_VOLUMES_GAZEBO)" \\' in makefile
+    assert "test-cbf-motion: init" in makefile
+    assert "./scripts/test_cbf_volume_motion.sh" in makefile
     assert "CBF_VOLUMES=true" in env_example
     assert "CBF_VOLUMES_GAZEBO=true" in env_example
     assert "make sim CBF_VOLUMES=false" in env_example
     assert "make sim CBF_VOLUMES_GAZEBO=false" in env_example
+    assert "rviz_description_content = _description_command(" in simulation_launch
+    assert "gazebo_description_content = _description_command(" in simulation_launch
+    assert '"robot_description": ParameterValue(' in simulation_launch
+    assert '"-string",\n            gazebo_description_content,' in simulation_launch
+
+
+@pytest.mark.parametrize(
+    ("show_volumes", "show_volumes_gazebo", "expected"),
+    [
+        ("true", "true", ("true", "true")),
+        ("true", "false", ("true", "false")),
+        ("false", "true", ("false", "false")),
+        ("false", "false", ("false", "false")),
+    ],
+)
+def test_cbf_visibility_is_resolved_independently(
+    show_volumes, show_volumes_gazebo, expected
+):
+    assert resolve_cbf_visibility(show_volumes, show_volumes_gazebo) == expected
+
+
+def test_cbf_visibility_rejects_invalid_values():
+    with pytest.raises(ValueError, match="show_cbf_volumes"):
+        resolve_cbf_visibility("yes", "true")
+    with pytest.raises(ValueError, match="show_cbf_volumes_gazebo"):
+        resolve_cbf_visibility("true", "yes")
+
+
+def test_visual_motion_test_is_simulation_only_and_returns_each_joint():
+    script = (
+        REPOSITORY_ROOT / "scripts" / "test_cbf_volume_motion.sh"
+    ).read_text(encoding="utf-8")
+
+    assert 'grep -qx "/gz_ros_control"' in script
+    assert script.count("run_pulse shoulder_pan_joint") == 2
+    assert script.count("run_pulse elbow_joint") == 2
+    assert script.count("run_pulse wrist_1_joint") == 2
+    assert "pulse_duration" in script
+    assert "max_abs_velocity:=0.35" in script

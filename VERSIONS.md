@@ -2,6 +2,20 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao visual 0.5.5 / bringup 0.2.4 — 21 de agosto de 2026
+
+- Corrige `CBF_VOLUMES_GAZEBO=false` gerando descricoes Xacro independentes
+  para o `robot_state_publisher`/RViz e para `ros_gz_sim create`/Gazebo.
+- Remove a dependencia de `visibility_flags` aplicada a links fixos sem
+  inercia, pois esses links sao agrupados durante a conversao URDF para SDFormat.
+- Mantem os nove volumes no RViz e os remove integralmente apenas da entidade
+  criada no Gazebo quando a chave exclusiva esta desativada.
+- Adiciona regressao para as quatro combinacoes de `CBF_VOLUMES` e
+  `CBF_VOLUMES_GAZEBO`.
+- Adiciona `make test-cbf-motion`, um ensaio somente para simulacao com seis
+  pulsos protegidos, deslocamento nominal de `0.6 rad` e retorno das tres juntas.
+- Atualiza `ur_cbf_bringup` para `0.2.4`.
+
 ## Revisao visual 0.5.4 / bringup 0.2.3 — 21 de agosto de 2026
 
 - Substitui `wrist_1_connector` por um cilindro de `0.10405 m`, removendo as duas

@@ -5,10 +5,10 @@ CBFs, QPs e metricas de distancia diferenciaveis. A interface de controle e a me
 na simulacao e no hardware real: velocidades articulares publicadas em
 `/forward_velocity_controller/commands`.
 
-> **Estado do projeto:** infraestrutura Docker `v0.2.0`, bringup `v0.2.3` e
+> **Estado do projeto:** infraestrutura Docker `v0.2.0`, bringup `v0.2.4` e
 > pacote de controle `ur_cbf_control` na revisao `0.5.1`. O controlador nominal
 > pode operar por DLS ou por QP com limites articulares. A simulacao inclui uma
-> OnRobot RG2/RG6 selecionavel e a revisao visual `0.5.4` introduz os volumes
+> OnRobot RG2/RG6 selecionavel e a revisao visual `0.5.5` introduz os volumes
 > geometricos que servirao de base para as CBFs.
 
 ## Arquitetura
@@ -298,11 +298,16 @@ make sim CBF_VOLUMES_GAZEBO=false
 | `true` | `false` | visiveis | ocultos |
 | `false` | qualquer valor | ausentes | ausentes |
 
-A opcao exclusiva do Gazebo usa `visibility_flags=0` no SDFormat gerado. O
-`robot_description` continua contendo os elementos `<visual>`, portanto o
-`RobotModel` do RViz permanece inalterado. A semantica da mascara e definida na
-[especificacao oficial do elemento visual do SDFormat](https://sdformat.org/spec/1.12/visual/).
-Como a descricao e processada durante a inicializacao, altere a chave apos
+A opcao exclusiva do Gazebo gera duas expansoes independentes do Xacro. O
+`robot_state_publisher` recebe a descricao completa usada pelo `RobotModel` do
+RViz, enquanto `ros_gz_sim create` recebe outra descricao, sem os links dos
+volumes quando `CBF_VOLUMES_GAZEBO=false`. Isso evita depender de extensoes
+`visibility_flags`, que podem ser perdidas quando o conversor URDF para SDFormat
+agrupa links fixos sem inercia. A separacao segue a mesma arquitetura de
+inicializacao do
+[`ur_sim_control.launch.py` oficial](https://github.com/UniversalRobots/Universal_Robots_ROS2_GZ_Simulation/blob/jazzy/ur_simulation_gz/launch/ur_sim_control.launch.py),
+mas fornece descricoes diferentes ao publicador de estado e ao criador da entidade.
+Como ambas sao processadas durante a inicializacao, altere a chave apos
 `make down` e reinicie a simulacao.
 
 Para reativa-los:
@@ -311,6 +316,19 @@ Para reativa-los:
 make down
 make sim
 ```
+
+Com a simulacao ativa, um ensaio visual protegido movimenta tres juntas em
+sequencia e retorna cada uma a posicao inicial:
+
+```bash
+make test-cbf-motion
+```
+
+O ensaio aplica deslocamentos nominais de `0.6 rad` em
+`shoulder_pan_joint`, `elbow_joint` e `wrist_1_joint`, com velocidades entre
+`0.20 rad/s` e `0.30 rad/s`. Cada pulso verifica o deslocamento medido e termina
+mantendo comando nulo. Ele exige `/gz_ros_control` e se recusa a operar no robo
+real.
 
 As aproximacoes do braco sao atualmente especificas do UR3e; outro valor de
 `UR_TYPE` nao recebe silenciosamente as dimensoes do UR3e. A capsula da RG2 e

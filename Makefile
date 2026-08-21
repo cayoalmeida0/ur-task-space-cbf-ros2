@@ -6,7 +6,7 @@ ONROBOT_PORT ?= 502
 CBF_VOLUMES ?= true
 CBF_VOLUMES_GAZEBO ?= true
 
-.PHONY: init configure-real diagnose build shell check gui-auth sim real down
+.PHONY: init configure-real diagnose build shell check gui-auth sim test-cbf-motion real down
 
 init:
 	@./scripts/sync_env.sh
@@ -60,6 +60,9 @@ sim: init gui-auth
 	CBF_VOLUMES="$(CBF_VOLUMES)" \
 	CBF_VOLUMES_GAZEBO="$(CBF_VOLUMES_GAZEBO)" \
 	$(COMPOSE) --profile sim up ur_cbf_sim
+
+test-cbf-motion: init
+	$(COMPOSE) --profile dev run --rm ur_cbf_dev ./scripts/test_cbf_volume_motion.sh
 
 real: init
 	$(COMPOSE) --profile real up ur_cbf_real
