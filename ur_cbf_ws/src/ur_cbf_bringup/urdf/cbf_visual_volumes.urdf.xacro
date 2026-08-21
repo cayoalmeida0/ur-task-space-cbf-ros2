@@ -34,6 +34,34 @@
     </xacro:unless>
   </xacro:macro>
 
+  <!-- Cilindro sem tampas esfericas para ligar volumes ja sobrepostos. -->
+  <xacro:macro name="cbf_cylinder_visual"
+               params="name parent center rpy radius length rgba gazebo_visible">
+    <link name="${name}_cbf_volume">
+      <visual name="${name}_cbf_cylinder">
+        <origin xyz="${center}" rpy="${rpy}"/>
+        <geometry>
+          <cylinder radius="${radius}" length="${length}"/>
+        </geometry>
+        <material name="${name}_cbf_material">
+          <color rgba="${rgba}"/>
+        </material>
+      </visual>
+    </link>
+    <joint name="${name}_cbf_volume_joint" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="${parent}"/>
+      <child link="${name}_cbf_volume"/>
+    </joint>
+    <xacro:unless value="${gazebo_visible}">
+      <gazebo reference="${name}_cbf_volume">
+        <visual>
+          <visibility_flags>0</visibility_flags>
+        </visual>
+      </gazebo>
+    </xacro:unless>
+  </xacro:macro>
+
   <!-- Uma capsula e formada por um cilindro e duas esferas, todos visuais. -->
   <xacro:macro name="cbf_capsule_visual"
                params="name parent center rpy cap_a cap_b radius length rgba gazebo_visible">
@@ -102,10 +130,6 @@
       cap_b="-0.24355 0 ${shoulder_body_offset}"
       radius="0.075" length="0.24355" rgba="${arm_color}"
       gazebo_visible="${gazebo_visible}"/>
-    <xacro:cbf_sphere_visual
-      name="${prefix}elbow" parent="${prefix}forearm_link"
-      xyz="0 0 0" radius="0.075" rgba="${arm_color}"
-      gazebo_visible="${gazebo_visible}"/>
     <xacro:cbf_capsule_visual
       name="${prefix}forearm" parent="${prefix}forearm_link"
       center="-0.1066 0 ${elbow_body_offset}" rpy="0 1.57079632679 0"
@@ -117,11 +141,9 @@
       Completa o offset distal do antebraco ate o frame posterior a junta 4.
       Comprimento: 0.13105 - 0.027 = 0.10405 m.
     -->
-    <xacro:cbf_capsule_visual
+    <xacro:cbf_cylinder_visual
       name="${prefix}wrist_1_connector" parent="${prefix}forearm_link"
       center="-0.2132 0 0.079025" rpy="0 0 0"
-      cap_a="-0.2132 0 ${elbow_body_offset}"
-      cap_b="-0.2132 0 ${wrist_1_joint_offset}"
       radius="0.060" length="0.10405" rgba="${arm_color}"
       gazebo_visible="${gazebo_visible}"/>
     <xacro:cbf_sphere_visual

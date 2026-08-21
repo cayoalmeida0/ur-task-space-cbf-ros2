@@ -2,6 +2,20 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao visual 0.5.4 / bringup 0.2.3 — 21 de agosto de 2026
+
+- Substitui `wrist_1_connector` por um cilindro de `0.10405 m`, removendo as duas
+  esferas terminais que coincidiam com a capsula do antebraco e com a esfera de
+  `wrist_1_link`.
+- Remove `elbow_cbf_volume`, pois as capsulas deslocadas do braco e antebraco ja
+  se sobrepoem em `0.047 m` e cobrem o centro da junta 3 com margem de `0.038 m`.
+- Reduz a representacao do conjunto UR3e/RG2 para nove volumes sem criar lacunas
+  na uniao geometrica.
+- Preserva os offsets fisicos, a capsula unica da RG2 e os controles independentes
+  `CBF_VOLUMES` e `CBF_VOLUMES_GAZEBO`.
+- Atualiza `ur_cbf_bringup` para `0.2.3` e adiciona testes contra a reintroducao
+  das tres esferas redundantes.
+
 ## Revisao visual 0.5.3 / bringup 0.2.2 — 21 de agosto de 2026
 
 - Desloca a capsula do braco em `0.120 m` e a do antebraco em `0.027 m`, seguindo

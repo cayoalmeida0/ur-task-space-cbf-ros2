@@ -126,10 +126,11 @@ def test_cbf_visual_volumes_are_visual_only_and_cover_ur3e_rg2():
     assert root.tag == "robot"
     assert "<collision" not in text
     assert "<inertial" not in text
-    assert text.count("<xacro:cbf_sphere_visual") == 6
-    assert text.count("<xacro:cbf_capsule_visual") == 4
-    assert text.count("<visibility_flags>0</visibility_flags>") == 2
-    assert text.count('<xacro:unless value="${gazebo_visible}">') == 2
+    assert text.count("<xacro:cbf_sphere_visual") == 5
+    assert text.count("<xacro:cbf_capsule_visual") == 3
+    assert text.count("<xacro:cbf_cylinder_visual") == 1
+    assert text.count("<visibility_flags>0</visibility_flags>") == 3
+    assert text.count('<xacro:unless value="${gazebo_visible}">') == 3
     for parent in (
         "base_link",
         "shoulder_link",
@@ -145,6 +146,7 @@ def test_cbf_visual_volumes_are_visual_only_and_cover_ur3e_rg2():
     assert 'name="${prefix}rg2"' in text
     assert 'radius="0.090" length="0.110"' in text
     assert "rg2_finger" not in text
+    assert 'name="${prefix}elbow"' not in text
 
 
 def test_ur3e_body_capsules_use_official_physical_offsets():
@@ -158,8 +160,11 @@ def test_ur3e_body_capsules_use_official_physical_offsets():
     assert 'center="-0.121775 0 ${shoulder_body_offset}"' in volumes
     assert 'center="-0.1066 0 ${elbow_body_offset}"' in volumes
     assert 'name="${prefix}wrist_1_connector"' in volumes
+    assert '<xacro:cbf_cylinder_visual\n      name="${prefix}wrist_1_connector"' in volumes
     assert 'center="-0.2132 0 0.079025"' in volumes
     assert 'radius="0.060" length="0.10405"' in volumes
+    assert 'cap_a="-0.2132 0 ${elbow_body_offset}"' not in volumes
+    assert 'cap_b="-0.2132 0 ${wrist_1_joint_offset}"' not in volumes
 
 
 def test_rg2_uses_one_gripper_capsule_and_rg6_does_not_reuse_it():
