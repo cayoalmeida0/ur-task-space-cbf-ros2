@@ -32,16 +32,42 @@ if [[ "${python_version}" != ${expected_python_prefix}* ]]; then
 fi
 
 python3 - <<'PY'
+import osqp
 import uaibot as ub
 
 assert ub.__version__ == "1.2.7", ub.__version__
+assert osqp.__version__ == "1.1.3", osqp.__version__
 assert hasattr(ub.Robot, "create_ur_ur3e")
 robot = ub.Robot.create_ur_ur3e(name="ur3e_check")
 assert len(robot.links) == 6
 print(f"UAIbot {ub.__version__}: UR3e criado com {len(robot.links)} elos")
+print(f"OSQP {osqp.__version__}: resolvedor QP encontrado")
 PY
 
-for package in ur_description ur_controllers ur_robot_driver ur_simulation_gz ur_cbf_bringup; do
+# Reproduz o interpretador gravado nos executaveis Python gerados pelo colcon.
+# Isso evita aprovar uma imagem na qual apenas o Python do venv importa UAIbot.
+PYTHONNOUSERSITE=1 /usr/bin/python3 - <<'PY'
+import sys
+import osqp
+import uaibot as ub
+
+assert ub.__version__ == "1.2.7", ub.__version__
+assert osqp.__version__ == "1.1.3", osqp.__version__
+print(f"Python ROS {sys.executable}: acesso ao UAIbot {ub.__version__}: OK")
+print(f"Python ROS {sys.executable}: acesso ao OSQP {osqp.__version__}: OK")
+PY
+
+packages=(
+  onrobot_description
+  onrobot_driver
+  ur_description
+  ur_controllers
+  ur_robot_driver
+  ur_simulation_gz
+  ur_cbf_bringup
+  ur_cbf_control
+)
+for package in "${packages[@]}"; do
   if ! ros2 pkg prefix "${package}" >/dev/null 2>&1; then
     echo "ERRO: pacote ROS nao encontrado no ambiente: ${package}" >&2
     echo "AMENT_PREFIX_PATH=${AMENT_PREFIX_PATH:-nao definido}" >&2
@@ -49,6 +75,34 @@ for package in ur_description ur_controllers ur_robot_driver ur_simulation_gz ur
   fi
   echo "Pacote ROS encontrado: ${package}"
 done
+
+onrobot_share="$(ros2 pkg prefix onrobot_description)/share/onrobot_description"
+for model_file in rg2_macro.xacro rg6_macro.xacro; do
+  model_path="${onrobot_share}/urdf/${model_file}"
+  if [[ ! -f "${model_path}" ]]; then
+    echo "ERRO: descricao OnRobot nao encontrada: ${model_path}" >&2
+    exit 1
+  fi
+  if grep -q '<mimic joint=' "${model_path}"; then
+    echo "ERRO: ${model_file} ainda contem tags mimic incompativeis." >&2
+    exit 1
+  fi
+done
+echo "Descricao OnRobot preparada para juntas explicitas: OK"
+
+if ! ros2 pkg executables ur_cbf_bringup \
+    | grep -q 'ur_cbf_bringup onrobot_width_adapter'; then
+  echo "ERRO: executavel onrobot_width_adapter nao encontrado." >&2
+  exit 1
+fi
+echo "Adaptador de largura OnRobot encontrado: OK"
+
+if ! ros2 pkg executables ur_cbf_bringup \
+    | grep -q 'ur_cbf_bringup onrobot_real_adapter'; then
+  echo "ERRO: executavel onrobot_real_adapter nao encontrado." >&2
+  exit 1
+fi
+echo "Adaptador do RG real encontrado: OK"
 
 # Distingue a ausencia do pacote Debian de uma falha no registro da extensao
 # Python do comando ros2.

@@ -8,6 +8,9 @@ ARG USER_UID=1000
 ARG USER_GID=1000
 # Tag oficial 2.5.0, ancestral da branch kilted usada para ROS 2 Jazzy.
 ARG UR_SIMULATION_GZ_COMMIT=048c80cd1faf87a2c74e14baadb65bd22b564d8f
+# Descricao MIT dos modelos OnRobot RG2/RG6 e driver Modbus do hardware real.
+ARG ONROBOT_DESCRIPTION_COMMIT=29180b3fa9cba6555f3e515e789b8ccd34252fab
+ARG ONROBOT_DRIVER_COMMIT=b99abaccfbbe90f2096feff833f4c0849757a587
 
 ENV LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8 \
@@ -49,6 +52,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential \
       cmake \
       gz-harmonic \
+      libnet1-dev \
       python3-colcon-common-extensions \
       python3-pip \
       python3-rosdep \
@@ -67,7 +71,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN rosdep init 2>/dev/null || true \
     && rosdep update --rosdistro ${ROS_DISTRO}
 
-# A simulacao oficial e compilada sem o launch opcional do MoveIt.
+# A simulacao oficial e compilada sem o launch opcional do MoveIt. Os modelos
+# OnRobot sao instalados no mesmo prefixo e usados por uma adaptacao local para
+# Gazebo Harmonic/gz_ros2_control. As tags mimic sao removidas porque o adaptador
+# comanda explicitamente todas as juntas da gripper no motor DART.
 RUN mkdir -p /opt/ur_vendor_ws/src \
     && git clone https://github.com/UniversalRobots/Universal_Robots_ROS2_GZ_Simulation.git \
       /opt/ur_vendor_ws/src/Universal_Robots_ROS2_GZ_Simulation \
@@ -75,6 +82,16 @@ RUN mkdir -p /opt/ur_vendor_ws/src \
     && git checkout ${UR_SIMULATION_GZ_COMMIT} \
     && sed -i '/ur_moveit_config/d' ur_simulation_gz/package.xml \
     && rm -f ur_simulation_gz/launch/ur_sim_moveit.launch.py \
+    && git clone https://github.com/tonydle/OnRobot_ROS2_Description.git \
+      /opt/ur_vendor_ws/src/OnRobot_ROS2_Description \
+    && cd /opt/ur_vendor_ws/src/OnRobot_ROS2_Description \
+    && git checkout ${ONROBOT_DESCRIPTION_COMMIT} \
+    && sed -i '/<mimic joint=/d' urdf/rg2_macro.xacro urdf/rg6_macro.xacro \
+    && git clone --recurse-submodules https://github.com/tonydle/OnRobot_ROS2_Driver.git \
+      /opt/ur_vendor_ws/src/OnRobot_ROS2_Driver \
+    && cd /opt/ur_vendor_ws/src/OnRobot_ROS2_Driver \
+    && git checkout ${ONROBOT_DRIVER_COMMIT} \
+    && git submodule update --init --recursive \
     && source /opt/ros/${ROS_DISTRO}/setup.bash \
     && cd /opt/ur_vendor_ws \
     && apt-get update \

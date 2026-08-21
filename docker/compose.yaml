@@ -5,7 +5,7 @@ x-ur-cbf-common: &ur-cbf-common
     args:
       USER_UID: ${HOST_UID:-1000}
       USER_GID: ${HOST_GID:-1000}
-  image: ur-cbf-jazzy:${IMAGE_TAG:-0.1.7}
+  image: ur-cbf-jazzy:${IMAGE_TAG:-0.2.0}
   network_mode: host
   ipc: host
   stdin_open: true
@@ -17,6 +17,13 @@ x-ur-cbf-common: &ur-cbf-common
     LIBGL_ALWAYS_SOFTWARE: ${LIBGL_ALWAYS_SOFTWARE:-1}
     ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-42}
     UR_TYPE: ${UR_TYPE:-ur3e}
+    ONROBOT_TYPE: ${ONROBOT_TYPE:-rg2}
+    ONROBOT_CONNECTION_TYPE: ${ONROBOT_CONNECTION_TYPE:-serial}
+    ONROBOT_DEVICE: ${ONROBOT_DEVICE:-/tmp/ttyUR}
+    ONROBOT_IP: ${ONROBOT_IP:-192.168.1.1}
+    ONROBOT_PORT: ${ONROBOT_PORT:-502}
+    CBF_VOLUMES: ${CBF_VOLUMES:-true}
+    CBF_VOLUMES_GAZEBO: ${CBF_VOLUMES_GAZEBO:-true}
   volumes:
     - ..:/workspace:rw
     - /tmp/.X11-unix:/tmp/.X11-unix:rw
@@ -36,6 +43,7 @@ services:
       - ur_cbf_bringup
       - simulation.launch.py
       - ur_type:=${UR_TYPE:-ur3e}
+      - onrobot_type:=${ONROBOT_TYPE:-rg2}
 
   ur_cbf_real:
     <<: *ur-cbf-common
@@ -47,3 +55,8 @@ services:
       - real.launch.py
       - ur_type:=${UR_TYPE:-ur3e}
       - robot_ip:=${ROBOT_IP}
+      - onrobot_type:=${ONROBOT_TYPE:-rg2}
+      - onrobot_connection_type:=${ONROBOT_CONNECTION_TYPE:-serial}
+      - onrobot_device:=${ONROBOT_DEVICE:-/tmp/ttyUR}
+      - onrobot_ip:=${ONROBOT_IP:-192.168.1.1}
+      - onrobot_port:=${ONROBOT_PORT:-502}

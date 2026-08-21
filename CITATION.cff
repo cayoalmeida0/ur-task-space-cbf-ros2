@@ -2,8 +2,16 @@ cff-version: 1.2.0
 message: "Se este software contribuir para sua pesquisa, cite o repositorio e a versao utilizada."
 type: software
 title: "Ambiente ROS 2 para controle CBF de manipuladores Universal Robots"
-version: 0.2.1
-date-released: 2026-08-20
+version: 0.5.7
+date-released: 2026-08-21
+repository-code: "https://github.com/cayoalmeida0/ur-task-space-cbf-ros2"
+license: Apache-2.0
+keywords:
+  - "ROS 2"
+  - "control barrier functions"
+  - "quadratic programming"
+  - "Universal Robots"
+  - "Gazebo"
 authors:
   - family-names: "Sousa"
     given-names: "Cayo Fábio de Almeida"

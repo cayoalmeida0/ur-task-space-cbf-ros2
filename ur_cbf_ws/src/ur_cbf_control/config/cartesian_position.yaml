@@ -1,0 +1,42 @@
+cartesian_position_test:
+  ros__parameters:
+    use_sim_time: true
+    execute_test: false
+    controller_node: /forward_velocity_controller
+    command_topic: /forward_velocity_controller/commands
+    joint_states_topic: /joint_states
+    required_simulation_node: /gz_ros_control
+    ur_type: ur3e
+    model_joint_names:
+      - shoulder_pan_joint
+      - shoulder_lift_joint
+      - elbow_joint
+      - wrist_1_joint
+      - wrist_2_joint
+      - wrist_3_joint
+    uaibot_mode: auto
+    onrobot_type: rg2
+    target_offset: [0.0, 0.0, 0.01]
+    position_gains: [1.0, 1.0, 1.0]
+    damping: 0.05
+    controller_mode: qp
+    qp_absolute_tolerance: 1.0e-6
+    qp_relative_tolerance: 1.0e-6
+    qp_max_iterations: 4000
+    qp_time_limit: 0.01
+    qp_polishing: false
+    max_cartesian_speed: 0.01
+    max_abs_joint_velocity: 0.10
+    position_tolerance: 0.001
+    settle_duration: 0.5
+    success_hold_duration: 0.5
+    zero_hold_duration: 0.5
+    max_control_duration: 30.0
+    max_wall_control_duration: 180.0
+    state_timeout: 0.25
+    startup_timeout: 15.0
+    command_rate: 50.0
+    experiment_id: cartesian_position_ur3e_001
+    random_seed: 0
+    result_directory: /workspace/results
+    require_result_record: true

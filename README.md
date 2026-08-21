@@ -1,254 +1,201 @@
 # Ambiente ROS 2 para controle CBF de manipuladores Universal Robots
 
-Ambiente inicial da dissertacao para controle restrito no espaco de tarefa usando
-CBFs, QPs e metricas de distancia diferenciaveis. A interface de controle e a mesma
-na simulacao e no hardware real: velocidades articulares publicadas em
+Ambiente reproduzível para pesquisa de controle restrito no espaço de tarefa com
+Control Barrier Functions (CBFs), programas quadráticos (QPs) e métricas de
+distância diferenciáveis. A mesma interface comanda a planta simulada e o robô
+real: velocidades articulares em
 `/forward_velocity_controller/commands`.
 
-> **Estado do projeto:** infraestrutura `v0.1.7` validada em Ubuntu 24.04 em
-> 23 de julho de 2026. Os controladores CBF/QP ainda serao desenvolvidos sobre
-> esta base.
+> **Estado atual — revisão de projeto 0.5.7:** infraestrutura Docker `0.2.0`,
+> `ur_cbf_bringup` `0.2.4` e `ur_cbf_control` `0.5.1`. O controlador nominal
+> opera por DLS ou QP com limites de velocidade. A formulação das CBFs ainda é o
+> próximo marco; os volumes geométricos já podem ser inspecionados no RViz e no
+> Gazebo.
 
-## Arquitetura
+## Visão geral
 
-O Gazebo e a planta e a fonte do estado no backend de simulacao. No backend real,
-essas funcoes sao exercidas pelo `ur_robot_driver`. O UAIbot participa somente da
-camada matematica e geometrica; ele nao constitui uma segunda planta de simulacao.
+O Gazebo Harmonic é a planta e a fonte de estado na simulação. No hardware, essas
+funções são exercidas pelo `ur_robot_driver`. O UAIbot é usado somente para
+cinemática e geometria; ele não cria uma segunda planta de simulação. MoveIt não
+participa da arquitetura de controle.
 
 ```mermaid
 flowchart TD
-    C["Controlador CBF/QP"] --> T["/forward_velocity_controller/commands"]
-    T --> S["Gazebo + gz_ros2_control"]
-    T --> R["UR real + ur_robot_driver"]
-    G["UAIbot: cinemática e geometria"] --> C
+    C["Controlador nominal / CBF-QP"] --> A["Velocidades articulares"]
+    A --> S["Gazebo + gz_ros2_control"]
+    A --> R["UR real + ur_robot_driver"]
+    U["UAIbot: cinemática e geometria"] --> C
+    G["Largura da RG2/RG6"] --> S
+    G --> R
 ```
 
-## Componentes
+### O que já está implementado
 
-- Ubuntu 24.04
-- ROS 2 Jazzy
-- Python 3.12
-- UAIbot 1.2.7
-- Gazebo Harmonic
-- RViz 2
-- `ros2_control` e `gz_ros2_control`
-- interface de linha de comando `ros2 control` (`ros2controlcli`)
-- driver e descricao oficiais da Universal Robots
-- simulacao oficial `ur_simulation_gz` 2.5.0, da linha compatível com Jazzy,
-  sem o caminho opcional do MoveIt
+- ROS 2 Jazzy sobre Ubuntu 24.04 e Python 3.12;
+- Gazebo Harmonic, RViz 2, `ros2_control` e `gz_ros2_control`;
+- simulação parametrizada de manipuladores Universal Robots;
+- OnRobot RG2/RG6 no RViz e no Gazebo, com backend real Modbus;
+- interface comum da gripper em `/finger_width_controller/commands`;
+- controle cartesiano nominal por DLS ou QP com OSQP 1.1.3;
+- TCP controlado em `gripper_tcp`, no centro dos dedos fechados;
+- watchdogs, comando nulo em falhas e ensaios explicitamente armados;
+- volumes visuais do UR3e/RG2 que acompanharão a futura geometria das CBFs;
+- resultados experimentais em JSON com parâmetros, versões, seed e métricas.
 
-O modelo padrao e o UR3e. O argumento `ur_type` permite usar UR5e e outros modelos
-suportados pelos pacotes oficiais sem modificar os launch files.
+### Escopo dos modelos
 
-## 1. Pre-requisitos do Ubuntu host
+| Camada | Estado atual |
+|---|---|
+| Bringup ROS/Gazebo | `ur_type` é parametrizado; UR3e é o padrão |
+| Gripper | RG2 consolidada; RG6 disponível para comparação |
+| Adaptador cinemático UAIbot | UR3e implementado e validado |
+| Volumes visuais para CBF | dimensões atuais específicas do UR3e com RG2 |
+| Hardware real | UR via `ur_robot_driver`; RG2 via driver OnRobot |
 
-Instale Docker Engine e o plugin Docker Compose. O usuario deve conseguir executar:
+Modelos sem adaptador ou geometria explícita são recusados, em vez de receberem
+parâmetros do UR3e silenciosamente.
+
+## Início rápido
+
+### 1. Obter o projeto
 
 ```bash
-docker --version
-docker compose version
+git clone https://github.com/cayoalmeida0/ur-task-space-cbf-ros2.git
+cd ur-task-space-cbf-ros2
 ```
 
-Para a interface grafica, confirme que `DISPLAY` esta definido e que o comando
-`xhost` esta disponivel:
-
-```bash
-echo "$DISPLAY"
-command -v xhost
-```
-
-Em Ubuntu, o comando `xhost` pertence ao pacote `x11-xserver-utils`:
-
-```bash
-sudo apt install x11-xserver-utils
-```
-
-## 2. Configuracao inicial
-
-Na raiz do projeto:
+### 2. Preparar, construir e verificar
 
 ```bash
 make init
 make diagnose
-```
-
-O diagnostico deve exibir o caminho absoluto do `docker/Dockerfile` e uma linha
-contendo `existing_group`. Se aparecer apenas `groupadd --gid`, a copia local ainda
-corresponde a versao 0.1.0.
-
-O diagnóstico também mostra o commit da simulação UR. Para esta revisão, o valor
-esperado é:
-
-```text
-048c80cd1faf87a2c74e14baadb65bd22b564d8f
-```
-
-Edite `.env` se necessario. Os campos principais sao:
-
-```dotenv
-UR_TYPE=ur3e
-ROBOT_IP=192.168.0.10
-ROS_DOMAIN_ID=42
-```
-
-Para preparar o UR5e no futuro, altere apenas:
-
-```dotenv
-UR_TYPE=ur5e
-```
-
-## 3. Construir e verificar
-
-```bash
 make build
 make check
 ```
 
-O alvo `make build` ativa explicitamente o perfil de desenvolvimento e constroi
-o servico `ur_cbf_dev`. A imagem resultante usa a tag definida por `IMAGE_TAG`
-no arquivo `.env`; nesta revisao, `ur-cbf-jazzy:0.1.7`.
+O `make init` cria e migra `.env` automaticamente. Não é necessário editar o
+arquivo para usar a configuração padrão (`UR_TYPE=ur3e`, `ONROBOT_TYPE=rg2` e
+`IMAGE_TAG=0.2.0`). Valores locais como `ROBOT_IP` e `ROS_DOMAIN_ID` são
+preservados.
 
-O diagnostico verifica ROS 2 Jazzy, Python 3.12, UAIbot, criacao do modelo UR3e,
-Gazebo, os pacotes da Universal Robots, o pacote local `ur_cbf_bringup` e a
-instalacao do pacote `ros-jazzy-ros2controlcli`, alem da extensao de linha de
-comando `ros2 control`. O script carrega explicitamente
-`ur_cbf_ws/install/setup.bash` antes de consultar o indice de pacotes ROS.
-
-## 4. Executar a simulacao
+### 3. Iniciar a simulação
 
 ```bash
 make sim
 ```
 
-Antes de iniciar o container, esse alvo verifica `DISPLAY` e `xhost` e autoriza
-automaticamente a conexao X11/XWayland apenas para o usuario local que executou
-o comando. Nao e necessario criar ou montar manualmente `~/.Xauthority`.
-
-O launch inicia Gazebo, RViz, `joint_state_broadcaster` e
-`forward_velocity_controller` para o modelo definido por `UR_TYPE`.
-
-Se a interface grafica for recusada pelo servidor X, a autorizacao pode ser
-reaplicada manualmente antes de repetir o comando:
+Em outro terminal:
 
 ```bash
-xhost +SI:localuser:"$(id -un)"
-make sim
-```
-
-Em outro terminal, entre no ambiente de desenvolvimento:
-
-```bash
+cd ~/ur-task-space-cbf-ros2
 make shell
-```
-
-Comandos de inspecao uteis:
-
-```bash
 ros2 control list_controllers
-ros2 topic echo /joint_states
-ros2 topic info /forward_velocity_controller/commands
 ```
 
-## 5. Executar com o robo real
+O resultado esperado inclui estes controladores ativos:
 
-O host Ubuntu e o controlador do robo devem estar na mesma rede IP. Configure
-`ROBOT_IP` em `.env`, instale o External Control URCap no robo e execute:
+```text
+joint_state_broadcaster
+forward_velocity_controller
+onrobot_joint_position_controller
+```
+
+Consulte o [guia de instalação](docs/SETUP.md) se o build ou a interface gráfica
+falhar. Compatibilidade com WSL 2, inclusive a limitação observada em redes que
+bloqueiam TLS dentro de containers, também está documentada nesse guia.
+
+## Testes funcionais principais
+
+Com `make sim` ativo e após entrar com `make shell`, teste a RG2:
 
 ```bash
-make real
+ros2 topic pub --once /finger_width_controller/commands \
+  std_msgs/msg/Float64MultiArray "{data: [0.08]}"
+
+ros2 topic pub --once /finger_width_controller/commands \
+  std_msgs/msg/Float64MultiArray "{data: [0.02]}"
 ```
 
-O perfil real usa rede Docker do tipo `host`, necessaria para as conexoes do driver
-com o controlador Universal Robots.
-
-Antes de qualquer teste de movimento real:
-
-1. valide a calibracao especifica do manipulador;
-2. limite velocidades e aceleracoes;
-3. mantenha o botao de emergencia acessivel;
-4. teste inicialmente sem carga e em velocidade reduzida;
-5. implemente watchdog para enviar velocidade nula se o controlador parar.
-
-## 6. Recompilar o workspace
-
-O entrypoint compila automaticamente quando `install/setup.bash` ainda nao existe.
-Depois de modificar os pacotes, execute dentro do container:
+Para inspecionar o movimento dos volumes visuais em três juntas, execute no
+host:
 
 ```bash
-cd /workspace/ur_cbf_ws
-colcon build --symlink-install
-source install/setup.bash
+make test-cbf-motion
 ```
 
-## 7. Verificacao minima
+Para manter os volumes no RViz e ocultá-los somente no Gazebo:
 
-Antes de registrar uma revisao ou iniciar uma campanha experimental:
+```bash
+make down
+make sim CBF_VOLUMES_GAZEBO=false
+```
+
+Para executar o ensaio cartesiano QP:
+
+```bash
+ros2 launch ur_cbf_control cartesian_position.launch.py \
+  ur_type:=ur3e \
+  onrobot_type:=rg2 \
+  controller_mode:=qp \
+  experiment_id:=cartesian_qp_ur3e_001 \
+  execute_test:=true
+```
+
+Os procedimentos completos, critérios de aprovação e convenções de frames estão
+no [guia da simulação](docs/SIMULATION.md) e na
+[documentação do pacote de controle](ur_cbf_ws/src/ur_cbf_control/README.md).
+
+## Verificação antes de uma revisão
+
+Dentro do container:
 
 ```bash
 ./scripts/check_system.sh
-cd ur_cbf_ws
+cd /workspace/ur_cbf_ws
 colcon test --event-handlers console_direct+
 colcon test-result --verbose
 ```
 
-O primeiro comando deve ser executado dentro do container, por exemplo com
-`make shell`. Para cada experimento, registre a versao da imagem, os parametros
-ROS/YAML e as seeds utilizadas.
+O repositório também executa no GitHub uma verificação rápida de sintaxe,
+metadados e testes unitários independentes do ROS. A validação completa continua
+sendo a execução acima na imagem Docker, pois ela inclui os pacotes ROS, Xacro,
+Gazebo e os launches instalados.
 
-## 8. Primeiro ensaio da camada de controle
+## Documentação
 
-O pacote `ur_cbf_control` inicia a validacao da cadeia de comandos antes do
-controlador cartesiano e das CBFs. Seu ensaio monoarticular consulta a ordem das
-juntas no proprio `forward_velocity_controller`, reordena `/joint_states` por nome,
-aplica saturacao e publica comando nulo em caso de timeout ou interrupcao.
+- [Instalação, configuração, build e diagnóstico](docs/SETUP.md)
+- [Simulação, gripper, volumes visuais e ensaios](docs/SIMULATION.md)
+- [Preparação e segurança do robô real](docs/REAL_ROBOT.md)
+- [Controle DLS/QP, proteções e metodologia](ur_cbf_ws/src/ur_cbf_control/README.md)
+- [Como contribuir](CONTRIBUTING.md)
+- [Histórico técnico de versões](VERSIONS.md)
+- [Componentes e licenças de terceiros](THIRD_PARTY_NOTICES.md)
 
-Compile e teste dentro do container:
-
-```bash
-cd /workspace/ur_cbf_ws
-colcon build --symlink-install --packages-select ur_cbf_control
-source install/setup.bash
-colcon test --packages-select ur_cbf_control --event-handlers console_direct+
-colcon test-result --verbose
-```
-
-Com a simulacao ativa, execute deliberadamente o pulso de baixa velocidade:
-
-```bash
-ros2 launch ur_cbf_control joint_velocity_pulse.launch.py \
-  target_joint:=shoulder_pan_joint \
-  execute_test:=true
-```
-
-O teste e desarmado por padrao e recusa execucao se `/gz_ros_control` nao estiver
-presente. Consulte os criterios completos em
-`ur_cbf_ws/src/ur_cbf_control/README.md`.
-
-## Estrutura
+## Estrutura do repositório
 
 ```text
 .
-├── docker/
-│   ├── Dockerfile
-│   ├── compose.yaml
-│   └── entrypoint.sh
-├── requirements/
-│   └── requirements.txt
-├── scripts/
-│   └── check_system.sh
-└── ur_cbf_ws/
-    └── src/
-        ├── ur_cbf_bringup/
-        └── ur_cbf_control/
+├── .github/workflows/       # verificação rápida no GitHub
+├── docker/                  # imagem, Compose e entrypoint
+├── docs/                    # guias de uso
+├── requirements/            # dependências Python fixadas
+├── scripts/                 # migração, diagnóstico e ensaios
+└── ur_cbf_ws/src/
+    ├── ur_cbf_bringup/      # simulação e backend real
+    └── ur_cbf_control/      # controladores e experimentos
 ```
 
-Arquivos locais de ambiente (`.env`), resultados do `colcon`, ZIPs de entrega e
-artigos usados como referencia nao fazem parte do versionamento.
+`.env`, `build/`, `install/`, `log/`, caches, ZIPs, artigos de referência e
+resultados experimentais locais são deliberadamente excluídos do Git.
 
-## Observacao sobre UAIbot e UR5e
+## Segurança e reprodutibilidade
 
-A interface ROS e os backends Gazebo/real ja sao independentes do modelo. Entretanto,
-o UAIbot 1.2.7 oferece atualmente a fabrica `Robot.create_ur_ur3e()`, mas nao uma
-fabrica equivalente para o UR5e. Se o manipulador for alterado, o futuro modulo de
-geometria devera fornecer um adaptador UR5e com seus parametros cinetostaticos e
-primitivas de colisao, preservando a interface do controlador.
+Os ensaios de movimento são desarmados por padrão e publicam comando nulo quando
+o estado ou a solução fica obsoleta. Mesmo assim, o backend real só deve ser
+usado após seguir o [procedimento de segurança](docs/REAL_ROBOT.md), com área
+livre, limites conservadores e parada de emergência acessível.
+
+Cada experimento deve registrar a imagem Docker, modelo, parâmetros ROS/YAML,
+seed e versão do código. O projeto é distribuído sob a licença
+[Apache-2.0](LICENSE); componentes externos permanecem sob suas próprias
+licenças.
