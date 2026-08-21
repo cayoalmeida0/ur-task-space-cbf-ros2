@@ -8,8 +8,8 @@ na simulacao e no hardware real: velocidades articulares publicadas em
 > **Estado do projeto:** infraestrutura Docker `v0.2.0`, bringup `v0.2.4` e
 > pacote de controle `ur_cbf_control` na revisao `0.5.1`. O controlador nominal
 > pode operar por DLS ou por QP com limites articulares. A simulacao inclui uma
-> OnRobot RG2/RG6 selecionavel e a revisao visual `0.5.5` introduz os volumes
-> geometricos que servirao de base para as CBFs.
+> OnRobot RG2/RG6 selecionavel e a revisao experimental `0.5.6` consolida a
+> inspecao dos volumes geometricos que servirao de base para as CBFs.
 
 ## Arquitetura
 
@@ -328,7 +328,9 @@ O ensaio aplica deslocamentos nominais de `0.6 rad` em
 `shoulder_pan_joint`, `elbow_joint` e `wrist_1_joint`, com velocidades entre
 `0.20 rad/s` e `0.30 rad/s`. Cada pulso verifica o deslocamento medido e termina
 mantendo comando nulo. Ele exige `/gz_ros_control` e se recusa a operar no robo
-real.
+real. Para tolerar pausas ocasionais do simulador sob carga grafica, esse roteiro
+usa `state_timeout=1.0 s`; o limite conservador de `0.25 s` permanece inalterado
+nos demais ensaios e configuracoes de controle.
 
 As aproximacoes do braco sao atualmente especificas do UR3e; outro valor de
 `UR_TYPE` nao recebe silenciosamente as dimensoes do UR3e. A capsula da RG2 e

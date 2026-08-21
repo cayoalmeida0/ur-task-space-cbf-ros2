@@ -2,6 +2,16 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao experimental 0.5.6 / bringup 0.2.4 — 21 de agosto de 2026
+
+- Ajusta somente o roteiro `make test-cbf-motion` para
+  `state_timeout=1.0 s`, tolerando pausas ocasionais de `/joint_states`
+  quando Gazebo, RViz e o container de teste disputam recursos graficos.
+- Mantem o limite conservador de `0.25 s` no ensaio monoarticular padrao e nas
+  demais configuracoes de controle.
+- Preserva a interrupcao segura e o comando nulo caso a ausência de estado
+  ultrapasse o novo limite durante o ensaio visual.
+
 ## Revisao visual 0.5.5 / bringup 0.2.4 — 21 de agosto de 2026
 
 - Corrige `CBF_VOLUMES_GAZEBO=false` gerando descricoes Xacro independentes

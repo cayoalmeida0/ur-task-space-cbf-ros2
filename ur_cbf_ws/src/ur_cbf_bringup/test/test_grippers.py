@@ -246,3 +246,4 @@ def test_visual_motion_test_is_simulation_only_and_returns_each_joint():
     assert script.count("run_pulse wrist_1_joint") == 2
     assert "pulse_duration" in script
     assert "max_abs_velocity:=0.35" in script
+    assert "state_timeout:=1.0" in script

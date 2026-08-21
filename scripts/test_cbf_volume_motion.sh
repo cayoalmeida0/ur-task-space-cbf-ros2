@@ -32,6 +32,7 @@ run_pulse() {
     -p pulse_duration:="$duration" \
     -p settle_duration:=0.5 \
     -p zero_hold_duration:=0.5 \
+    -p state_timeout:=1.0 \
     -p minimum_motion_ratio:=0.6 \
     -p maximum_motion_ratio:=1.4 \
     -p max_other_joint_displacement:=0.01
