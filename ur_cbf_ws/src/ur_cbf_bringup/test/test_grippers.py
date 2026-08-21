@@ -11,6 +11,7 @@ from ur_cbf_bringup.grippers import (
 
 
 PACKAGE_ROOT = Path(__file__).parents[1]
+REPOSITORY_ROOT = Path(__file__).parents[4]
 
 
 def test_supported_models_are_explicit_and_stable():
@@ -115,3 +116,61 @@ def test_real_visual_xacro_attaches_gripper_to_tool0(model):
     assert '<child link="$(arg tf_prefix)onrobot_base_link"/>' in text
     assert "gz_ros2_control" not in text
     assert "gazebo_ros2_control" not in text
+
+
+def test_cbf_visual_volumes_are_visual_only_and_cover_ur3e_rg2():
+    volumes = PACKAGE_ROOT / "urdf" / "cbf_visual_volumes.urdf.xacro"
+    root = ET.parse(volumes).getroot()
+    text = volumes.read_text(encoding="utf-8")
+
+    assert root.tag == "robot"
+    assert "<collision" not in text
+    assert "<inertial" not in text
+    assert text.count("<xacro:cbf_sphere_visual") == 6
+    assert text.count("<xacro:cbf_capsule_visual") == 3
+    for parent in (
+        "base_link",
+        "shoulder_link",
+        "upper_arm_link",
+        "forearm_link",
+        "wrist_1_link",
+        "wrist_2_link",
+        "wrist_3_link",
+        "onrobot_base_link",
+    ):
+        assert f'parent="${{prefix}}{parent}"' in text
+
+    assert 'name="${prefix}rg2"' in text
+    assert 'radius="0.090" length="0.110"' in text
+    assert "rg2_finger" not in text
+
+
+def test_rg2_uses_one_gripper_capsule_and_rg6_does_not_reuse_it():
+    rg2 = (PACKAGE_ROOT / "urdf" / "ur_rg2_gz.urdf.xacro").read_text(
+        encoding="utf-8"
+    )
+    rg6 = (PACKAGE_ROOT / "urdf" / "ur_rg6_gz.urdf.xacro").read_text(
+        encoding="utf-8"
+    )
+
+    for description in (rg2, rg6):
+        assert "cbf_visual_volumes.urdf.xacro" in description
+        assert 'name="show_cbf_volumes"' in description
+        assert "<xacro:ur3e_cbf_visual_volumes" in description
+        assert "selected_ur_type == 'ur3e'" in description
+    assert rg2.count("<xacro:rg2_cbf_visual_volume") == 1
+    assert "<xacro:rg2_cbf_visual_volume" not in rg6
+
+
+def test_cbf_visual_volumes_can_be_toggled_without_editing_env():
+    compose = (REPOSITORY_ROOT / "docker" / "compose.yaml").read_text(
+        encoding="utf-8"
+    )
+    makefile = (REPOSITORY_ROOT / "Makefile").read_text(encoding="utf-8")
+    env_example = (REPOSITORY_ROOT / ".env.example").read_text(encoding="utf-8")
+
+    assert "CBF_VOLUMES: ${CBF_VOLUMES:-true}" in compose
+    assert "CBF_VOLUMES ?= true" in makefile
+    assert 'CBF_VOLUMES="$(CBF_VOLUMES)" $(COMPOSE)' in makefile
+    assert "CBF_VOLUMES=true" in env_example
+    assert "make sim CBF_VOLUMES=false" in env_example

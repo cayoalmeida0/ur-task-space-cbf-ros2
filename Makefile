@@ -3,6 +3,7 @@ ONROBOT_CONNECTION_TYPE ?= serial
 ONROBOT_DEVICE ?= /tmp/ttyUR
 ONROBOT_IP ?= 192.168.1.1
 ONROBOT_PORT ?= 502
+CBF_VOLUMES ?= true
 
 .PHONY: init configure-real diagnose build shell check gui-auth sim real down
 
@@ -55,7 +56,7 @@ gui-auth:
 	@echo "Acesso grafico X11 autorizado para o usuario $$(id -un)."
 
 sim: init gui-auth
-	$(COMPOSE) --profile sim up ur_cbf_sim
+	CBF_VOLUMES="$(CBF_VOLUMES)" $(COMPOSE) --profile sim up ur_cbf_sim
 
 real: init
 	$(COMPOSE) --profile real up ur_cbf_real

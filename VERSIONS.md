@@ -2,6 +2,23 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao visual 0.5.2 / bringup 0.2.1 — 21 de agosto de 2026
+
+- Adiciona aproximacoes geometricas sem colisao para inspecao no RViz e no
+  Gazebo antes da formulacao das CBFs.
+- Cobre o UR3e com uma esfera na base, esferas no ombro, cotovelo e punhos e
+  capsulas no braco e antebraco, todas presas por juntas fixas aos elos.
+- Representa toda a RG2 por uma unica capsula, sem criar volumes separados para
+  os dedos.
+- Mantem os volumes exclusivamente visuais, sem massa, inercia, colisao ou
+  interfaces de controle; a fisica da simulacao permanece inalterada.
+- Condiciona as dimensoes do braco ao modelo UR3e para impedir que sejam
+  aplicadas silenciosamente a outro manipulador.
+- Adiciona `CBF_VOLUMES`, habilitado por padrao, e permite comparar a cena com
+  `make sim CBF_VOLUMES=false`, sem edicao manual do `.env`.
+- Atualiza `ur_cbf_bringup` para `0.2.1` e adiciona testes de estrutura,
+  cobertura, separacao RG2/RG6 e propagacao da chave pelo Compose.
+
 ## Revisao 0.5.1 / infraestrutura 0.2.0 — 20 de agosto de 2026
 
 - Corrige no adaptador do UAIbot o quinto parametro DH do UR3e de `0.10535 m`

@@ -18,12 +18,14 @@
   <xacro:arg name="safety_k_position" default="20"/>
   <xacro:arg name="simulation_controllers" default=""/>
   <xacro:arg name="ros_namespace" default=""/>
+  <xacro:arg name="show_cbf_volumes" default="$(optenv CBF_VOLUMES true)"/>
   <!-- O Xacro upstream declara gripper_tcp no escopo da inclusao. -->
   <xacro:property name="prefix" value="$(arg tf_prefix)"/>
 
   <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
   <xacro:include filename="$(find ur_simulation_gz)/urdf/ur_gz.ros2_control.xacro"/>
   <xacro:include filename="$(find onrobot_description)/urdf/rg2_macro.xacro"/>
+  <xacro:include filename="$(find ur_cbf_bringup)/urdf/cbf_visual_volumes.urdf.xacro"/>
 
   <link name="world"/>
   <link name="ground_plane">
@@ -60,6 +62,14 @@
     <child link="$(arg tf_prefix)onrobot_base_link"/>
     <origin xyz="0 0 0" rpy="0 0 ${-pi/2}"/>
   </joint>
+
+  <xacro:if value="$(arg show_cbf_volumes)">
+    <xacro:property name="selected_ur_type" value="$(arg ur_type)"/>
+    <xacro:if value="${selected_ur_type == 'ur3e'}">
+      <xacro:ur3e_cbf_visual_volumes prefix="$(arg tf_prefix)"/>
+    </xacro:if>
+    <xacro:rg2_cbf_visual_volume prefix="$(arg tf_prefix)"/>
+  </xacro:if>
 
   <gazebo reference="world"/>
   <gazebo>

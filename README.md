@@ -5,10 +5,11 @@ CBFs, QPs e metricas de distancia diferenciaveis. A interface de controle e a me
 na simulacao e no hardware real: velocidades articulares publicadas em
 `/forward_velocity_controller/commands`.
 
-> **Estado do projeto:** infraestrutura Docker `v0.2.0` e pacote de controle
-> `ur_cbf_control` na revisao `0.5.1`. O controlador nominal pode operar por DLS
-> ou por QP com limites articulares. A simulacao inclui uma OnRobot RG2/RG6
-> selecionavel; as CBFs serao adicionadas na proxima etapa.
+> **Estado do projeto:** infraestrutura Docker `v0.2.0`, bringup `v0.2.1` e
+> pacote de controle `ur_cbf_control` na revisao `0.5.1`. O controlador nominal
+> pode operar por DLS ou por QP com limites articulares. A simulacao inclui uma
+> OnRobot RG2/RG6 selecionavel e a revisao visual `0.5.2` introduz os volumes
+> geometricos que servirao de base para as CBFs.
 
 ## Arquitetura
 
@@ -84,6 +85,7 @@ revisao ficam sempre em:
 ```dotenv
 IMAGE_TAG=0.2.0
 ONROBOT_TYPE=rg2
+CBF_VOLUMES=true
 ```
 
 Valores locais ja configurados, como `ROBOT_IP`, `ROS_DOMAIN_ID` e os parametros
@@ -246,6 +248,37 @@ Gazebo Harmonic e `gz_ros2_control` no backend simulado.
 O launch acrescenta o diretorio `share` que contem `onrobot_description` a
 `GZ_SIM_RESOURCE_PATH`; assim, os meshes `package://` da gripper sao resolvidos
 tanto no Gazebo quanto no RViz.
+
+### Volumes geometricos para as CBFs
+
+Com `UR_TYPE=ur3e` e `ONROBOT_TYPE=rg2`, a descricao inclui nove aproximacoes
+semitransparentes presas aos respectivos elos: esferas na base, ombro, cotovelo e
+punhos; capsulas no braco e antebraco; e uma unica capsula envolvendo toda a RG2.
+Elas aparecem tanto no RViz quanto no Gazebo e acompanham o movimento do robo.
+
+Esses links possuem somente elementos `<visual>`: nao contem `<collision>`, massa
+ou interfaces de controle e, portanto, nao alteram contato, inercia ou dinamica.
+As dimensoes desta primeira revisao devem ser inspecionadas visualmente antes de
+serem reutilizadas como geometria matematica das CBFs.
+
+Os volumes sao habilitados automaticamente. Para comparar a cena sem eles, nao
+e necessario editar `.env`:
+
+```bash
+make down
+make sim CBF_VOLUMES=false
+```
+
+Para reativa-los:
+
+```bash
+make down
+make sim
+```
+
+As aproximacoes do braco sao atualmente especificas do UR3e; outro valor de
+`UR_TYPE` nao recebe silenciosamente as dimensoes do UR3e. A capsula da RG2 e
+adicionada somente quando a descricao combinada selecionada e a RG2.
 
 As tags `mimic` da descricao upstream sao removidas durante a construcao da
 imagem e substituidas por comandos articulares explicitos. Isso evita depender
