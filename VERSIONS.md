@@ -2,6 +2,15 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao experimental 0.6.6 / controle 0.6.6 / bringup 0.3.6 — 26 de agosto de 2026
+
+- Define `z=0,025 m` nos origins URDF de `c21`, `c22` e `c23`.
+- Define `z=0` em `c31` e `y=0` em `c32`, incluindo a conversao correspondente
+  das componentes DH usadas pelo modelo matematico.
+- Restaura `c52` integralmente para a pose original da fabrica UAIbot fixada.
+- Preserva tipos, dimensoes, rotacoes, capsula RG2, imagem Docker `0.2.0` e modo
+  CBF padrao `off`.
+
 ## Revisao experimental 0.6.5 / controle 0.6.5 / bringup 0.3.5 — 26 de agosto de 2026
 
 - Parte das 13 primitivas originais do UR3e restauradas na revisao `0.6.4`.

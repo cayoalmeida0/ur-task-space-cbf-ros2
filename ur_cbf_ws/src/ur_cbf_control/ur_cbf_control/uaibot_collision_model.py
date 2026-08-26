@@ -12,7 +12,7 @@ UAIBOT_FACTORY_GEOMETRY_SOURCE = (
     "uaibot/robot/_create_ur_ur3e.py"
 )
 PROJECT_GEOMETRY_SOURCE = (
-    "ur-task-space-cbf-ros2@0.6.5:"
+    "ur-task-space-cbf-ros2@0.6.6:"
     "ur_cbf_control/uaibot_collision_model.py#UR3E_RG2_PROJECT_PRIMITIVES"
 )
 
@@ -112,24 +112,32 @@ def _translation(z: float):
     )
 
 
-def _with_translation_z(spec: UaibotPrimitiveSpec, z: float):
-    """Copia uma especificacao alterando somente a coordenada local z."""
+def _with_translation_component(
+    spec: UaibotPrimitiveSpec,
+    axis: int,
+    value: float,
+):
+    """Copia uma especificacao alterando uma componente da translacao DH."""
 
+    if axis not in (0, 1, 2):
+        raise ValueError("O eixo de translacao deve ser 0, 1 ou 2.")
     rows = [list(row) for row in spec.htm]
-    rows[2][3] = float(z)
+    rows[axis][3] = float(value)
     return replace(spec, htm=tuple(tuple(row) for row in rows))
 
 
-# As 13 primitivas partem da fabrica UAIbot fixada. Neste ensaio, somente a
-# coordenada z de c21, c22, c23 e c52 e zerada. A tabela original permanece
-# separada para validar o wheel antes da troca da garra pela capsula RG2.
+# As 13 primitivas partem da fabrica UAIbot fixada. Os ajustes abaixo sao feitos
+# nas coordenadas DH; c31/y_DH controla z_URDF e c32/z_DH controla y_URDF por
+# causa da transformacao Rx(pi/2) do elo 3. A tabela original permanece separada
+# para validar o wheel antes da troca da garra pela capsula RG2.
 UR3E_RG2_PROJECT_PRIMITIVES = (
     *(replace(spec) for spec in UR3E_UAIBOT_PRIMITIVES[:4]),
-    _with_translation_z(UR3E_UAIBOT_PRIMITIVES[4], 0.0),
-    _with_translation_z(UR3E_UAIBOT_PRIMITIVES[5], 0.0),
-    _with_translation_z(UR3E_UAIBOT_PRIMITIVES[6], 0.0),
-    *(replace(spec) for spec in UR3E_UAIBOT_PRIMITIVES[7:12]),
-    _with_translation_z(UR3E_UAIBOT_PRIMITIVES[12], 0.0),
+    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[4], 2, 0.025),
+    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[5], 2, 0.025),
+    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[6], 2, 0.025),
+    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[7], 1, 0.0),
+    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[8], 2, 0.0),
+    *(replace(spec) for spec in UR3E_UAIBOT_PRIMITIVES[9:13]),
     # A capsula RG2 substitui os seis objetos da garra generica UAIbot.
     UaibotPrimitiveSpec(5, 2, "Cylinder", _translation(0.110), (0.090, 0.110)),
     UaibotPrimitiveSpec(5, 3, "Ball", _translation(0.055), (0.090,)),

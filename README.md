@@ -6,11 +6,12 @@ distância diferenciáveis. A mesma interface comanda a planta simulada e o rob�
 real: velocidades articulares em
 `/forward_velocity_controller/commands`.
 
-> **Estado atual — revisão experimental 0.6.5:** infraestrutura Docker `0.2.0`,
-> `ur_cbf_bringup` `0.3.5` e `ur_cbf_control` `0.6.5`. O QP já aceita a primeira
+> **Estado atual — revisão experimental 0.6.6:** infraestrutura Docker `0.2.0`,
+> `ur_cbf_bringup` `0.3.6` e `ur_cbf_control` `0.6.6`. O QP já aceita a primeira
 > CBF cinemática de autocolisão nos modos `monitor` e `enforce`. As 16 primitivas
 > transparentes partem das 13 primitivas originais do braço UR3e no UAIbot; o
-> ensaio atual zera `z` em `c21`, `c22`, `c23` e `c52` e mantém a cápsula RG2.
+> ensaio atual usa `z=0,025 m` em `c21/c22/c23`, `z=0` em `c31`, `y=0` em
+> `c32`, restaura `c52` e mantém a cápsula RG2.
 > O padrão permanece `off` até validarmos poses e custo no container.
 
 ## Visão geral

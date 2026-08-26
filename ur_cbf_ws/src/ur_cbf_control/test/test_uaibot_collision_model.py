@@ -95,23 +95,31 @@ class UaibotCollisionModelTest(unittest.TestCase):
         self.assertEqual(len(UR3E_UAIBOT_PRIMITIVES), 19)
 
     def test_project_arm_specs_are_independent_from_factory_contract(self):
-        zeroed_z_indices = {4, 5, 6, 12}
+        adjusted_components = {
+            4: (2, 0.025),
+            5: (2, 0.025),
+            6: (2, 0.025),
+            7: (1, 0.0),
+            8: (2, 0.0),
+        }
         for index, (factory_spec, project_spec) in enumerate(zip(
             UR3E_UAIBOT_PRIMITIVES[:13],
             UR3E_RG2_PROJECT_PRIMITIVES[:13],
         )):
             self.assertIsNot(factory_spec, project_spec)
-            if index not in zeroed_z_indices:
+            if index not in adjusted_components:
                 self.assertEqual(factory_spec, project_spec)
                 continue
-            self.assertEqual(project_spec.htm[2][3], 0.0)
+            axis, value = adjusted_components[index]
+            expected_translation = np.asarray(factory_spec.htm)[:3, 3].copy()
+            expected_translation[axis] = value
             self.assertEqual(project_spec.dimensions, factory_spec.dimensions)
             factory_rotation = np.asarray(factory_spec.htm)[:3, :3]
             project_rotation = np.asarray(project_spec.htm)[:3, :3]
             np.testing.assert_array_equal(project_rotation, factory_rotation)
             np.testing.assert_array_equal(
-                np.asarray(project_spec.htm)[:2, 3],
-                np.asarray(factory_spec.htm)[:2, 3],
+                np.asarray(project_spec.htm)[:3, 3],
+                expected_translation,
             )
 
     def test_replaces_generic_gripper_with_rg2_capsule(self):

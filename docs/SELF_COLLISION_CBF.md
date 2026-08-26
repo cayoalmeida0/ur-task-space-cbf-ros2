@@ -65,17 +65,19 @@ explicitamente os quatro valores e mantém o wheel instalado sem modificações.
 
 O projeto valida inicialmente as 19 primitivas da fábrica UR3e do UAIbot 1.2.7.
 Em seguida, substitui somente a geometria distal, resultando em um modelo com 16
-objetos. As 13 primitivas do braço partem da fábrica; nesta revisão, somente a
-coordenada local `z` de `c21`, `c22`, `c23` e `c52` é zerada. Tipos, dimensões,
-rotações e as demais componentes de translação permanecem originais. Os seis
+objetos. As 13 primitivas do braço partem da fábrica; nesta revisão, os origins
+URDF usam `z=0,025 m` em `c21/c22/c23`, `z=0` em `c31` e `y=0` em `c32`,
+enquanto `c52` retorna à pose original. Tipos, dimensões e rotações permanecem
+originais. Os seis
 objetos da garra genérica são removidos e substituídos por uma cápsula RG2
 formada pela união de um cilindro e duas esferas.
 
 As matrizes do braço, relativas aos frames DH, foram convertidas para os frames
 dos elos da descrição oficial Jazzy por transformações rígidas constantes. A
 cópia visual aplica as transformações rígidas necessárias para expressar as
-matrizes DH nos frames dos elos URDF. O teste `z=0` é aplicado simultaneamente
-à tabela matemática e ao Xacro. A cápsula usa raio de
+matrizes DH nos frames dos elos URDF. Os ajustes são aplicados simultaneamente
+à tabela matemática e ao Xacro. Em `c31/c32`, a rotação fixa `Rx(pi/2)` faz as
+componentes `y/z` do frame DH corresponderem a `z/y` no frame URDF. A cápsula usa raio de
 `0,090 m`, trecho cilíndrico de `0,110 m` e centros das
 extremidades em `z=0,055 m` e `z=0,165 m` no frame da RG2. Esses mesmos valores
 são anexados ao último elo do modelo UAIbot. Assim, a cena transparente e os
@@ -93,7 +95,7 @@ para o conjunto `ur3e + rg2`; outros modelos são recusados em `monitor` e
 A tabela `UR3E_UAIBOT_PRIMITIVES` é o contrato imutável da dependência fixada.
 `UR3E_RG2_PROJECT_PRIMITIVES`, no módulo
 `ur_cbf_control/uaibot_collision_model.py`, contém cópias independentes das 13
-primitivas e explicita os quatro valores de `z` modificados. Qualquer ajuste
+primitivas e explicita os cinco ajustes de translação. Qualquer ajuste
 futuro deverá ser aplicado também ao Xacro e acompanhado de justificativa
 dimensional. Os testes de regressão verificam origens, orientações, tipos e
 dimensões antes da publicação.
