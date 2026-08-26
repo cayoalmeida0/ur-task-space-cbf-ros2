@@ -10,10 +10,13 @@ import numpy as np
 from ur_cbf_control.self_collision_cbf import distances_from_uaibot_structure
 from ur_cbf_control.self_collision_cbf import SelfCollisionCbfError
 from ur_cbf_control.self_collision_cbf import SelfCollisionDistances
-from ur_cbf_control.uaibot_collision_model import UAIBOT_GEOMETRY_SOURCE
+from ur_cbf_control.uaibot_collision_model import (
+    configure_ur3e_rg2_project_collision_model,
+)
+from ur_cbf_control.uaibot_collision_model import PROJECT_GEOMETRY_SOURCE
 from ur_cbf_control.uaibot_collision_model import UaibotCollisionModelError
 from ur_cbf_control.uaibot_collision_model import (
-    validate_uaibot_ur3e_collision_model,
+    validate_ur3e_rg2_project_collision_model,
 )
 
 
@@ -228,6 +231,10 @@ class UaibotKinematics:
             name=f"{ur_type}_control_model",
             eef_frame_visible=False,
         )
+        try:
+            configure_ur3e_rg2_project_collision_model(robot, ub)
+        except UaibotCollisionModelError as error:
+            raise KinematicsError(str(error)) from error
         corrections = _correct_ur3e_uaibot_dh(robot)
         return cls(
             robot,
@@ -314,7 +321,7 @@ class UaibotKinematics:
 
         if not self._self_collision_geometry_validated:
             try:
-                validate_uaibot_ur3e_collision_model(self.robot)
+                validate_ur3e_rg2_project_collision_model(self.robot)
             except UaibotCollisionModelError as error:
                 raise KinematicsError(str(error)) from error
             self._self_collision_geometry_validated = True
@@ -336,7 +343,7 @@ class UaibotKinematics:
                 structure,
                 joint_count=len(self.model_joint_names),
                 evaluation_time=evaluation_time,
-                geometry_source=UAIBOT_GEOMETRY_SOURCE,
+                geometry_source=PROJECT_GEOMETRY_SOURCE,
             )
         except SelfCollisionCbfError as error:
             raise KinematicsError(str(error)) from error

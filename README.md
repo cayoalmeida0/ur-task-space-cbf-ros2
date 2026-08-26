@@ -6,11 +6,11 @@ distância diferenciáveis. A mesma interface comanda a planta simulada e o rob�
 real: velocidades articulares em
 `/forward_velocity_controller/commands`.
 
-> **Estado atual — revisão experimental 0.6.0:** infraestrutura Docker `0.2.0`,
-> `ur_cbf_bringup` `0.3.0` e `ur_cbf_control` `0.6.0`. O QP já aceita a primeira
-> CBF cinemática de autocolisão nos modos `monitor` e `enforce`. Os 19 volumes
-> transparentes copiam a mesma geometria interna do UAIbot; o padrão permanece
-> `off` até validarmos poses e custo computacional no container.
+> **Estado atual — revisão experimental 0.6.1:** infraestrutura Docker `0.2.0`,
+> `ur_cbf_bringup` `0.3.1` e `ur_cbf_control` `0.6.1`. O QP já aceita a primeira
+> CBF cinemática de autocolisão nos modos `monitor` e `enforce`. As 16 primitivas
+> transparentes reproduzem a geometria UR3e/RG2 aplicada ao UAIbot; o padrão
+> permanece `off` até validarmos poses e custo computacional no container.
 
 ## Visão geral
 
@@ -40,7 +40,7 @@ flowchart TD
 - formulação de autocolisão `J_d qdot >= -gamma (d-d_safe)` integrada ao QP;
 - TCP controlado em `gripper_tcp`, no centro dos dedos fechados;
 - watchdogs, comando nulo em falhas e ensaios explicitamente armados;
-- 19 volumes visuais idênticos às primitivas de colisão internas do UAIbot;
+- 16 primitivas visuais idênticas ao modelo UAIbot corrigido do projeto;
 - resultados experimentais em JSON com parâmetros, versões, seed e métricas.
 
 ### Escopo dos modelos
@@ -51,7 +51,7 @@ flowchart TD
 | Gripper | RG2 consolidada; RG6 disponível para comparação |
 | Adaptador cinemático UAIbot | UR3e implementado e validado |
 | CBF de autocolisão | núcleo/QP implementado; backend UAIbot em validação |
-| Volumes visuais para CBF | 19 primitivas UAIbot copiadas para o Xacro |
+| Volumes visuais para CBF | 13 primitivas UR3e + cápsula RG2 de três objetos |
 | Hardware real | UR via `ur_robot_driver`; RG2 via driver OnRobot |
 
 Modelos sem adaptador ou geometria explícita são recusados, em vez de receberem

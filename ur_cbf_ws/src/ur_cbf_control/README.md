@@ -77,10 +77,11 @@ J_d(q) qdot >= -gamma (d(q) - d_safe)
 
 Use `self_collision_cbf_mode:=monitor` para calcular e registrar a distancia
 minima sem alterar o comando. `enforce` acrescenta todas as linhas ao OSQP e so
-e aceito com `controller_mode:=qp`; `off` e o padrao. Os 19 volumes transparentes
-copiam as mesmas primitivas internas do UAIbot, após a conversao fixa dos frames
-DH para os frames URDF. A garra representada continua sendo a geometria generica
-da fabrica UAIbot, nao uma aproximacao dimensional certificada da RG2. Consulte
+e aceito com `controller_mode:=qp`; `off` e o padrao. O projeto preserva 13
+primitivas da fabrica UAIbot para o UR3e e substitui a garra generica por uma
+capsula RG2 de tres objetos. A mesma lista corrigida e aplicada a
+`link.col_objects` e exibida pelo Xacro. Os modos `monitor` e `enforce` sao
+recusados para combinacoes diferentes de `ur3e + rg2`. Consulte
 [`docs/SELF_COLLISION_CBF.md`](../../../docs/SELF_COLLISION_CBF.md) antes de
 ativar a restricao.
 

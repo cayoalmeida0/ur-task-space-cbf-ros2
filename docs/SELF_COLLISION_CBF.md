@@ -57,23 +57,36 @@ adjacentes são excluídos, pois seus volumes se sobrepõem por construção. To
 as linhas retornadas são mantidas, sem limiar de ativação por distância, para
 não alterar silenciosamente o conjunto de segurança entre amostras.
 
-O Xacro copia as mesmas 19 primitivas da fábrica UR3e do UAIbot: 14 cilindros,
-duas esferas e três caixas. As matrizes originais, relativas aos frames DH,
-foram convertidas para os frames dos elos da descrição oficial Jazzy por
-transformações rígidas constantes. Assim, a cena transparente representa a
-mesma geometria usada em `d_k(q)` e `J_{d,k}(q)`, dentro do arredondamento das
-matrizes publicadas pelo UAIbot.
+O projeto valida inicialmente as 19 primitivas da fábrica UR3e do UAIbot 1.2.7.
+Em seguida, substitui essa lista por um modelo corrigido com 16 objetos. Treze
+primitivas preservam a geometria da base, do braço, do antebraço e dos pulsos;
+os seis objetos da garra genérica são removidos e substituídos por uma cápsula
+RG2 formada pela união de um cilindro e duas esferas.
 
-Essa equivalência não significa que a geometria seja uma reprodução fiel da
-RG2 física. A fábrica UAIbot contém uma garra genérica no último elo; o Xacro
-agora a exibe deliberadamente, em vez de sobrepor a antiga cápsula RG2. Portanto,
-o modelo visual e o modelo matemático são coerentes entre si, mas sua fidelidade
-ao conjunto UR3e/RG2 ainda deve ser avaliada separadamente.
+As matrizes do braço, relativas aos frames DH, foram convertidas para os frames
+dos elos da descrição oficial Jazzy por transformações rígidas constantes. A
+cápsula usa raio de `0,090 m`, trecho cilíndrico de `0,110 m` e centros das
+extremidades em `z=0,055 m` e `z=0,165 m` no frame da RG2. Esses mesmos valores
+são anexados ao último elo do modelo UAIbot. Assim, a cena transparente e os
+cálculos de `d_k(q)` e `J_{d,k}(q)` usam a mesma geometria corrigida.
 
-Antes do primeiro cálculo, o adaptador verifica no wheel instalado a contagem,
-o tipo, a matriz e as dimensões das 19 primitivas. Qualquer divergência em uma
-versão futura do UAIbot interrompe o controlador, evitando que o Xacro e o
-modelo matemático se separem silenciosamente.
+O código da dependência instalada não é alterado. A substituição ocorre após
+`Robot.create_ur_ur3e()` por meio dos objetos de cada `Link`. Antes e depois da
+troca, o adaptador verifica contagem, tipo, matriz e dimensões; qualquer
+divergência interrompe o controlador. A CBF corrigida está habilitada somente
+para o conjunto `ur3e + rg2`; outros modelos são recusados em `monitor` e
+`enforce` até possuírem geometria própria.
+
+### Ajuste dos volumes do braço
+
+A tabela `UR3E_UAIBOT_PRIMITIVES` é o contrato imutável da dependência fixada.
+Os ajustes experimentais devem ser feitos somente em
+`UR3E_RG2_PROJECT_PRIMITIVES`, no módulo
+`ur_cbf_control/uaibot_collision_model.py`. Cada uma das 13 primitivas do braço
+é uma cópia independente, permitindo alterar matriz e dimensões sem modificar a
+referência usada para validar o wheel. O Xacro deve receber o mesmo ajuste; os
+testes de regressão verificam origens, orientações, tipos e dimensões antes da
+publicação.
 
 Por isso o parâmetro padrão é `self_collision_cbf_mode: off`. O fluxo correto é
 primeiro executar `monitor`, comparar o par e a distância mínima com a cena e

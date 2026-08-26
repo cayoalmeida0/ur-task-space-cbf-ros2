@@ -68,6 +68,7 @@
     <xacro:if value="${selected_ur_type == 'ur3e'}">
       <xacro:ur3e_cbf_visual_volumes
         prefix="$(arg tf_prefix)"/>
+      <xacro:rg2_cbf_visual_volume prefix="$(arg tf_prefix)"/>
     </xacro:if>
   </xacro:if>
 

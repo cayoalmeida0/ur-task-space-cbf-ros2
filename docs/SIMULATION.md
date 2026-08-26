@@ -65,11 +65,10 @@ plugin Gazebo Classic do driver OnRobot.
 
 ## Volumes geométricos para as CBFs
 
-O UR3e apresenta 19 volumes sem colisão copiados da fábrica UAIbot 1.2.7:
+O conjunto UR3e/RG2 apresenta 16 primitivas sem colisão física:
 
-- 14 cilindros;
-- duas esferas;
-- três caixas, usadas no corpo e nos dedos da garra genérica.
+- 13 objetos preservados da fábrica UAIbot para base, braço e pulsos;
+- um cilindro e duas esferas que formam a cápsula da RG2.
 
 As matrizes `htm_obj` do UAIbot são relativas aos frames DH posteriores às
 juntas. Antes da transcrição para `<origin>`, elas foram convertidas aos frames
@@ -78,13 +77,16 @@ descrição oficial Jazzy. A fonte está fixada no commit
 [`1acb5ed`](https://github.com/UAIbot/UAIbotPy/blob/1acb5ed637738aca4ea05945e6c065c3757bc13d/uaibot/robot/_create_ur_ur3e.py).
 
 Esses elementos possuem apenas `<visual>`: não têm `<collision>`, massa, inércia
-ou interfaces de controle. Portanto, não alteram contato ou dinâmica. Suas
-formas, dimensões e poses representam a mesma geometria usada por
-`compute_dist_auto`; as cores e transparências são apenas recursos de inspeção.
+ou interfaces de controle. Portanto, não alteram contato ou dinâmica. Ao criar o
+modelo matemático, o projeto substitui os objetos de colisão da fábrica pelas
+mesmas 16 primitivas usadas na visualização; `compute_dist_auto` opera sobre
+essa lista corrigida.
 
-A geometria distal copiada é a garra genérica do UAIbot, não o contorno exato da
-RG2/RG6 mostrada pelos meshes. Essa escolha garante coerência entre visualização
-e cálculo, mas a fidelidade física deverá ser refinada em uma etapa posterior.
+A cápsula RG2 tem raio de `0,090 m`, comprimento cilíndrico de `0,110 m` e
+extremidades centradas em `z=0,055 m` e `z=0,165 m` no `onrobot_base_link`.
+Ela é uma aproximação conservadora única do corpo e dos dedos, não uma cópia do
+mesh. A RG6 permanece disponível na simulação, mas os modos `monitor` e
+`enforce` da CBF recusam essa combinação enquanto não houver geometria própria.
 
 As dimensões físicas foram confrontadas com os arquivos oficiais:
 
@@ -205,8 +207,8 @@ ros2 launch ur_cbf_control cartesian_position.launch.py \
 ```
 
 O log deve informar `d_self_min`, `h_self_min`, `cbf_ms` e `par`. Esse modo não
-altera o comando. Os volumes transparentes reproduzem o mesmo conjunto de
-objetos usado pelo UAIbot; o roteiro de validação está documentado em
+altera o comando. Os volumes transparentes reproduzem o modelo corrigido
+aplicado ao UAIbot; o roteiro de validação está documentado em
 [SELF_COLLISION_CBF.md](SELF_COLLISION_CBF.md).
 
 Consulte a [documentação de `ur_cbf_control`](../ur_cbf_ws/src/ur_cbf_control/README.md)

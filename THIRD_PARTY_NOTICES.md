@@ -2,11 +2,13 @@
 
 ## UAIbot UR3e collision geometry
 
-The primitive types, dimensions and homogeneous transforms used by
-`cbf_visual_volumes.urdf.xacro` are derived from
+The thirteen arm and wrist primitive types, dimensions and homogeneous
+transforms used by `cbf_visual_volumes.urdf.xacro` are derived from
 [`UAIbot/UAIbotPy`](https://github.com/UAIbot/UAIbotPy/blob/1acb5ed637738aca4ea05945e6c065c3757bc13d/uaibot/robot/_create_ur_ur3e.py),
 commit `1acb5ed637738aca4ea05945e6c065c3757bc13d`. The transforms were converted
 from the UAIbot DH frames to the corresponding ROS 2 Jazzy URDF link frames.
+The three-object RG2 capsule is original project configuration and replaces the
+generic gripper geometry from the upstream factory at runtime.
 UAIbot is distributed under the MIT License:
 
 > Copyright (c) 2023 UAIbot

@@ -111,7 +111,8 @@ class UaibotKinematicsTest(unittest.TestCase):
             mode="python",
         )
         with patch(
-            "ur_cbf_control.kinematics.validate_uaibot_ur3e_collision_model"
+            "ur_cbf_control.kinematics."
+            "validate_ur3e_rg2_project_collision_model"
         ) as validate_geometry:
             distances = adapter.evaluate_self_collision(
                 (0.0, 0.0, 0.0, 0.0),
@@ -191,13 +192,17 @@ class UaibotKinematicsTest(unittest.TestCase):
         class FakeUaibot:
             Robot = FakeRobotFactory
 
-        with patch.dict("sys.modules", {"uaibot": FakeUaibot}):
+        with patch.dict("sys.modules", {"uaibot": FakeUaibot}), patch(
+            "ur_cbf_control.kinematics."
+            "configure_ur3e_rg2_project_collision_model"
+        ) as configure_geometry:
             adapter = UaibotKinematics.create(
                 ur_type="ur3e",
                 model_joint_names=("j1", "j2", "j3", "j4", "j5", "j6"),
                 eef_offset_xyz=(0.0, 0.0, 0.218),
                 eef_offset_rpy=(0.0, 0.0, -np.pi / 2.0),
             )
+        configure_geometry.assert_called_once_with(robot, FakeUaibot)
         return robot, adapter
 
     def test_corrects_known_uaibot_ur3e_d5_value(self):

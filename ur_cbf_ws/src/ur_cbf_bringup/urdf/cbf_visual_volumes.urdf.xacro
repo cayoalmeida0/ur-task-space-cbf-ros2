@@ -1,15 +1,16 @@
 <?xml version="1.0"?>
 <!--
-  Copia visual dos objetos de colisao internos do UAIbot 1.2.7 para o UR3e.
+  Modelo visual de autocolisao corrigido do projeto para o conjunto UR3e/RG2.
 
   Fonte fixada:
   UAIbot/UAIbotPy@1acb5ed637738aca4ea05945e6c065c3757bc13d
   uaibot/robot/_create_ur_ur3e.py
 
-  As matrizes htm_obj do UAIbot sao relativas aos frames DH posteriores a cada
-  junta. Os origins abaixo aplicam as transformacoes rigidas DH -> elo URDF da
-  descricao oficial Jazzy. Cilindros usam o eixo local z; caixas usam
-  width/depth/height como x/y/z, igualmente ao UAIbot.
+  Os treze objetos do UR3e preservados da fabrica UAIbot sao relativos aos
+  frames DH posteriores a cada junta. Os origins abaixo aplicam as
+  transformacoes rigidas DH -> elo URDF da descricao oficial Jazzy. A garra
+  generica da dependencia foi substituida por uma capsula RG2 pertencente ao
+  projeto, formada por um cilindro e duas esferas.
 
   Estes links nao possuem collision nem inertial: aparecem no RViz e no Gazebo,
   acompanham os elos por juntas fixas e nao alteram a fisica da simulacao.
@@ -55,17 +56,31 @@
     </joint>
   </xacro:macro>
 
-  <xacro:macro name="cbf_box_visual"
-               params="name parent xyz rpy size rgba">
+  <xacro:macro name="cbf_capsule_visual"
+               params="name parent center rpy cap_a cap_b radius length rgba">
     <link name="${name}_cbf_volume">
-      <visual name="${name}_cbf_visual">
-        <origin xyz="${xyz}" rpy="${rpy}"/>
+      <visual name="${name}_cbf_cylinder">
+        <origin xyz="${center}" rpy="${rpy}"/>
         <geometry>
-          <box size="${size}"/>
+          <cylinder radius="${radius}" length="${length}"/>
         </geometry>
         <material name="${name}_cbf_material">
           <color rgba="${rgba}"/>
         </material>
+      </visual>
+      <visual name="${name}_cbf_cap_a">
+        <origin xyz="${cap_a}" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="${radius}"/>
+        </geometry>
+        <material name="${name}_cbf_material"/>
+      </visual>
+      <visual name="${name}_cbf_cap_b">
+        <origin xyz="${cap_b}" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="${radius}"/>
+        </geometry>
+        <material name="${name}_cbf_material"/>
       </visual>
     </link>
     <joint name="${name}_cbf_volume_joint" type="fixed">
@@ -77,7 +92,6 @@
 
   <xacro:macro name="ur3e_cbf_visual_volumes" params="prefix">
     <xacro:property name="arm_color" value="0.00 0.75 1.00 0.25"/>
-    <xacro:property name="tool_color" value="1.00 0.45 0.00 0.30"/>
 
     <!-- UAIbot link 0; ^shoulder_link T_DH0 = Rx(pi/2). -->
     <xacro:cbf_cylinder_visual
@@ -141,28 +155,14 @@
       name="${prefix}uaibot_c52" parent="${prefix}wrist_3_link"
       xyz="0.0011 -0.021 -0.0201" rpy="1.570796326795 1.570796326795 0"
       radius="0.01" length="0.028" rgba="${arm_color}"/>
-    <xacro:cbf_sphere_visual
-      name="${prefix}uaibot_c53" parent="${prefix}wrist_3_link"
-      xyz="0.0011 0.004 0.0279" radius="0.05" rgba="${tool_color}"/>
-    <xacro:cbf_box_visual
-      name="${prefix}uaibot_c54" parent="${prefix}wrist_3_link"
-      xyz="0.0011 -0.006 0.1079" rpy="1.570796326795 1.570796326795 0"
-      size="0.09 0.07 0.06" rgba="${tool_color}"/>
-    <xacro:cbf_box_visual
-      name="${prefix}uaibot_c55" parent="${prefix}wrist_3_link"
-      xyz="-0.0389 -0.001 0.1529" rpy="1.570796326795 0.785398163397 0"
-      size="0.075 0.04 0.035" rgba="${tool_color}"/>
-    <xacro:cbf_box_visual
-      name="${prefix}uaibot_c56" parent="${prefix}wrist_3_link"
-      xyz="0.0411 -0.001 0.1529" rpy="-1.570796326795 0.785398163397 -3.14159265359"
-      size="0.075 0.04 0.035" rgba="${tool_color}"/>
-    <xacro:cbf_cylinder_visual
-      name="${prefix}uaibot_c57" parent="${prefix}wrist_3_link"
-      xyz="0.0511 -0.001 0.1979" rpy="3.14159265359 0 1.570796326795"
-      radius="0.021" length="0.04" rgba="${tool_color}"/>
-    <xacro:cbf_cylinder_visual
-      name="${prefix}uaibot_c58" parent="${prefix}wrist_3_link"
-      xyz="-0.0489 -0.001 0.1979" rpy="3.14159265359 0 1.570796326795"
-      radius="0.021" length="0.04" rgba="${tool_color}"/>
+  </xacro:macro>
+
+  <xacro:macro name="rg2_cbf_visual_volume" params="prefix">
+    <!-- Mesmos tres objetos anexados ao ultimo elo do modelo UAIbot corrigido. -->
+    <xacro:cbf_capsule_visual
+      name="${prefix}rg2" parent="${prefix}onrobot_base_link"
+      center="0 0 0.110" rpy="0 0 0"
+      cap_a="0 0 0.055" cap_b="0 0 0.165"
+      radius="0.090" length="0.110" rgba="1.00 0.45 0.00 0.30"/>
   </xacro:macro>
 </robot>

@@ -289,7 +289,7 @@ class CartesianPositionTest(Node):
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.6.0; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.1; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
 
     def _validate_parameters(self) -> None:
@@ -323,6 +323,13 @@ class CartesianPositionTest(Node):
         if self.self_collision_cbf_mode not in {"off", "monitor", "enforce"}:
             raise ValueError(
                 "self_collision_cbf_mode deve ser off, monitor ou enforce."
+            )
+        if self.self_collision_cbf_mode != "off" and (
+            self.ur_type,
+            self.onrobot_type,
+        ) != ("ur3e", "rg2"):
+            raise ValueError(
+                "A geometria de autocolisao corrigida suporta apenas ur3e + rg2."
             )
         if (
             self.self_collision_cbf_mode == "enforce"
@@ -626,7 +633,7 @@ class CartesianPositionTest(Node):
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.6.0",
+                "control_package": "ur_cbf_control:0.6.1",
                 "controller_mode": self.controller_mode,
                 "self_collision_cbf_mode": self.self_collision_cbf_mode,
                 "osqp": self.qp_solver.solver_version,

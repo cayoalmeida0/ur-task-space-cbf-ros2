@@ -35,7 +35,10 @@ python3 - <<'PY'
 import osqp
 import uaibot as ub
 from ur_cbf_control.uaibot_collision_model import (
-    validate_uaibot_ur3e_collision_model,
+    configure_ur3e_rg2_project_collision_model,
+)
+from ur_cbf_control.uaibot_collision_model import (
+    validate_ur3e_rg2_project_collision_model,
 )
 
 assert ub.__version__ == "1.2.7", ub.__version__
@@ -45,9 +48,10 @@ robot = ub.Robot.create_ur_ur3e(name="ur3e_check")
 assert len(robot.links) == 6
 assert hasattr(robot, "compute_dist_auto")
 assert all(len(link.col_objects) > 0 for link in robot.links)
-validate_uaibot_ur3e_collision_model(robot)
+configure_ur3e_rg2_project_collision_model(robot, ub)
+validate_ur3e_rg2_project_collision_model(robot)
 print(f"UAIbot {ub.__version__}: UR3e criado com {len(robot.links)} elos")
-print("UAIbot: 19 primitivas de autocolisao coincidem com o Xacro")
+print("Geometria corrigida: 16 primitivas UR3e/RG2 coincidem com o Xacro")
 print(f"OSQP {osqp.__version__}: resolvedor QP encontrado")
 PY
 

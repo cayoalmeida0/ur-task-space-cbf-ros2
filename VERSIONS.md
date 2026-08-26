@@ -2,6 +2,22 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao experimental 0.6.1 / controle 0.6.1 / bringup 0.3.1 — 21 de agosto de 2026
+
+- Mantem 13 primitivas da fabrica UAIbot para base, braco, antebraco e pulsos
+  do UR3e, com os mesmos tipos, dimensoes e transformacoes da revisao anterior.
+- Remove os seis objetos da garra generica UAIbot e restaura a aproximacao da
+  RG2 como uma capsula de tres objetos: cilindro e duas esferas.
+- Aplica essa geometria corrigida diretamente a `Link._col_objects` logo apos a
+  criacao do UR3e, fazendo `compute_dist_auto` calcular distancias e Jacobianos
+  sobre o mesmo modelo exibido pelo Xacro.
+- Valida primeiro as 19 primitivas da dependencia fixada e, depois da troca, as
+  16 primitivas do projeto; qualquer divergencia interrompe a inicializacao.
+- Restringe os modos de autocolisao `monitor` e `enforce` a combinacao
+  `ur3e + rg2` enquanto outros conjuntos nao possuirem geometria propria.
+- Mantem a imagem Docker `0.2.0` e o modo CBF padrao `off` durante o ajuste
+  visual e a validacao temporal do novo modelo.
+
 ## Revisao experimental 0.6.0 / controle 0.6.0 / bringup 0.3.0 — 21 de agosto de 2026
 
 - Formula a primeira CBF cinemática de autocolisao como
