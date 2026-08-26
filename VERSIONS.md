@@ -2,6 +2,12 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao experimental 0.6.13 / controle 0.6.13 / bringup 0.3.13 — 26 de agosto de 2026
+
+- Define no frame URDF `z=-0,030 m` em `c31` e `z=-0,050 m` em `c41`.
+- Aplica os mesmos ajustes às coordenadas DH do UAIbot, preservando todos os
+  outros origins, tipos, dimensoes, rotacoes, capsula RG2 e imagem Docker `0.2.0`.
+
 ## Revisao experimental 0.6.12 / controle 0.6.12 / bringup 0.3.12 — 26 de agosto de 2026
 
 - Define no frame URDF `z=0` em `c31`, preservando `x=y=0`.

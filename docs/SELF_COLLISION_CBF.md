@@ -68,7 +68,8 @@ Em seguida, substitui somente a geometria distal, resultando em um modelo com 16
 objetos. As 13 primitivas do braço partem da fábrica; nesta revisão, os origins
 URDF usam `z=0,115 m` em `c11`, `x=0; z=0,050 m` em `c21`, preservam
 `z=0,027 m` em `c22` e `z=0,025 m` em `c23`, usam
-`x=y=z=0` em `c31`, `x=0; y=0,025 m` em `c32`, `z=0,050 m` em `c41`,
+`x=y=0; z=-0,030 m` em `c31`, `x=0; y=0,025 m` em `c32`,
+`z=-0,050 m` em `c41`,
 `x=z=0` em `c42`, preservam `c51` e usam
 `z=-0,018 m` em `c52`. Tipos, dimensões e
 rotações permanecem originais. Os seis
