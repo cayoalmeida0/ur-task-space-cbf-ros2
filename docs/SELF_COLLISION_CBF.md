@@ -66,9 +66,9 @@ explicitamente os quatro valores e mantém o wheel instalado sem modificações.
 O projeto valida inicialmente as 19 primitivas da fábrica UR3e do UAIbot 1.2.7.
 Em seguida, substitui somente a geometria distal, resultando em um modelo com 16
 objetos. As 13 primitivas do braço partem da fábrica; nesta revisão, os origins
-URDF usam `x=0` em `c21`, `z=0,025 m` em `c21/c22/c23`, `y=0,01 m; z=0` em
-`c31`, `y=0,04 m` em `c32` e `z=0` em `c51`, enquanto `c52` permanece na pose
-original. Tipos, dimensões e rotações permanecem originais. Os seis
+URDF usam `x=0; z=0,025 m` em `c21`, `z=0,025 m` em `c22/c23`, `y=z=0` em
+`c31`, `y=0` em `c32`, `xyz=(0;0;-0,02) m` em `c51` e `z=-0,018 m` em `c52`.
+Tipos, dimensões e rotações permanecem originais. Os seis
 objetos da garra genérica são removidos e substituídos por uma cápsula RG2
 formada pela união de um cilindro e duas esferas.
 
