@@ -11,9 +11,9 @@
   rigidas DH -> elo URDF da descricao oficial Jazzy. Tipos, dimensoes e poses
   locais dos treze objetos do braco partem da fabrica UAIbot fixada. Neste
   ensaio, c11 usa z=0.115 m; c21 usa x=0 e z=0.0425 m; c22 preserva z=0.027 m;
-  c23 usa x=-0.2196 m e z=0.025 m; c31 usa x=y=0 e z=-0.020 m; c32 usa x=0,
-  y=0 m e comprimento=0.0945 m; c41 usa z=-0.025 m; c42 usa
-  x=0, y=0.005 m e z=0; c51 permanece inalterado; e c52 usa z=-0.030 m.
+  c23 usa x=-0.2096 m e z=0.025 m; c31 usa x=y=0 e z=-0.020 m; c32 usa x=0,
+  y=0 m e comprimento=0.0945 m; c41 usa z=-0.027 m; c42 usa
+  x=0, y=0 m e z=0; c51 permanece inalterado; e c52 usa x=0.0061 m e z=-0.030 m.
   A garra generica foi substituida por uma capsula RG2 pertencente ao projeto.
 
   Estes links nao possuem collision nem inertial: aparecem no RViz e no Gazebo,
@@ -127,7 +127,7 @@
       radius="0.04" length="0.2" rgba="${arm_color}"/>
     <xacro:cbf_cylinder_visual
       name="${prefix}uaibot_c23" parent="${prefix}forearm_link"
-      xyz="-0.2196 0 0.025" rpy="0 0 1.570796326795"
+      xyz="-0.2096 0 0.025" rpy="0 0 1.570796326795"
       radius="0.035" length="0.09" rgba="${arm_color}"/>
 
     <!-- UAIbot link 3; ^wrist_1_link T_DH3 = Rx(pi/2). -->
@@ -143,11 +143,11 @@
     <!-- UAIbot link 4; ^wrist_2_link T_DH4 = Rx(-pi/2). -->
     <xacro:cbf_cylinder_visual
       name="${prefix}uaibot_c41" parent="${prefix}wrist_2_link"
-      xyz="0.0011 0 -0.025" rpy="0 0 -1.570796326795"
+      xyz="0.0011 0 -0.027" rpy="0 0 -1.570796326795"
       radius="0.035" length="0.025" rgba="${arm_color}"/>
     <xacro:cbf_cylinder_visual
       name="${prefix}uaibot_c42" parent="${prefix}wrist_2_link"
-      xyz="0 0.005 0" rpy="1.570796326795 1.570796326795 0"
+      xyz="0 0 0" rpy="1.570796326795 1.570796326795 0"
       radius="0.038" length="0.098" rgba="${arm_color}"/>
 
     <!-- UAIbot link 5; ^wrist_3_link T_DH5 = I. -->
@@ -157,7 +157,7 @@
       radius="0.038" length="0.046" rgba="${arm_color}"/>
     <xacro:cbf_cylinder_visual
       name="${prefix}uaibot_c52" parent="${prefix}wrist_3_link"
-      xyz="0.0011 -0.021 -0.03" rpy="1.570796326795 1.570796326795 0"
+      xyz="0.0061 -0.021 -0.03" rpy="1.570796326795 1.570796326795 0"
       radius="0.01" length="0.028" rgba="${arm_color}"/>
   </xacro:macro>
 
