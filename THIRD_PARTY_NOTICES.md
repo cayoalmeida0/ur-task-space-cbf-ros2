@@ -7,10 +7,11 @@ transforms used by `cbf_visual_volumes.urdf.xacro` are derived from
 [`UAIbot/UAIbotPy`](https://github.com/UAIbot/UAIbotPy/blob/1acb5ed637738aca4ea05945e6c065c3757bc13d/uaibot/robot/_create_ur_ur3e.py),
 commit `1acb5ed637738aca4ea05945e6c065c3757bc13d`. The transforms were converted
 from the UAIbot DH frames to the corresponding ROS 2 Jazzy URDF link frames.
-The project copy preserves the exact primitive types, homogeneous transforms,
-and dimensions of all thirteen upstream UR3e arm objects. Only the generic
-upstream gripper geometry is replaced. The project-owned distance evaluator
-uses UAIbot's public `Utils.compute_dist` implementation but replaces the
+The project copy preserves the primitive types, rotations, and dimensions of
+all thirteen upstream UR3e arm objects. Revision 0.6.5 sets only the local z
+translation of `c21`, `c22`, `c23`, and `c52` to zero. The generic upstream
+gripper geometry is replaced. The project-owned distance evaluator uses
+UAIbot's public `Utils.compute_dist` implementation but replaces the
 incompatible three-value unpacking in UAIbot 1.2.7
 `_compute_dist_auto_python`.
 The three-object RG2 capsule is original project configuration and replaces the

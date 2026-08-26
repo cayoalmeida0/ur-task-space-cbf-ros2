@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>ur_cbf_bringup</name>
-  <version>0.3.4</version>
+  <version>0.3.5</version>
   <description>Bringup UR para Gazebo e hardware real, com OnRobot RG2/RG6.</description>
   <maintainer email="cayoalmeida0@users.noreply.github.com">Cayo Sousa</maintainer>
   <license>Apache-2.0</license>

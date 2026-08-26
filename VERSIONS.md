@@ -2,6 +2,15 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao experimental 0.6.5 / controle 0.6.5 / bringup 0.3.5 — 26 de agosto de 2026
+
+- Parte das 13 primitivas originais do UR3e restauradas na revisao `0.6.4`.
+- Define `z=0` exclusivamente em `c21`, `c22`, `c23` e `c52`, preservando
+  coordenadas `x/y`, rotacoes, tipos e dimensoes originais.
+- Aplica os quatro deslocamentos simultaneamente ao modelo matematico UAIbot e
+  ao Xacro usado no RViz/Gazebo.
+- Mantem a capsula RG2, a imagem Docker `0.2.0` e o modo CBF padrao `off`.
+
 ## Revisao experimental 0.6.4 / controle 0.6.4 / bringup 0.3.4 — 26 de agosto de 2026
 
 - Restaura `c0` a `c52` para os tipos, matrizes e dimensoes exatos da fabrica
