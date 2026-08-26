@@ -64,27 +64,21 @@ mas `_compute_dist_auto_python` tenta desempacotar três. O projeto trata
 explicitamente os quatro valores e mantém o wheel instalado sem modificações.
 
 O projeto valida inicialmente as 19 primitivas da fábrica UR3e do UAIbot 1.2.7.
-Em seguida, substitui essa lista por um modelo corrigido com 16 objetos. As 13
-primitivas do braço preservam os tipos da fábrica; seis recebem ajustes
-versionados de pose ou dimensão para cobrir as juntas físicas. Os seis objetos
-da garra genérica são removidos e substituídos por uma cápsula RG2 formada pela
-união de um cilindro e duas esferas.
+Em seguida, substitui somente a geometria distal, resultando em um modelo com 16
+objetos. As 13 primitivas do braço são cópias exatas da fábrica, incluindo tipo,
+matriz homogênea e dimensões. Os seis objetos da garra genérica são removidos e
+substituídos por uma cápsula RG2 formada pela união de um cilindro e duas
+esferas.
 
 As matrizes do braço, relativas aos frames DH, foram convertidas para os frames
 dos elos da descrição oficial Jazzy por transformações rígidas constantes. A
-cópia original posicionava os objetos `c21` e `c22` em `z=0,050 m` no
-`forearm_link`; o modelo do projeto usa `z=0,027 m`, igual ao `elbow_offset`
-publicado para o UR3e. A esfera `c21` é centralizada na junta e usa o
-`elbow_radius=0,060 m`. O cilindro `c23` cobre os `0,10405 m` entre esse offset
-e `wrist_1_link`; `c31` é centralizado no primeiro punho e `c32` cobre os
-`0,08535 m` completos até `wrist_2_link`. Por fim, `c41` é centralizado no
-segundo punho. Os raios de `c23` e `c41` mantêm uma folga positiva entre os
-elos não adjacentes 2 e 4, evitando uma autocolisão estrutural falsa. Tudo é
-aplicado simultaneamente à tabela matemática e ao Xacro. A
-cápsula usa raio de `0,090 m`, trecho cilíndrico de `0,110 m` e centros das
+cópia visual aplica somente as transformações rígidas necessárias para expressar
+as matrizes DH nos frames dos elos URDF. Nenhum centro, raio ou comprimento das
+13 primitivas originais é corrigido nesta revisão. A cápsula usa raio de
+`0,090 m`, trecho cilíndrico de `0,110 m` e centros das
 extremidades em `z=0,055 m` e `z=0,165 m` no frame da RG2. Esses mesmos valores
 são anexados ao último elo do modelo UAIbot. Assim, a cena transparente e os
-cálculos de `d_k(q)` e `J_{d,k}(q)` usam a mesma geometria corrigida.
+cálculos de `d_k(q)` e `J_{d,k}(q)` usam a mesma geometria versionada.
 
 O código da dependência instalada não é alterado. A substituição ocorre após
 `Robot.create_ur_ur3e()` por meio dos objetos de cada `Link`. Antes e depois da
@@ -96,12 +90,11 @@ para o conjunto `ur3e + rg2`; outros modelos são recusados em `monitor` e
 ### Ajuste dos volumes do braço
 
 A tabela `UR3E_UAIBOT_PRIMITIVES` é o contrato imutável da dependência fixada.
-Os ajustes experimentais devem ser feitos somente em
 `UR3E_RG2_PROJECT_PRIMITIVES`, no módulo
-`ur_cbf_control/uaibot_collision_model.py`. Cada uma das 13 primitivas do braço
-é uma cópia independente, permitindo alterar matriz e dimensões sem modificar a
-referência usada para validar o wheel. O Xacro deve receber o mesmo ajuste; os
-testes de regressão verificam origens, orientações, tipos e dimensões antes da
+`ur_cbf_control/uaibot_collision_model.py`, contém cópias independentes e
+idênticas das 13 primitivas do braço. Qualquer ajuste futuro deverá ser aplicado
+também ao Xacro e acompanhado de justificativa dimensional. Os testes de
+regressão verificam origens, orientações, tipos e dimensões antes da
 publicação.
 
 Por isso o parâmetro padrão é `self_collision_cbf_mode: off`. O fluxo correto é

@@ -95,27 +95,12 @@ class UaibotCollisionModelTest(unittest.TestCase):
         self.assertEqual(len(UR3E_UAIBOT_PRIMITIVES), 19)
 
     def test_project_arm_specs_are_independent_from_factory_contract(self):
-        adjusted_indices = {4, 5, 6, 7, 8, 9}
-        for index, (factory_spec, project_spec) in enumerate(zip(
+        for factory_spec, project_spec in zip(
             UR3E_UAIBOT_PRIMITIVES[:13],
             UR3E_RG2_PROJECT_PRIMITIVES[:13],
-        )):
+        ):
             self.assertIsNot(factory_spec, project_spec)
-            if index not in adjusted_indices:
-                self.assertEqual(factory_spec, project_spec)
-
-        expected_adjustments = {
-            4: ((0.2132, 0.0, 0.027), (0.060,)),
-            5: ((0.1086, 0.0, 0.027), (0.040, 0.200)),
-            6: ((0.0, 0.0, 0.079025), (0.040, 0.10405)),
-            7: ((0.0, 0.0, 0.0), (0.045, 0.090)),
-            8: ((0.0, 0.0, 0.042675), (0.045, 0.08535)),
-            9: ((0.0, 0.0, 0.0), (0.038, 0.090)),
-        }
-        for index, (translation, dimensions) in expected_adjustments.items():
-            spec = UR3E_RG2_PROJECT_PRIMITIVES[index]
-            self.assertTrue(np.allclose(np.asarray(spec.htm)[:3, 3], translation))
-            self.assertEqual(spec.dimensions, dimensions)
+            self.assertEqual(factory_spec, project_spec)
 
     def test_replaces_generic_gripper_with_rg2_capsule(self):
         robot = make_factory_robot()
@@ -139,16 +124,6 @@ class UaibotCollisionModelTest(unittest.TestCase):
         self.assertAlmostEqual(distal[2][1][2, 3], 0.110)
         self.assertAlmostEqual(distal[3][1][2, 3], 0.055)
         self.assertAlmostEqual(distal[4][1][2, 3], 0.165)
-
-    def test_adjusted_wrist_neighbors_preserve_positive_radial_clearance(self):
-        c23 = UR3E_RG2_PROJECT_PRIMITIVES[6]
-        c41 = UR3E_RG2_PROJECT_PRIMITIVES[9]
-        wrist_spacing = 0.08535
-        radial_clearance = wrist_spacing - (
-            c23.dimensions[0] + c41.dimensions[0]
-        )
-        self.assertGreater(radial_clearance, 0.0)
-        self.assertAlmostEqual(radial_clearance, 0.00735)
 
     def test_rejects_changed_factory_primitive_count(self):
         robot = make_factory_robot()

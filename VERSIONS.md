@@ -2,6 +2,17 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao experimental 0.6.4 / controle 0.6.4 / bringup 0.3.4 — 26 de agosto de 2026
+
+- Restaura `c0` a `c52` para os tipos, matrizes e dimensoes exatos da fabrica
+  UR3e do UAIbot 1.2.7 fixada no commit `1acb5ed`.
+- Remove todos os ajustes experimentais de centro, raio e comprimento aplicados
+  ao cotovelo e aos punhos nas revisoes `0.6.2` e `0.6.3`.
+- Aplica a mesma restauracao ao Xacro após a conversao rigida dos frames DH para
+  os frames URDF, preservando equivalencia visual e matematica.
+- Mantem somente a substituicao da garra generica pela capsula RG2 do projeto.
+- Mantem a imagem Docker `0.2.0` e o modo CBF padrao `off`.
+
 ## Revisao experimental 0.6.3 / controle 0.6.3 / bringup 0.3.3 — 26 de agosto de 2026
 
 - Centraliza `c21` no cotovelo e amplia seu raio para os `0,060 m` oficiais.
