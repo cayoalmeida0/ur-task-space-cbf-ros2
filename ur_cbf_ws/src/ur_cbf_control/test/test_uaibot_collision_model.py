@@ -96,13 +96,13 @@ class UaibotCollisionModelTest(unittest.TestCase):
 
     def test_project_arm_specs_are_independent_from_factory_contract(self):
         adjusted_components = {
-            4: ((0, 0.2132), (2, 0.025)),
-            5: ((2, 0.025),),
+            4: ((0, 0.2132), (2, 0.02)),
+            5: ((2, 0.0225),),
             6: ((2, 0.025),),
-            7: ((1, 0.0), (2, 0.0)),
+            7: ((1, 0.02), (2, 0.0)),
             8: ((2, 0.0),),
             11: ((0, 0.0), (1, 0.0), (2, -0.02)),
-            12: ((2, -0.018),),
+            12: ((2, -0.015),),
         }
         for index, (factory_spec, project_spec) in enumerate(zip(
             UR3E_UAIBOT_PRIMITIVES[:13],
@@ -141,13 +141,13 @@ class UaibotCollisionModelTest(unittest.TestCase):
             5: np.eye(4),
         }
         expected_urdf_origins = {
-            4: (0.0, 0.0, 0.025),
-            5: (-0.1046, 0.0, 0.025),
+            4: (0.0, 0.0, 0.02),
+            5: (-0.1046, 0.0, 0.0225),
             6: (-0.2146, 0.0, 0.025),
-            7: (0.0, 0.0, 0.0),
+            7: (0.0, 0.0, 0.02),
             8: (0.0, 0.0, -0.0011),
             11: (0.0, 0.0, -0.02),
-            12: (0.0011, -0.021, -0.018),
+            12: (0.0011, -0.021, -0.015),
         }
 
         for index, expected_origin in expected_urdf_origins.items():

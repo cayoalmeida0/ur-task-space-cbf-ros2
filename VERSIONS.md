@@ -2,6 +2,15 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao experimental 0.6.9 / controle 0.6.9 / bringup 0.3.9 — 26 de agosto de 2026
+
+- Define no frame URDF `z=0,020 m` em `c21`, `z=0,0225 m` em `c22` e
+  preserva `z=0,025 m` em `c23`.
+- Define `x=y=0; z=0,020 m` em `c31` e preserva `x=y=0` em `c32`.
+- Preserva `c51` em `xyz=(0; 0; -0,020) m` e define `z=-0,015 m` em `c52`.
+- Aplica as mesmas poses ao Xacro e às matrizes DH do modelo UAIbot, preservando
+  tipos, dimensoes, rotacoes, capsula RG2 e imagem Docker `0.2.0`.
+
 ## Revisao experimental 0.6.8 / controle 0.6.8 / bringup 0.3.8 — 26 de agosto de 2026
 
 - Preserva `z=0,025 m` em `c21/c22/c23` e `x=0` em `c21`.
