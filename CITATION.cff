@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "Se este software contribuir para sua pesquisa, cite o repositorio e a versao utilizada."
 type: software
 title: "Ambiente ROS 2 para controle CBF de manipuladores Universal Robots"
-version: 0.6.2
+version: 0.6.3
 date-released: 2026-08-26
 repository-code: "https://github.com/cayoalmeida0/ur-task-space-cbf-ros2"
 license: Apache-2.0

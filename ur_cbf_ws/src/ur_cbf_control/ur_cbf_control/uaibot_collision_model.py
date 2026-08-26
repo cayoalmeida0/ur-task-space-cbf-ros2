@@ -12,7 +12,7 @@ UAIBOT_FACTORY_GEOMETRY_SOURCE = (
     "uaibot/robot/_create_ur_ur3e.py"
 )
 PROJECT_GEOMETRY_SOURCE = (
-    "ur-task-space-cbf-ros2@0.6.2:"
+    "ur-task-space-cbf-ros2@0.6.3:"
     "ur_cbf_control/uaibot_collision_model.py#UR3E_RG2_PROJECT_PRIMITIVES"
 )
 
@@ -112,12 +112,23 @@ def _translation(z: float):
     )
 
 
-def _with_translation_z(spec: UaibotPrimitiveSpec, z: float):
-    """Copia uma especificacao alterando somente sua coordenada local z."""
+def _adjust_primitive(
+    spec: UaibotPrimitiveSpec,
+    *,
+    translation: tuple[float, float, float] | None = None,
+    dimensions: tuple[float, ...] | None = None,
+):
+    """Copia uma primitiva alterando pose local e/ou dimensoes."""
 
     rows = [list(row) for row in spec.htm]
-    rows[2][3] = float(z)
-    return replace(spec, htm=tuple(tuple(row) for row in rows))
+    if translation is not None:
+        for axis, value in enumerate(translation):
+            rows[axis][3] = float(value)
+    return replace(
+        spec,
+        htm=tuple(tuple(row) for row in rows),
+        dimensions=spec.dimensions if dimensions is None else dimensions,
+    )
 
 
 # Cada primitiva do braco e uma copia independente. Os ajustes experimentais
@@ -128,14 +139,42 @@ UR3E_RG2_PROJECT_PRIMITIVES = (
     replace(UR3E_UAIBOT_PRIMITIVES[1]),
     replace(UR3E_UAIBOT_PRIMITIVES[2]),
     replace(UR3E_UAIBOT_PRIMITIVES[3]),
-    # A fabrica desloca o corpo principal do antebraco em 50 mm. A descricao
-    # oficial do UR3e posiciona esse corpo em 27 mm no frame forearm_link.
-    _with_translation_z(UR3E_UAIBOT_PRIMITIVES[4], 0.027),
-    _with_translation_z(UR3E_UAIBOT_PRIMITIVES[5], 0.027),
-    replace(UR3E_UAIBOT_PRIMITIVES[6]),
-    replace(UR3E_UAIBOT_PRIMITIVES[7]),
-    replace(UR3E_UAIBOT_PRIMITIVES[8]),
-    replace(UR3E_UAIBOT_PRIMITIVES[9]),
+    # O corpo principal do antebraco usa o elbow_offset=27 mm. A esfera c21
+    # fica no centro da junta e adota o elbow_radius=60 mm oficial.
+    _adjust_primitive(
+        UR3E_UAIBOT_PRIMITIVES[4],
+        translation=(0.2132, 0.0, 0.027),
+        dimensions=(0.060,),
+    ),
+    _adjust_primitive(
+        UR3E_UAIBOT_PRIMITIVES[5],
+        translation=(0.1086, 0.0, 0.027),
+    ),
+    # c23 cobre continuamente do elbow_offset ao centro de wrist_1_link.
+    _adjust_primitive(
+        UR3E_UAIBOT_PRIMITIVES[6],
+        translation=(0.0, 0.0, 0.079025),
+        dimensions=(0.040, 0.10405),
+    ),
+    # c31 e c41 sao centralizados nos corpos das juntas de punho; c32 cobre
+    # todo o vao de 85,35 mm entre wrist_1_link e wrist_2_link. c31/c32 usam
+    # o wrist_radius=45 mm oficial. c23/c41 preservam uma pequena folga entre
+    # os elos nao adjacentes 2 e 4, evitando autocolisao estrutural falsa.
+    _adjust_primitive(
+        UR3E_UAIBOT_PRIMITIVES[7],
+        translation=(0.0, 0.0, 0.0),
+        dimensions=(0.045, 0.090),
+    ),
+    _adjust_primitive(
+        UR3E_UAIBOT_PRIMITIVES[8],
+        translation=(0.0, 0.0, 0.042675),
+        dimensions=(0.045, 0.08535),
+    ),
+    _adjust_primitive(
+        UR3E_UAIBOT_PRIMITIVES[9],
+        translation=(0.0, 0.0, 0.0),
+        dimensions=(0.038, 0.090),
+    ),
     replace(UR3E_UAIBOT_PRIMITIVES[10]),
     replace(UR3E_UAIBOT_PRIMITIVES[11]),
     replace(UR3E_UAIBOT_PRIMITIVES[12]),

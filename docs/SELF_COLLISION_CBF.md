@@ -64,19 +64,23 @@ mas `_compute_dist_auto_python` tenta desempacotar três. O projeto trata
 explicitamente os quatro valores e mantém o wheel instalado sem modificações.
 
 O projeto valida inicialmente as 19 primitivas da fábrica UR3e do UAIbot 1.2.7.
-Em seguida, substitui essa lista por um modelo corrigido com 16 objetos. Onze
-primitivas preservam integralmente a geometria da base, do braço e dos pulsos;
-duas primitivas do antebraço mantêm forma e dimensões, mas recebem o alinhamento
-físico descrito abaixo. Os seis objetos da garra genérica são removidos e
-substituídos por uma cápsula RG2 formada pela união de um cilindro e duas
-esferas.
+Em seguida, substitui essa lista por um modelo corrigido com 16 objetos. As 13
+primitivas do braço preservam os tipos da fábrica; seis recebem ajustes
+versionados de pose ou dimensão para cobrir as juntas físicas. Os seis objetos
+da garra genérica são removidos e substituídos por uma cápsula RG2 formada pela
+união de um cilindro e duas esferas.
 
 As matrizes do braço, relativas aos frames DH, foram convertidas para os frames
 dos elos da descrição oficial Jazzy por transformações rígidas constantes. A
 cópia original posicionava os objetos `c21` e `c22` em `z=0,050 m` no
 `forearm_link`; o modelo do projeto usa `z=0,027 m`, igual ao `elbow_offset`
-publicado para o UR3e na descrição oficial. O realinhamento lateral de `23 mm`
-é aplicado simultaneamente à tabela matemática e ao Xacro. A
+publicado para o UR3e. A esfera `c21` é centralizada na junta e usa o
+`elbow_radius=0,060 m`. O cilindro `c23` cobre os `0,10405 m` entre esse offset
+e `wrist_1_link`; `c31` é centralizado no primeiro punho e `c32` cobre os
+`0,08535 m` completos até `wrist_2_link`. Por fim, `c41` é centralizado no
+segundo punho. Os raios de `c23` e `c41` mantêm uma folga positiva entre os
+elos não adjacentes 2 e 4, evitando uma autocolisão estrutural falsa. Tudo é
+aplicado simultaneamente à tabela matemática e ao Xacro. A
 cápsula usa raio de `0,090 m`, trecho cilíndrico de `0,110 m` e centros das
 extremidades em `z=0,055 m` e `z=0,165 m` no frame da RG2. Esses mesmos valores
 são anexados ao último elo do modelo UAIbot. Assim, a cena transparente e os

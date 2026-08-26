@@ -7,11 +7,13 @@ transforms used by `cbf_visual_volumes.urdf.xacro` are derived from
 [`UAIbot/UAIbotPy`](https://github.com/UAIbot/UAIbotPy/blob/1acb5ed637738aca4ea05945e6c065c3757bc13d/uaibot/robot/_create_ur_ur3e.py),
 commit `1acb5ed637738aca4ea05945e6c065c3757bc13d`. The transforms were converted
 from the UAIbot DH frames to the corresponding ROS 2 Jazzy URDF link frames.
-The local z translation of forearm objects `c21` and `c22` is modified from
-0.050 m to the official UR3e `elbow_offset` of 0.027 m. The project-owned
-distance evaluator uses UAIbot's public `Utils.compute_dist` implementation but
-replaces the incompatible three-value unpacking in UAIbot 1.2.7
-`_compute_dist_auto_python`.
+The project copy adjusts six primitives without changing their upstream types:
+`c21` and `c22` use the official UR3e `elbow_offset` of 0.027 m; `c21` is
+centered on the elbow with the official 0.060 m radius; and `c23`, `c31`, `c32`
+and `c41` are centered or extended to cover the physical wrist chain. The
+project-owned distance evaluator uses UAIbot's public `Utils.compute_dist`
+implementation but replaces the incompatible three-value unpacking in UAIbot
+1.2.7 `_compute_dist_auto_python`.
 The three-object RG2 capsule is original project configuration and replaces the
 generic gripper geometry from the upstream factory at runtime.
 UAIbot is distributed under the MIT License:

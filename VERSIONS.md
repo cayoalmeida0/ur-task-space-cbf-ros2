@@ -2,6 +2,19 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao experimental 0.6.3 / controle 0.6.3 / bringup 0.3.3 — 26 de agosto de 2026
+
+- Centraliza `c21` no cotovelo e amplia seu raio para os `0,060 m` oficiais.
+- Estende `c23` por `0,10405 m`, cobrindo continuamente do `elbow_offset` ate
+  o centro de `wrist_1_link`.
+- Centraliza `c31` e `c41` nos dois corpos de punho assinalados na validacao
+  visual e estende `c32` por todo o vao oficial de `0,08535 m`.
+- Mantem uma folga positiva entre `c23` e os objetos do elo 4 para que a
+  cobertura ampliada nao produza autocolisao estrutural falsa.
+- Aplica exatamente as mesmas poses e dimensoes ao Xacro e ao modelo UAIbot,
+  preservando 13 primitivas no braco e a capsula simplificada da RG2.
+- Mantem a imagem Docker `0.2.0` e o modo CBF padrao `off`.
+
 ## Revisao experimental 0.6.2 / controle 0.6.2 / bringup 0.3.2 — 26 de agosto de 2026
 
 - Substitui a chamada defeituosa a `Robot.compute_dist_auto` no modo Python por
