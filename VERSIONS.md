@@ -2,6 +2,16 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao experimental 0.6.11 / controle 0.6.11 / bringup 0.3.11 — 26 de agosto de 2026
+
+- Define no frame URDF `z=0,115 m` em `c11` e `z=0,050 m` em `c21`.
+- Define `z=0,050 m` em `c31`, `y=0,025 m` em `c32` e `z=0,010 m` em
+  `c41`, preservando os demais eixos desses objetos.
+- Define `z=-0,018 m` em `c52`; preserva `c22`, `c23`, `c42`, `c51`, tipos,
+  dimensoes, rotacoes e a capsula RG2.
+- Aplica as conversoes equivalentes aos frames DH do UAIbot e mantém a imagem
+  Docker `0.2.0`.
+
 ## Revisao experimental 0.6.10 / controle 0.6.10 / bringup 0.3.10 — 26 de agosto de 2026
 
 - Define no frame URDF `z=0` em `c11`, `z=0,030 m` em `c21` e

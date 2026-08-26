@@ -5,7 +5,7 @@ package_name = "ur_cbf_bringup"
 
 setup(
     name=package_name,
-    version="0.3.10",
+    version="0.3.11",
     packages=find_packages(exclude=["test"]),
     data_files=[
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),

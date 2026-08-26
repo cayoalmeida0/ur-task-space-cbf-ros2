@@ -10,11 +10,11 @@
   DH posteriores a cada junta. Os origins abaixo aplicam as transformacoes
   rigidas DH -> elo URDF da descricao oficial Jazzy. Tipos, dimensoes e poses
   locais dos treze objetos do braco partem da fabrica UAIbot fixada. Neste
-  ensaio, c11 usa z=0; c21 usa x=0 e z=0.030 m; c22 usa z=0.027 m; c23
-  preserva z=0.025 m; c31 usa x=y=0 e z=-0.020 m; c32 usa x=0, y=0.020 m;
-  c41 usa z=-0.010 m; c42 usa z=0; c51 permanece inalterado; e c52 preserva
-  z=-0.015 m. A garra generica foi substituida por uma capsula RG2 pertencente
-  ao projeto.
+  ensaio, c11 usa z=0.115 m; c21 usa x=0 e z=0.050 m; c22 preserva z=0.027 m;
+  c23 preserva z=0.025 m; c31 usa x=y=0 e z=0.050 m; c32 usa x=0,
+  y=0.025 m; c41 usa z=0.010 m; c42 preserva z=0; c51 permanece inalterado;
+  e c52 usa z=-0.018 m. A garra generica foi substituida por uma capsula RG2
+  pertencente ao projeto.
 
   Estes links nao possuem collision nem inertial: aparecem no RViz e no Gazebo,
   acompanham os elos por juntas fixas e nao alteram a fisica da simulacao.
@@ -106,7 +106,7 @@
     <!-- UAIbot link 1; ^upper_arm_link T_DH1 = Tx(-0.24355). -->
     <xacro:cbf_cylinder_visual
       name="${prefix}uaibot_c11" parent="${prefix}upper_arm_link"
-      xyz="0.00185 0 0" rpy="0 0 1.570796326795"
+      xyz="0.00185 0 0.115" rpy="0 0 1.570796326795"
       radius="0.052" length="0.13" rgba="${arm_color}"/>
     <xacro:cbf_cylinder_visual
       name="${prefix}uaibot_c12" parent="${prefix}upper_arm_link"
@@ -120,7 +120,7 @@
     <!-- UAIbot link 2; ^forearm_link T_DH2 = Tx(-0.2132). -->
     <xacro:cbf_sphere_visual
       name="${prefix}uaibot_c21" parent="${prefix}forearm_link"
-      xyz="0 0 0.03" radius="0.05" rgba="${arm_color}"/>
+      xyz="0 0 0.05" radius="0.05" rgba="${arm_color}"/>
     <xacro:cbf_cylinder_visual
       name="${prefix}uaibot_c22" parent="${prefix}forearm_link"
       xyz="-0.1046 0 0.027" rpy="-1.570796326795 0 1.570796326795"
@@ -133,17 +133,17 @@
     <!-- UAIbot link 3; ^wrist_1_link T_DH3 = Rx(pi/2). -->
     <xacro:cbf_cylinder_visual
       name="${prefix}uaibot_c31" parent="${prefix}wrist_1_link"
-      xyz="0 0 -0.02" rpy="0 0 3.14159265359"
+      xyz="0 0 0.05" rpy="0 0 3.14159265359"
       radius="0.035" length="0.09" rgba="${arm_color}"/>
     <xacro:cbf_cylinder_visual
       name="${prefix}uaibot_c32" parent="${prefix}wrist_1_link"
-      xyz="0 0.02 -0.0011" rpy="-1.570796326795 0 -3.14159265359"
+      xyz="0 0.025 -0.0011" rpy="-1.570796326795 0 -3.14159265359"
       radius="0.035" length="0.045" rgba="${arm_color}"/>
 
     <!-- UAIbot link 4; ^wrist_2_link T_DH4 = Rx(-pi/2). -->
     <xacro:cbf_cylinder_visual
       name="${prefix}uaibot_c41" parent="${prefix}wrist_2_link"
-      xyz="0.0011 0 -0.01" rpy="0 0 -1.570796326795"
+      xyz="0.0011 0 0.01" rpy="0 0 -1.570796326795"
       radius="0.035" length="0.025" rgba="${arm_color}"/>
     <xacro:cbf_cylinder_visual
       name="${prefix}uaibot_c42" parent="${prefix}wrist_2_link"
@@ -157,7 +157,7 @@
       radius="0.038" length="0.046" rgba="${arm_color}"/>
     <xacro:cbf_cylinder_visual
       name="${prefix}uaibot_c52" parent="${prefix}wrist_3_link"
-      xyz="0.0011 -0.021 -0.015" rpy="1.570796326795 1.570796326795 0"
+      xyz="0.0011 -0.021 -0.018" rpy="1.570796326795 1.570796326795 0"
       radius="0.01" length="0.028" rgba="${arm_color}"/>
   </xacro:macro>
 

@@ -12,7 +12,7 @@ UAIBOT_FACTORY_GEOMETRY_SOURCE = (
     "uaibot/robot/_create_ur_ur3e.py"
 )
 PROJECT_GEOMETRY_SOURCE = (
-    "ur-task-space-cbf-ros2@0.6.10:"
+    "ur-task-space-cbf-ros2@0.6.11:"
     "ur_cbf_control/uaibot_collision_model.py#UR3E_RG2_PROJECT_PRIMITIVES"
 )
 
@@ -133,22 +133,22 @@ def _with_translation_component(
 # troca da garra pela capsula RG2.
 UR3E_RG2_PROJECT_PRIMITIVES = (
     replace(UR3E_UAIBOT_PRIMITIVES[0]),
-    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[1], 2, 0.0),
+    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[1], 2, 0.115),
     *(replace(spec) for spec in UR3E_UAIBOT_PRIMITIVES[2:4]),
     _with_translation_component(
         _with_translation_component(UR3E_UAIBOT_PRIMITIVES[4], 0, 0.2132),
         2,
-        0.03,
+        0.05,
     ),
     _with_translation_component(UR3E_UAIBOT_PRIMITIVES[5], 2, 0.027),
     _with_translation_component(UR3E_UAIBOT_PRIMITIVES[6], 2, 0.025),
     _with_translation_component(
-        _with_translation_component(UR3E_UAIBOT_PRIMITIVES[7], 1, -0.02),
+        _with_translation_component(UR3E_UAIBOT_PRIMITIVES[7], 1, 0.05),
         2,
         0.0,
     ),
-    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[8], 2, -0.02),
-    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[9], 1, 0.01),
+    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[8], 2, -0.025),
+    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[9], 1, -0.01),
     _with_translation_component(UR3E_UAIBOT_PRIMITIVES[10], 1, 0.0),
     _with_translation_component(
         _with_translation_component(
@@ -159,7 +159,7 @@ UR3E_RG2_PROJECT_PRIMITIVES = (
         2,
         -0.02,
     ),
-    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[12], 2, -0.015),
+    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[12], 2, -0.018),
     # A capsula RG2 substitui os seis objetos da garra generica UAIbot.
     UaibotPrimitiveSpec(5, 2, "Cylinder", _translation(0.110), (0.090, 0.110)),
     UaibotPrimitiveSpec(5, 3, "Ball", _translation(0.055), (0.090,)),
