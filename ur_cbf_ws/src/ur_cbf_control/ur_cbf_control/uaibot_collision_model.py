@@ -12,7 +12,7 @@ UAIBOT_FACTORY_GEOMETRY_SOURCE = (
     "uaibot/robot/_create_ur_ur3e.py"
 )
 PROJECT_GEOMETRY_SOURCE = (
-    "ur-task-space-cbf-ros2@0.6.6:"
+    "ur-task-space-cbf-ros2@0.6.7:"
     "ur_cbf_control/uaibot_collision_model.py#UR3E_RG2_PROJECT_PRIMITIVES"
 )
 
@@ -127,17 +127,27 @@ def _with_translation_component(
 
 
 # As 13 primitivas partem da fabrica UAIbot fixada. Os ajustes abaixo sao feitos
-# nas coordenadas DH; c31/y_DH controla z_URDF e c32/z_DH controla y_URDF por
-# causa da transformacao Rx(pi/2) do elo 3. A tabela original permanece separada
-# para validar o wheel antes da troca da garra pela capsula RG2.
+# nas coordenadas DH; em c31/c32, z_DH controla -y_URDF e y_DH controla z_URDF
+# por causa da transformacao Rx(pi/2) do elo 3. A tabela original permanece
+# separada para validar o wheel antes da troca da garra pela capsula RG2.
 UR3E_RG2_PROJECT_PRIMITIVES = (
     *(replace(spec) for spec in UR3E_UAIBOT_PRIMITIVES[:4]),
-    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[4], 2, 0.025),
+    _with_translation_component(
+        _with_translation_component(UR3E_UAIBOT_PRIMITIVES[4], 0, 0.2132),
+        2,
+        0.025,
+    ),
     _with_translation_component(UR3E_UAIBOT_PRIMITIVES[5], 2, 0.025),
     _with_translation_component(UR3E_UAIBOT_PRIMITIVES[6], 2, 0.025),
-    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[7], 1, 0.0),
-    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[8], 2, 0.0),
-    *(replace(spec) for spec in UR3E_UAIBOT_PRIMITIVES[9:13]),
+    _with_translation_component(
+        _with_translation_component(UR3E_UAIBOT_PRIMITIVES[7], 1, 0.0),
+        2,
+        -0.01,
+    ),
+    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[8], 2, -0.04),
+    *(replace(spec) for spec in UR3E_UAIBOT_PRIMITIVES[9:11]),
+    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[11], 2, 0.0),
+    replace(UR3E_UAIBOT_PRIMITIVES[12]),
     # A capsula RG2 substitui os seis objetos da garra generica UAIbot.
     UaibotPrimitiveSpec(5, 2, "Cylinder", _translation(0.110), (0.090, 0.110)),
     UaibotPrimitiveSpec(5, 3, "Ball", _translation(0.055), (0.090,)),

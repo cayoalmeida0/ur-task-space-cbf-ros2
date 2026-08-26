@@ -66,9 +66,9 @@ explicitamente os quatro valores e mantém o wheel instalado sem modificações.
 O projeto valida inicialmente as 19 primitivas da fábrica UR3e do UAIbot 1.2.7.
 Em seguida, substitui somente a geometria distal, resultando em um modelo com 16
 objetos. As 13 primitivas do braço partem da fábrica; nesta revisão, os origins
-URDF usam `z=0,025 m` em `c21/c22/c23`, `z=0` em `c31` e `y=0` em `c32`,
-enquanto `c52` retorna à pose original. Tipos, dimensões e rotações permanecem
-originais. Os seis
+URDF usam `x=0` em `c21`, `z=0,025 m` em `c21/c22/c23`, `y=0,01 m; z=0` em
+`c31`, `y=0,04 m` em `c32` e `z=0` em `c51`, enquanto `c52` permanece na pose
+original. Tipos, dimensões e rotações permanecem originais. Os seis
 objetos da garra genérica são removidos e substituídos por uma cápsula RG2
 formada pela união de um cilindro e duas esferas.
 
@@ -95,7 +95,7 @@ para o conjunto `ur3e + rg2`; outros modelos são recusados em `monitor` e
 A tabela `UR3E_UAIBOT_PRIMITIVES` é o contrato imutável da dependência fixada.
 `UR3E_RG2_PROJECT_PRIMITIVES`, no módulo
 `ur_cbf_control/uaibot_collision_model.py`, contém cópias independentes das 13
-primitivas e explicita os cinco ajustes de translação. Qualquer ajuste
+primitivas e explicita os ajustes de translação da revisão. Qualquer ajuste
 futuro deverá ser aplicado também ao Xacro e acompanhado de justificativa
 dimensional. Os testes de regressão verificam origens, orientações, tipos e
 dimensões antes da publicação.

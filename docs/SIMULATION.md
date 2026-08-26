@@ -67,9 +67,10 @@ plugin Gazebo Classic do driver OnRobot.
 
 O conjunto UR3e/RG2 apresenta 16 primitivas sem colisão física:
 
-- 13 objetos do braço derivados da fábrica UAIbot fixada; o ensaio `0.6.6`
-  mantém tipos e dimensões, usa `z=0,025 m` em `c21/c22/c23`, `z=0` em `c31`,
-  `y=0` em `c32` e restaura `c52` à pose original;
+- 13 objetos do braço derivados da fábrica UAIbot fixada; o ensaio `0.6.7`
+  mantém tipos e dimensões, usa `x=0` em `c21`, `z=0,025 m` em `c21/c22/c23`,
+  `y=0,01 m; z=0` em `c31`, `y=0,04 m` em `c32`, `z=0` em `c51` e mantém
+  `c52` na pose original;
 - um cilindro e duas esferas que formam a cápsula da RG2.
 
 As matrizes `htm_obj` do UAIbot são relativas aos frames DH posteriores às

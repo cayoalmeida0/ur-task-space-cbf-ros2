@@ -96,11 +96,12 @@ class UaibotCollisionModelTest(unittest.TestCase):
 
     def test_project_arm_specs_are_independent_from_factory_contract(self):
         adjusted_components = {
-            4: (2, 0.025),
-            5: (2, 0.025),
-            6: (2, 0.025),
-            7: (1, 0.0),
-            8: (2, 0.0),
+            4: ((0, 0.2132), (2, 0.025)),
+            5: ((2, 0.025),),
+            6: ((2, 0.025),),
+            7: ((1, 0.0), (2, -0.01)),
+            8: ((2, -0.04),),
+            11: ((2, 0.0),),
         }
         for index, (factory_spec, project_spec) in enumerate(zip(
             UR3E_UAIBOT_PRIMITIVES[:13],
@@ -110,9 +111,9 @@ class UaibotCollisionModelTest(unittest.TestCase):
             if index not in adjusted_components:
                 self.assertEqual(factory_spec, project_spec)
                 continue
-            axis, value = adjusted_components[index]
             expected_translation = np.asarray(factory_spec.htm)[:3, 3].copy()
-            expected_translation[axis] = value
+            for axis, value in adjusted_components[index]:
+                expected_translation[axis] = value
             self.assertEqual(project_spec.dimensions, factory_spec.dimensions)
             factory_rotation = np.asarray(factory_spec.htm)[:3, :3]
             project_rotation = np.asarray(project_spec.htm)[:3, :3]
@@ -120,6 +121,42 @@ class UaibotCollisionModelTest(unittest.TestCase):
             np.testing.assert_array_equal(
                 np.asarray(project_spec.htm)[:3, 3],
                 expected_translation,
+            )
+
+    def test_project_dh_translations_match_visual_urdf_origins(self):
+        link_from_dh = {
+            2: np.asarray((
+                (1.0, 0.0, 0.0, -0.2132),
+                (0.0, 1.0, 0.0, 0.0),
+                (0.0, 0.0, 1.0, 0.0),
+                (0.0, 0.0, 0.0, 1.0),
+            )),
+            3: np.asarray((
+                (1.0, 0.0, 0.0, 0.0),
+                (0.0, 0.0, -1.0, 0.0),
+                (0.0, 1.0, 0.0, 0.0),
+                (0.0, 0.0, 0.0, 1.0),
+            )),
+            5: np.eye(4),
+        }
+        expected_urdf_origins = {
+            4: (0.0, 0.0, 0.025),
+            5: (-0.1046, 0.0, 0.025),
+            6: (-0.2146, 0.0, 0.025),
+            7: (0.0, 0.01, 0.0),
+            8: (0.0, 0.04, -0.0011),
+            11: (0.0011, 0.004, 0.0),
+            12: (0.0011, -0.021, -0.0201),
+        }
+
+        for index, expected_origin in expected_urdf_origins.items():
+            spec = UR3E_RG2_PROJECT_PRIMITIVES[index]
+            visual_htm = link_from_dh[spec.link_index] @ np.asarray(spec.htm)
+            np.testing.assert_allclose(
+                visual_htm[:3, 3],
+                expected_origin,
+                atol=1e-12,
+                rtol=0.0,
             )
 
     def test_replaces_generic_gripper_with_rg2_capsule(self):
