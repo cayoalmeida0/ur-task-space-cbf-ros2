@@ -67,7 +67,8 @@ plugin Gazebo Classic do driver OnRobot.
 
 O conjunto UR3e/RG2 apresenta 16 primitivas sem colisão física:
 
-- 13 objetos preservados da fábrica UAIbot para base, braço e pulsos;
+- 11 objetos preservados da fábrica UAIbot e dois objetos do antebraço
+  realinhados ao `elbow_offset=0,027 m` oficial;
 - um cilindro e duas esferas que formam a cápsula da RG2.
 
 As matrizes `htm_obj` do UAIbot são relativas aos frames DH posteriores às
@@ -79,8 +80,8 @@ descrição oficial Jazzy. A fonte está fixada no commit
 Esses elementos possuem apenas `<visual>`: não têm `<collision>`, massa, inércia
 ou interfaces de controle. Portanto, não alteram contato ou dinâmica. Ao criar o
 modelo matemático, o projeto substitui os objetos de colisão da fábrica pelas
-mesmas 16 primitivas usadas na visualização; `compute_dist_auto` opera sobre
-essa lista corrigida.
+mesmas 16 primitivas usadas na visualização. O avaliador do projeto percorre
+essa lista e chama `UAIbot.Utils.compute_dist` para cada par não adjacente.
 
 A cápsula RG2 tem raio de `0,090 m`, comprimento cilíndrico de `0,110 m` e
 extremidades centradas em `z=0,055 m` e `z=0,165 m` no `onrobot_base_link`.
@@ -90,8 +91,8 @@ mesh. A RG6 permanece disponível na simulação, mas os modos `monitor` e
 
 As dimensões físicas foram confrontadas com os arquivos oficiais:
 
-- [`physical_parameters.yaml`](https://github.com/UniversalRobots/Universal_Robots_ROS2_Description/blob/jazzy/config/ur3e/physical_parameters.yaml)
-- [`default_kinematics.yaml`](https://github.com/UniversalRobots/Universal_Robots_ROS2_Description/blob/jazzy/config/ur3e/default_kinematics.yaml)
+- [`physical_parameters.yaml`](https://github.com/UniversalRobots/Universal_Robots_ROS2_Description/blob/39242984dc8d1fff9584c922c17c69c58df3591d/config/ur3e/physical_parameters.yaml)
+- [`default_kinematics.yaml`](https://github.com/UniversalRobots/Universal_Robots_ROS2_Description/blob/39242984dc8d1fff9584c922c17c69c58df3591d/config/ur3e/default_kinematics.yaml)
 
 ### Controle de visualização
 
@@ -115,7 +116,8 @@ conversão URDF/SDFormat.
 
 ### Ensaio visual de movimento
 
-Com a simulação ativa, execute no host:
+Mantenha `make sim` ativo no primeiro terminal. Em um segundo terminal do host,
+fora de `make shell`, execute:
 
 ```bash
 make test-cbf-motion
@@ -127,6 +129,10 @@ O roteiro aplica e desfaz deslocamentos nominais de `0.6 rad` em
 com comando nulo. O teste exige `/gz_ros_control`, recusa o robô real e usa
 `state_timeout=1.0 s` para tolerar pausas ocasionais do simulador sob carga
 gráfica.
+
+O erro `ERRO: /gz_ros_control nao foi encontrado` significa que a simulação não
+está ativa ou ainda não terminou de inicializar. O comando `make` não deve ser
+executado dentro do container, pois o Docker pertence ao host.
 
 ## Frames do efetuador
 

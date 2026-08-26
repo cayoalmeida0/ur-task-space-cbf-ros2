@@ -62,6 +62,10 @@ sim: init gui-auth
 	$(COMPOSE) --profile sim up ur_cbf_sim
 
 test-cbf-motion: init
+	@if [ -f /.dockerenv ]; then \
+		echo "ERRO: execute 'make test-cbf-motion' no terminal do host, nao dentro de 'make shell'."; \
+		exit 1; \
+	fi
 	$(COMPOSE) --profile dev run --rm ur_cbf_dev ./scripts/test_cbf_volume_motion.sh
 
 real: init

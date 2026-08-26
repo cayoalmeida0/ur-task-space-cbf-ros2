@@ -9,7 +9,9 @@ if ! command -v ros2 >/dev/null 2>&1; then
 fi
 
 if ! ros2 node list | grep -qx "/gz_ros_control"; then
-  echo "ERRO: /gz_ros_control nao foi encontrado. Inicie a simulacao primeiro."
+  echo "ERRO: /gz_ros_control nao foi encontrado."
+  echo "No host, mantenha 'make sim' ativo em um terminal e execute"
+  echo "'make test-cbf-motion' em outro terminal."
   exit 1
 fi
 

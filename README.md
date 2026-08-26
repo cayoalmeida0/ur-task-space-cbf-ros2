@@ -6,8 +6,8 @@ distância diferenciáveis. A mesma interface comanda a planta simulada e o rob�
 real: velocidades articulares em
 `/forward_velocity_controller/commands`.
 
-> **Estado atual — revisão experimental 0.6.1:** infraestrutura Docker `0.2.0`,
-> `ur_cbf_bringup` `0.3.1` e `ur_cbf_control` `0.6.1`. O QP já aceita a primeira
+> **Estado atual — revisão experimental 0.6.2:** infraestrutura Docker `0.2.0`,
+> `ur_cbf_bringup` `0.3.2` e `ur_cbf_control` `0.6.2`. O QP já aceita a primeira
 > CBF cinemática de autocolisão nos modos `monitor` e `enforce`. As 16 primitivas
 > transparentes reproduzem a geometria UR3e/RG2 aplicada ao UAIbot; o padrão
 > permanece `off` até validarmos poses e custo computacional no container.
@@ -118,8 +118,8 @@ ros2 topic pub --once /finger_width_controller/commands \
   std_msgs/msg/Float64MultiArray "{data: [0.02]}"
 ```
 
-Para inspecionar o movimento dos volumes visuais em três juntas, execute no
-host:
+Para inspecionar o movimento dos volumes visuais em três juntas, mantenha
+`make sim` ativo e execute no host, em um segundo terminal:
 
 ```bash
 make test-cbf-motion

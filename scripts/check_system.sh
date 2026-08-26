@@ -46,12 +46,13 @@ assert osqp.__version__ == "1.1.3", osqp.__version__
 assert hasattr(ub.Robot, "create_ur_ur3e")
 robot = ub.Robot.create_ur_ur3e(name="ur3e_check")
 assert len(robot.links) == 6
-assert hasattr(robot, "compute_dist_auto")
+assert hasattr(ub.Utils, "compute_dist")
 assert all(len(link.col_objects) > 0 for link in robot.links)
 configure_ur3e_rg2_project_collision_model(robot, ub)
 validate_ur3e_rg2_project_collision_model(robot)
 print(f"UAIbot {ub.__version__}: UR3e criado com {len(robot.links)} elos")
 print("Geometria corrigida: 16 primitivas UR3e/RG2 coincidem com o Xacro")
+print("Backend geometrico: UAIbot Utils.compute_dist disponivel")
 print(f"OSQP {osqp.__version__}: resolvedor QP encontrado")
 PY
 

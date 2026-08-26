@@ -2,12 +2,11 @@
 
 from dataclasses import dataclass
 import math
-import time
 from typing import Any, Sequence
 
 import numpy as np
 
-from ur_cbf_control.self_collision_cbf import distances_from_uaibot_structure
+from ur_cbf_control.self_collision_cbf import evaluate_uaibot_nonadjacent_distances
 from ur_cbf_control.self_collision_cbf import SelfCollisionCbfError
 from ur_cbf_control.self_collision_cbf import SelfCollisionDistances
 from ur_cbf_control.uaibot_collision_model import (
@@ -87,7 +86,8 @@ _UR3E_OFFICIAL_WRIST_2_D_M = 0.08535
 _UR3E_UAIBOT_1_2_7_WRIST_2_D_M = 0.10535
 _UR3E_DH_TOLERANCE_M = 1e-10
 _UR3E_DH_REFERENCE = (
-    "UniversalRobots/Universal_Robots_ROS2_Description@jazzy:"
+    "UniversalRobots/Universal_Robots_ROS2_Description@"
+    "39242984dc8d1fff9584c922c17c69c58df3591d:"
     "config/ur3e/default_kinematics.yaml"
 )
 
@@ -170,6 +170,7 @@ class UaibotKinematics:
         model_name: str = "custom",
         model_corrections: Sequence[KinematicModelCorrection] = (),
         requested_mode: str | None = None,
+        distance_utils: Any | None = None,
     ) -> None:
         self.robot = robot
         self.model_joint_names = tuple(str(name) for name in model_joint_names)
@@ -187,6 +188,7 @@ class UaibotKinematics:
         self.requested_mode = mode if requested_mode is None else requested_mode
         self.model_name = str(model_name)
         self.model_corrections = tuple(model_corrections)
+        self.distance_utils = distance_utils
         self._self_collision_geometry_validated = False
         htm_n_eef = homogeneous_transform_from_xyz_rpy(
             eef_offset_xyz,
@@ -245,6 +247,7 @@ class UaibotKinematics:
             model_name="ur3e_official_ros2_description",
             model_corrections=corrections,
             requested_mode=mode,
+            distance_utils=ub.Utils,
         )
 
     def evaluate(self, model_positions: Sequence[float]) -> KinematicState:
@@ -294,9 +297,10 @@ class UaibotKinematics:
     ) -> SelfCollisionDistances:
         """Avalia todos os pares nao adjacentes do modelo interno UAIbot.
 
-        ``max_dist=np.inf`` preserva o conjunto de linhas do QP entre ciclos e
-        evita que um par seja descoberto somente depois de cruzar uma margem de
-        ativacao. O modo Python e obrigatorio devido a correcao DH do UR3e.
+        Todos os pares separados por pelo menos um elo intermediario sao
+        preservados entre ciclos. O modo Python e obrigatorio devido a correcao
+        DH do UR3e e usa o avaliador do projeto para contornar uma incompatibilidade
+        de desempacotamento do UAIbot 1.2.7.
         """
 
         positions = np.asarray(model_positions, dtype=float).reshape(-1)
@@ -314,9 +318,9 @@ class UaibotKinematics:
             raise KinematicsError(
                 "Numero maximo de iteracoes de distancia deve ser positivo."
             )
-        if not hasattr(self.robot, "compute_dist_auto"):
+        if self.distance_utils is None:
             raise KinematicsError(
-                "A versao instalada do UAIbot nao oferece compute_dist_auto."
+                "Backend UAIbot Utils.compute_dist nao foi configurado."
             )
 
         if not self._self_collision_geometry_validated:
@@ -327,22 +331,12 @@ class UaibotKinematics:
             self._self_collision_geometry_validated = True
 
         try:
-            start = time.perf_counter()
-            structure = self.robot.compute_dist_auto(
-                q=positions,
-                old_dist_struct=None,
-                tol=float(tolerance),
-                no_iter_max=int(max_iterations),
-                max_dist=np.inf,
-                h=0.0,
-                eps=0.0,
-                mode="python",
-            )
-            evaluation_time = time.perf_counter() - start
-            return distances_from_uaibot_structure(
-                structure,
-                joint_count=len(self.model_joint_names),
-                evaluation_time=evaluation_time,
+            return evaluate_uaibot_nonadjacent_distances(
+                self.robot,
+                positions,
+                distance_utils=self.distance_utils,
+                tolerance=float(tolerance),
+                max_iterations=int(max_iterations),
                 geometry_source=PROJECT_GEOMETRY_SOURCE,
             )
         except SelfCollisionCbfError as error:

@@ -2,6 +2,25 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao experimental 0.6.2 / controle 0.6.2 / bringup 0.3.2 — 26 de agosto de 2026
+
+- Substitui a chamada defeituosa a `Robot.compute_dist_auto` no modo Python por
+  um avaliador pertencente ao projeto, que preserva os mesmos pares nao
+  adjacentes e usa `UAIbot.Utils.compute_dist` para pontos, distancias e
+  Jacobianos.
+- Trata explicitamente os quatro retornos documentados por `Utils.compute_dist`;
+  o UAIbot 1.2.7 tentava desempacota-los em tres valores e interrompia o primeiro
+  ciclo do modo `monitor`.
+- Mantem o wheel UAIbot intacto e adiciona uma regressao especifica para o
+  contrato de quatro retornos da dependencia fixada.
+- Realinha em `23 mm` os objetos `c21` e `c22` do antebraco: a coordenada local
+  passa de `z=0,050 m` para o `elbow_offset=0,027 m` da descricao oficial UR3e.
+- Aplica o mesmo realinhamento na tabela matematica e no Xacro, preservando a
+  equivalencia entre as distancias calculadas e os volumes transparentes.
+- Esclarece que `make test-cbf-motion` deve ser executado no host, em um segundo
+  terminal, enquanto `make sim` permanece ativo.
+- Mantem a imagem Docker `0.2.0` e o modo CBF padrao `off`.
+
 ## Revisao experimental 0.6.1 / controle 0.6.1 / bringup 0.3.1 — 21 de agosto de 2026
 
 - Mantem 13 primitivas da fabrica UAIbot para base, braco, antebraco e pulsos

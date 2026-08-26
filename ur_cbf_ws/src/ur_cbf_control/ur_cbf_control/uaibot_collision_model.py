@@ -12,7 +12,7 @@ UAIBOT_FACTORY_GEOMETRY_SOURCE = (
     "uaibot/robot/_create_ur_ur3e.py"
 )
 PROJECT_GEOMETRY_SOURCE = (
-    "ur-task-space-cbf-ros2@0.6.1:"
+    "ur-task-space-cbf-ros2@0.6.2:"
     "ur_cbf_control/uaibot_collision_model.py#UR3E_RG2_PROJECT_PRIMITIVES"
 )
 
@@ -112,6 +112,14 @@ def _translation(z: float):
     )
 
 
+def _with_translation_z(spec: UaibotPrimitiveSpec, z: float):
+    """Copia uma especificacao alterando somente sua coordenada local z."""
+
+    rows = [list(row) for row in spec.htm]
+    rows[2][3] = float(z)
+    return replace(spec, htm=tuple(tuple(row) for row in rows))
+
+
 # Cada primitiva do braco e uma copia independente. Os ajustes experimentais
 # devem ser feitos somente nesta tabela, preservando a tabela anterior como
 # contrato imutavel da fabrica UAIbot fixada.
@@ -120,8 +128,10 @@ UR3E_RG2_PROJECT_PRIMITIVES = (
     replace(UR3E_UAIBOT_PRIMITIVES[1]),
     replace(UR3E_UAIBOT_PRIMITIVES[2]),
     replace(UR3E_UAIBOT_PRIMITIVES[3]),
-    replace(UR3E_UAIBOT_PRIMITIVES[4]),
-    replace(UR3E_UAIBOT_PRIMITIVES[5]),
+    # A fabrica desloca o corpo principal do antebraco em 50 mm. A descricao
+    # oficial do UR3e posiciona esse corpo em 27 mm no frame forearm_link.
+    _with_translation_z(UR3E_UAIBOT_PRIMITIVES[4], 0.027),
+    _with_translation_z(UR3E_UAIBOT_PRIMITIVES[5], 0.027),
     replace(UR3E_UAIBOT_PRIMITIVES[6]),
     replace(UR3E_UAIBOT_PRIMITIVES[7]),
     replace(UR3E_UAIBOT_PRIMITIVES[8]),

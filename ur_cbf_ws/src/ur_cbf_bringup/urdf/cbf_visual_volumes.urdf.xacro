@@ -6,11 +6,12 @@
   UAIbot/UAIbotPy@1acb5ed637738aca4ea05945e6c065c3757bc13d
   uaibot/robot/_create_ur_ur3e.py
 
-  Os treze objetos do UR3e preservados da fabrica UAIbot sao relativos aos
-  frames DH posteriores a cada junta. Os origins abaixo aplicam as
-  transformacoes rigidas DH -> elo URDF da descricao oficial Jazzy. A garra
-  generica da dependencia foi substituida por uma capsula RG2 pertencente ao
-  projeto, formada por um cilindro e duas esferas.
+  Os treze objetos do UR3e derivados da fabrica UAIbot sao relativos aos frames
+  DH posteriores a cada junta. Os origins abaixo aplicam as transformacoes
+  rigidas DH -> elo URDF da descricao oficial Jazzy; c21 e c22 tambem recebem o
+  elbow_offset fisico de 0.027 m. A garra generica da dependencia foi
+  substituida por uma capsula RG2 pertencente ao projeto, formada por um
+  cilindro e duas esferas.
 
   Estes links nao possuem collision nem inertial: aparecem no RViz e no Gazebo,
   acompanham os elos por juntas fixas e nao alteram a fisica da simulacao.
@@ -116,10 +117,10 @@
     <!-- UAIbot link 2; ^forearm_link T_DH2 = Tx(-0.2132). -->
     <xacro:cbf_sphere_visual
       name="${prefix}uaibot_c21" parent="${prefix}forearm_link"
-      xyz="-0.0246 0 0.05" radius="0.05" rgba="${arm_color}"/>
+      xyz="-0.0246 0 0.027" radius="0.05" rgba="${arm_color}"/>
     <xacro:cbf_cylinder_visual
       name="${prefix}uaibot_c22" parent="${prefix}forearm_link"
-      xyz="-0.1046 0 0.05" rpy="-1.570796326795 0 1.570796326795"
+      xyz="-0.1046 0 0.027" rpy="-1.570796326795 0 1.570796326795"
       radius="0.04" length="0.2" rgba="${arm_color}"/>
     <xacro:cbf_cylinder_visual
       name="${prefix}uaibot_c23" parent="${prefix}forearm_link"

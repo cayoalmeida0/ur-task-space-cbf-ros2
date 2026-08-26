@@ -11,10 +11,47 @@ from ur_cbf_control.kinematics import homogeneous_transform_from_xyz_rpy
 class FakeLink:
     def __init__(self, d=0.0):
         self._d = float(d)
+        self._col_objects = []
 
     @property
     def d(self):
         return self._d
+
+    @property
+    def col_objects(self):
+        return self._col_objects
+
+
+class FakePrimitive:
+    def __init__(self):
+        self.htm = np.eye(4)
+
+    def copy(self):
+        return FakePrimitive()
+
+    def set_ani_frame(self, htm):
+        self.htm = np.asarray(htm, dtype=float)
+
+
+class FakeDistanceUtils:
+    call_kwargs = None
+
+    @classmethod
+    def compute_dist(cls, _first, _second, **kwargs):
+        cls.call_kwargs = kwargs
+        return (
+            np.zeros((3, 1)),
+            np.array(((0.08,), (0.0,), (0.0,))),
+            0.08,
+            (1.0, 0.0),
+        )
+
+
+class ThreeValueDistanceUtils(FakeDistanceUtils):
+    @classmethod
+    def compute_dist(cls, _first, _second, **kwargs):
+        cls.call_kwargs = kwargs
+        return np.zeros((3, 1)), np.ones((3, 1)), 1.0
 
 
 class FakeRobot:
@@ -22,6 +59,9 @@ class FakeRobot:
         if d_values is None:
             d_values = [0.0] * joint_count
         self.links = [FakeLink(d) for d in d_values]
+        if joint_count >= 3:
+            self.links[0]._col_objects.append((FakePrimitive(), np.eye(4)))
+            self.links[2]._col_objects.append((FakePrimitive(), np.eye(4)))
         self.htm_n_eef = None
 
     def set_htm_to_eef(self, htm):
@@ -29,6 +69,13 @@ class FakeRobot:
 
     def jac_geo(self, q, axis, mode):
         joint_count = len(self.links)
+        if axis == "dh":
+            jacobians = [np.zeros((6, joint_count)) for _ in self.links]
+            jacobians[0][0, 0] = 1.0
+            return (
+                jacobians,
+                [np.eye(4) for _ in self.links],
+            )
         jacobian = np.zeros((6, joint_count))
         jacobian[: min(3, joint_count), : min(3, joint_count)] = np.eye(
             min(3, joint_count)
@@ -36,30 +83,6 @@ class FakeRobot:
         htm = np.eye(4)
         htm[:3, 3] = (0.1, 0.2, 0.3)
         return jacobian, htm
-
-    def compute_dist_auto(self, **kwargs):
-        joint_count = len(self.links)
-
-        class Structure:
-            no_items = 1
-            dist_vect = np.array(((0.08,),))
-            jac_dist_mat = np.ones((1, joint_count))
-
-            def __getitem__(self, index):
-                return type(
-                    "Item",
-                    (),
-                    {
-                        "link_number_1": 0,
-                        "link_col_obj_number_1": 0,
-                        "link_number_2": 2,
-                        "link_col_obj_number_2": 1,
-                    },
-                )()
-
-        self.distance_arguments = kwargs
-        return Structure()
-
 
 class UaibotKinematicsTest(unittest.TestCase):
     def test_applies_explicit_end_effector_offset(self):
@@ -109,6 +132,7 @@ class UaibotKinematicsTest(unittest.TestCase):
             eef_offset_xyz=(0.0, 0.0, 0.0),
             eef_offset_rpy=(0.0, 0.0, 0.0),
             mode="python",
+            distance_utils=FakeDistanceUtils,
         )
         with patch(
             "ur_cbf_control.kinematics."
@@ -127,9 +151,27 @@ class UaibotKinematicsTest(unittest.TestCase):
         validate_geometry.assert_called_once_with(robot)
         self.assertEqual(distances.count, 1)
         self.assertAlmostEqual(distances.minimum_distance, 0.08)
-        self.assertEqual(robot.distance_arguments["mode"], "python")
-        self.assertTrue(np.isinf(robot.distance_arguments["max_dist"]))
-        self.assertIsNone(robot.distance_arguments["old_dist_struct"])
+        self.assertAlmostEqual(distances.jacobian[0, 0], -1.0)
+        self.assertEqual(FakeDistanceUtils.call_kwargs["mode"], "python")
+        self.assertEqual(FakeDistanceUtils.call_kwargs["tol"], 1e-3)
+        self.assertEqual(FakeDistanceUtils.call_kwargs["no_iter_max"], 15)
+
+    def test_rejects_unexpected_uaibot_distance_return_contract(self):
+        robot = FakeRobot(joint_count=3)
+        adapter = UaibotKinematics(
+            robot=robot,
+            model_joint_names=("j1", "j2", "j3"),
+            eef_offset_xyz=(0.0, 0.0, 0.0),
+            eef_offset_rpy=(0.0, 0.0, 0.0),
+            mode="python",
+            distance_utils=ThreeValueDistanceUtils,
+        )
+        with patch(
+            "ur_cbf_control.kinematics."
+            "validate_ur3e_rg2_project_collision_model"
+        ):
+            with self.assertRaisesRegex(KinematicsError, "quatro valores"):
+                adapter.evaluate_self_collision((0.0, 0.0, 0.0))
 
     def test_rejects_joint_count_mismatch(self):
         with self.assertRaisesRegex(KinematicsError, "Quantidade"):
@@ -158,6 +200,7 @@ class UaibotKinematicsTest(unittest.TestCase):
 
         class FakeUaibot:
             Robot = FakeRobotFactory
+            Utils = FakeDistanceUtils
 
         with patch.dict("sys.modules", {"uaibot": FakeUaibot}):
             with self.assertRaisesRegex(KinematicsError, "ainda nao possui"):
@@ -191,6 +234,7 @@ class UaibotKinematicsTest(unittest.TestCase):
 
         class FakeUaibot:
             Robot = FakeRobotFactory
+            Utils = FakeDistanceUtils
 
         with patch.dict("sys.modules", {"uaibot": FakeUaibot}), patch(
             "ur_cbf_control.kinematics."

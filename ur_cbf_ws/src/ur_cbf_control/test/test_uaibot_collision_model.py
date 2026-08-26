@@ -95,12 +95,20 @@ class UaibotCollisionModelTest(unittest.TestCase):
         self.assertEqual(len(UR3E_UAIBOT_PRIMITIVES), 19)
 
     def test_project_arm_specs_are_independent_from_factory_contract(self):
-        for factory_spec, project_spec in zip(
+        for index, (factory_spec, project_spec) in enumerate(zip(
             UR3E_UAIBOT_PRIMITIVES[:13],
             UR3E_RG2_PROJECT_PRIMITIVES[:13],
-        ):
-            self.assertEqual(factory_spec, project_spec)
+        )):
             self.assertIsNot(factory_spec, project_spec)
+            if index not in {4, 5}:
+                self.assertEqual(factory_spec, project_spec)
+
+        for index in (4, 5):
+            self.assertAlmostEqual(UR3E_UAIBOT_PRIMITIVES[index].htm[2][3], 0.05)
+            self.assertAlmostEqual(
+                UR3E_RG2_PROJECT_PRIMITIVES[index].htm[2][3],
+                0.027,
+            )
 
     def test_replaces_generic_gripper_with_rg2_capsule(self):
         robot = make_factory_robot()

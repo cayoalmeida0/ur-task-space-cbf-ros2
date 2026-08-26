@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 import math
+import time
 from typing import Any, Sequence
 
 import numpy as np
@@ -9,6 +10,18 @@ import numpy as np
 
 class SelfCollisionCbfError(RuntimeError):
     """Indica geometria, parametro ou resultado de distancia invalido."""
+
+
+def _skew(vector: np.ndarray) -> np.ndarray:
+    """Retorna a matriz antissimetrica de um vetor tridimensional."""
+
+    values = np.asarray(vector, dtype=float).reshape(-1)
+    if values.size != 3 or not np.all(np.isfinite(values)):
+        raise SelfCollisionCbfError(
+            "Ponto testemunha UAIbot deve conter tres valores finitos."
+        )
+    x, y, z = values
+    return np.array(((0.0, -z, y), (z, 0.0, -x), (-y, x, 0.0)))
 
 
 @dataclass(frozen=True)
@@ -152,61 +165,196 @@ def formulate_self_collision_cbf(
     )
 
 
-def distances_from_uaibot_structure(
-    distance_structure: Any,
+def evaluate_uaibot_nonadjacent_distances(
+    robot: Any,
+    configuration: Sequence[float],
     *,
-    joint_count: int,
-    evaluation_time: float = 0.0,
-    geometry_source: str = "uaibot_internal_collision_objects",
+    distance_utils: Any,
+    tolerance: float,
+    max_iterations: int,
+    geometry_source: str,
 ) -> SelfCollisionDistances:
-    """Converte ``DistStructRobotAuto`` sem depender de classes privadas."""
+    """Avalia os pares nao adjacentes usando a distancia publica do UAIbot.
 
+    O ``compute_dist_auto`` Python do UAIbot 1.2.7 tenta desempacotar tres
+    valores de ``Utils.compute_dist``, embora essa funcao documente e retorne
+    quatro. Este avaliador reproduz a cinemática diferencial do algoritmo
+    fixado, preserva a exclusao de elos adjacentes e trata explicitamente o
+    quarto retorno, sem modificar a dependencia instalada.
+    """
+
+    positions = np.asarray(configuration, dtype=float).reshape(-1)
+    links = getattr(robot, "links", None)
+    if links is None or len(links) != positions.size:
+        raise SelfCollisionCbfError(
+            "Quantidade de elos UAIbot difere da configuracao articular."
+        )
+    if not np.all(np.isfinite(positions)):
+        raise SelfCollisionCbfError("Configuracao contém NaN ou infinito.")
+    if not math.isfinite(tolerance) or tolerance <= 0.0:
+        raise SelfCollisionCbfError(
+            "Tolerancia de distancia deve ser finita e positiva."
+        )
+    if max_iterations <= 0:
+        raise SelfCollisionCbfError(
+            "Numero maximo de iteracoes de distancia deve ser positivo."
+        )
+    compute_distance = getattr(distance_utils, "compute_dist", None)
+    if not callable(compute_distance):
+        raise SelfCollisionCbfError(
+            "UAIbot nao expoe Utils.compute_dist para o backend do projeto."
+        )
+
+    start = time.perf_counter()
     try:
-        count = int(distance_structure.no_items)
-        distance_vector = np.asarray(
-            distance_structure.dist_vect,
-            dtype=float,
-        ).reshape(-1)
-        distance_jacobian = np.asarray(
-            distance_structure.jac_dist_mat,
-            dtype=float,
+        jacobians, dh_transforms = robot.jac_geo(
+            positions,
+            "dh",
+            mode="python",
         )
     except Exception as error:
         raise SelfCollisionCbfError(
-            f"Estrutura de distancias UAIbot invalida: {error}"
+            f"Falha na cinemática DH usada pela autocolisao: {error}"
         ) from error
+    if len(jacobians) != len(links) or len(dh_transforms) != len(links):
+        raise SelfCollisionCbfError(
+            "UAIbot retornou quantidade invalida de frames ou Jacobianos DH."
+        )
 
-    if count <= 0:
+    world_objects: list[list[Any]] = []
+    for link_index, link in enumerate(links):
+        dh_transform = np.asarray(dh_transforms[link_index], dtype=float)
+        jacobian = np.asarray(jacobians[link_index], dtype=float)
+        if dh_transform.shape != (4, 4) or not np.all(np.isfinite(dh_transform)):
+            raise SelfCollisionCbfError(
+                f"Transformacao DH invalida no elo {link_index}."
+            )
+        if jacobian.shape != (6, positions.size) or not np.all(
+            np.isfinite(jacobian)
+        ):
+            raise SelfCollisionCbfError(
+                f"Jacobiano DH invalido no elo {link_index}."
+            )
+
+        link_world_objects: list[Any] = []
+        for object_index, item in enumerate(link.col_objects):
+            try:
+                primitive, attached_transform = item
+                attached_array = np.asarray(attached_transform, dtype=float)
+                if attached_array.shape != (4, 4):
+                    raise ValueError("transformacao anexada nao e 4x4")
+                primitive_copy = primitive.copy()
+                primitive_copy.set_ani_frame(dh_transform @ attached_array)
+            except Exception as error:
+                raise SelfCollisionCbfError(
+                    "Objeto de colisao UAIbot invalido em "
+                    f"link_{link_index}_obj_{object_index}: {error}"
+                ) from error
+            link_world_objects.append(primitive_copy)
+        world_objects.append(link_world_objects)
+
+    distance_values: list[float] = []
+    distance_jacobians: list[np.ndarray] = []
+    labels: list[str] = []
+    for first_link in range(len(links)):
+        for second_link in range(first_link + 2, len(links)):
+            for first_object, first_primitive in enumerate(
+                world_objects[first_link]
+            ):
+                for second_object, second_primitive in enumerate(
+                    world_objects[second_link]
+                ):
+                    initial_point = np.random.uniform(-100.0, 100.0, (3, 1))
+                    try:
+                        result = compute_distance(
+                            first_primitive,
+                            second_primitive,
+                            p_a_init=initial_point,
+                            tol=float(tolerance),
+                            no_iter_max=int(max_iterations),
+                            h=0.0,
+                            eps=0.0,
+                            mode="python",
+                        )
+                    except Exception as error:
+                        raise SelfCollisionCbfError(
+                            "Falha na distancia UAIbot do par "
+                            f"link_{first_link}_obj_{first_object}__"
+                            f"link_{second_link}_obj_{second_object}: {error}"
+                        ) from error
+                    if not isinstance(result, (tuple, list)) or len(result) != 4:
+                        raise SelfCollisionCbfError(
+                            "Utils.compute_dist do UAIbot deve retornar quatro "
+                            "valores: dois pontos, distancia e historico."
+                        )
+                    point_first, point_second, distance, _history = result
+                    first_point = np.asarray(point_first, dtype=float).reshape(-1)
+                    second_point = np.asarray(point_second, dtype=float).reshape(-1)
+                    distance_value = float(distance)
+                    if (
+                        first_point.size != 3
+                        or second_point.size != 3
+                        or not np.all(np.isfinite(first_point))
+                        or not np.all(np.isfinite(second_point))
+                        or not math.isfinite(distance_value)
+                        or distance_value <= 0.0
+                    ):
+                        raise SelfCollisionCbfError(
+                            "UAIbot retornou pontos ou distancia invalidos para "
+                            f"link_{first_link}_obj_{first_object}__"
+                            f"link_{second_link}_obj_{second_object}."
+                        )
+
+                    first_dh_position = np.asarray(
+                        dh_transforms[first_link], dtype=float
+                    )[:3, 3]
+                    second_dh_position = np.asarray(
+                        dh_transforms[second_link], dtype=float
+                    )[:3, 3]
+                    first_jacobian = np.asarray(
+                        jacobians[first_link], dtype=float
+                    )
+                    second_jacobian = np.asarray(
+                        jacobians[second_link], dtype=float
+                    )
+                    first_point_jacobian = (
+                        first_jacobian[:3, :]
+                        - _skew(first_point - first_dh_position)
+                        @ first_jacobian[3:6, :]
+                    )
+                    second_point_jacobian = (
+                        second_jacobian[:3, :]
+                        - _skew(second_point - second_dh_position)
+                        @ second_jacobian[3:6, :]
+                    )
+                    delta = first_point - second_point
+                    jacobian_distance = (
+                        delta.reshape(1, 3)
+                        @ (first_point_jacobian - second_point_jacobian)
+                        / distance_value
+                    ).reshape(-1)
+                    if not np.all(np.isfinite(jacobian_distance)):
+                        raise SelfCollisionCbfError(
+                            "Jacobiano de distancia nao finito para "
+                            f"link_{first_link}_obj_{first_object}__"
+                            f"link_{second_link}_obj_{second_object}."
+                        )
+
+                    distance_values.append(distance_value)
+                    distance_jacobians.append(jacobian_distance)
+                    labels.append(
+                        f"link_{first_link}_obj_{first_object}__"
+                        f"link_{second_link}_obj_{second_object}"
+                    )
+
+    if not distance_values:
         raise SelfCollisionCbfError(
             "UAIbot nao retornou pares nao adjacentes de colisao."
         )
-    if distance_vector.size != count or distance_jacobian.shape != (
-        count,
-        joint_count,
-    ):
-        raise SelfCollisionCbfError(
-            "Dimensoes da estrutura de distancias UAIbot sao inconsistentes."
-        )
-
-    labels: list[str] = []
-    for index in range(count):
-        try:
-            item = distance_structure[index]
-            labels.append(
-                "link_"
-                f"{int(item.link_number_1)}_obj_{int(item.link_col_obj_number_1)}"
-                "__link_"
-                f"{int(item.link_number_2)}_obj_{int(item.link_col_obj_number_2)}"
-            )
-        except Exception as error:
-            raise SelfCollisionCbfError(
-                f"Nao foi possivel identificar o par UAIbot {index}: {error}"
-            ) from error
-
     return SelfCollisionDistances(
-        distances=distance_vector,
-        jacobian=distance_jacobian,
+        distances=np.asarray(distance_values, dtype=float),
+        jacobian=np.vstack(distance_jacobians),
         pair_labels=tuple(labels),
         geometry_source=str(geometry_source),
-        evaluation_time=float(evaluation_time),
+        evaluation_time=time.perf_counter() - start,
     )

@@ -51,20 +51,32 @@ revisão não introduz variável de relaxação.
 
 ## Pares considerados
 
-O backend atual usa `Robot.compute_dist_auto` do UAIbot 1.2.7. Ele compara
-objetos presos a elos separados por pelo menos um elo intermediário; pares
-adjacentes são excluídos, pois seus volumes se sobrepõem por construção. Todas
-as linhas retornadas são mantidas, sem limiar de ativação por distância, para
-não alterar silenciosamente o conjunto de segurança entre amostras.
+O backend do projeto percorre objetos presos a elos separados por pelo menos um
+elo intermediário; pares adjacentes são excluídos, pois seus volumes se
+sobrepõem por construção. Para cada par, usa `UAIbot.Utils.compute_dist` em modo
+Python e monta o Jacobiano da distância a partir dos pontos testemunha e dos
+Jacobianos DH. Todos os pares são mantidos, sem limiar de ativação, para não
+alterar silenciosamente o conjunto de segurança entre amostras.
+
+Esse avaliador substitui somente o invólucro `Robot.compute_dist_auto` do UAIbot
+1.2.7. Nessa revisão, `Utils.compute_dist` documenta e retorna quatro valores,
+mas `_compute_dist_auto_python` tenta desempacotar três. O projeto trata
+explicitamente os quatro valores e mantém o wheel instalado sem modificações.
 
 O projeto valida inicialmente as 19 primitivas da fábrica UR3e do UAIbot 1.2.7.
-Em seguida, substitui essa lista por um modelo corrigido com 16 objetos. Treze
-primitivas preservam a geometria da base, do braço, do antebraço e dos pulsos;
-os seis objetos da garra genérica são removidos e substituídos por uma cápsula
-RG2 formada pela união de um cilindro e duas esferas.
+Em seguida, substitui essa lista por um modelo corrigido com 16 objetos. Onze
+primitivas preservam integralmente a geometria da base, do braço e dos pulsos;
+duas primitivas do antebraço mantêm forma e dimensões, mas recebem o alinhamento
+físico descrito abaixo. Os seis objetos da garra genérica são removidos e
+substituídos por uma cápsula RG2 formada pela união de um cilindro e duas
+esferas.
 
 As matrizes do braço, relativas aos frames DH, foram convertidas para os frames
 dos elos da descrição oficial Jazzy por transformações rígidas constantes. A
+cópia original posicionava os objetos `c21` e `c22` em `z=0,050 m` no
+`forearm_link`; o modelo do projeto usa `z=0,027 m`, igual ao `elbow_offset`
+publicado para o UR3e na descrição oficial. O realinhamento lateral de `23 mm`
+é aplicado simultaneamente à tabela matemática e ao Xacro. A
 cápsula usa raio de `0,090 m`, trecho cilíndrico de `0,110 m` e centros das
 extremidades em `z=0,055 m` e `z=0,165 m` no frame da RG2. Esses mesmos valores
 são anexados ao último elo do modelo UAIbot. Assim, a cena transparente e os
@@ -129,5 +141,12 @@ devem entrar na escolha final da margem.
 - C. Khazoom et al., *Humanoid Self-Collision Avoidance Using Whole-Body
   Control with Control Barrier Functions*, 2022.
   [arXiv:2207.00692](https://arxiv.org/abs/2207.00692).
-- UAIbot, implementação de `compute_dist_auto` usada como backend geométrico.
+- UAIbot, implementação de `compute_dist_auto` cuja incompatibilidade de
+  desempacotamento é contornada pelo projeto.
   [Fonte fixada no commit 1acb5ed](https://github.com/UAIbot/UAIbotPy/blob/1acb5ed637738aca4ea05945e6c065c3757bc13d/uaibot/robot/_compute_dist_auto.py).
+- UAIbot, implementação pública de `Utils.compute_dist` usada para as distâncias
+  diferenciáveis.
+  [Fonte fixada no commit 1acb5ed](https://github.com/UAIbot/UAIbotPy/blob/1acb5ed637738aca4ea05945e6c065c3757bc13d/uaibot/utils/utils.py).
+- Universal Robots, parâmetros físicos oficiais do UR3e, incluindo
+  `elbow_offset: 0.027`.
+  [Descrição ROS 2 Jazzy, commit 3924298](https://github.com/UniversalRobots/Universal_Robots_ROS2_Description/blob/39242984dc8d1fff9584c922c17c69c58df3591d/config/ur3e/physical_parameters.yaml).
