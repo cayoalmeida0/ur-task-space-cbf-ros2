@@ -66,10 +66,11 @@ explicitamente os quatro valores e mantém o wheel instalado sem modificações.
 O projeto valida inicialmente as 19 primitivas da fábrica UR3e do UAIbot 1.2.7.
 Em seguida, substitui somente a geometria distal, resultando em um modelo com 16
 objetos. As 13 primitivas do braço partem da fábrica; nesta revisão, os origins
-URDF usam `x=0; z=0,020 m` em `c21`, `z=0,0225 m` em `c22`, preservam
-`z=0,025 m` em `c23`, usam `x=y=0; z=0,020 m` em `c31`, `x=y=0` em
-`c32`, preservam `xyz=(0;0;-0,020) m` em `c51` e usam `z=-0,015 m` em
-`c52`. Tipos, dimensões e rotações permanecem originais. Os seis
+URDF usam `z=0` em `c11`, `x=0; z=0,030 m` em `c21`, `z=0,027 m` em
+`c22`, preservam `z=0,025 m` em `c23`, usam `x=y=0; z=-0,020 m` em
+`c31`, `x=0; y=0,020 m` em `c32`, `z=-0,010 m` em `c41`, `z=0` em
+`c42` e preservam `c51` e `z=-0,015 m` em `c52`. Tipos, dimensões e
+rotações permanecem originais. Os seis
 objetos da garra genérica são removidos e substituídos por uma cápsula RG2
 formada pela união de um cilindro e duas esferas.
 
@@ -78,7 +79,8 @@ dos elos da descrição oficial Jazzy por transformações rígidas constantes. 
 cópia visual aplica as transformações rígidas necessárias para expressar as
 matrizes DH nos frames dos elos URDF. Os ajustes são aplicados simultaneamente
 à tabela matemática e ao Xacro. Em `c31/c32`, a rotação fixa `Rx(pi/2)` faz as
-componentes `y/z` do frame DH corresponderem a `z/y` no frame URDF. A cápsula usa raio de
+componentes `y/z` do frame DH corresponderem a `z/-y` no frame URDF. Em
+`c41/c42`, `Rx(-pi/2)` faz essas componentes corresponderem a `-z/y`. A cápsula usa raio de
 `0,090 m`, trecho cilíndrico de `0,110 m` e centros das
 extremidades em `z=0,055 m` e `z=0,165 m` no frame da RG2. Esses mesmos valores
 são anexados ao último elo do modelo UAIbot. Assim, a cena transparente e os

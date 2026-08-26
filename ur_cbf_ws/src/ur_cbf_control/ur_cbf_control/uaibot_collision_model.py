@@ -12,7 +12,7 @@ UAIBOT_FACTORY_GEOMETRY_SOURCE = (
     "uaibot/robot/_create_ur_ur3e.py"
 )
 PROJECT_GEOMETRY_SOURCE = (
-    "ur-task-space-cbf-ros2@0.6.9:"
+    "ur-task-space-cbf-ros2@0.6.10:"
     "ur_cbf_control/uaibot_collision_model.py#UR3E_RG2_PROJECT_PRIMITIVES"
 )
 
@@ -128,24 +128,28 @@ def _with_translation_component(
 
 # As 13 primitivas partem da fabrica UAIbot fixada. Os ajustes abaixo sao feitos
 # nas coordenadas DH; em c31/c32, z_DH controla -y_URDF e y_DH controla z_URDF
-# por causa da transformacao Rx(pi/2) do elo 3. A tabela original permanece
-# separada para validar o wheel antes da troca da garra pela capsula RG2.
+# por causa de Rx(pi/2). Em c41/c42, y_DH controla -z_URDF por causa de
+# Rx(-pi/2). A tabela original permanece separada para validar o wheel antes da
+# troca da garra pela capsula RG2.
 UR3E_RG2_PROJECT_PRIMITIVES = (
-    *(replace(spec) for spec in UR3E_UAIBOT_PRIMITIVES[:4]),
+    replace(UR3E_UAIBOT_PRIMITIVES[0]),
+    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[1], 2, 0.0),
+    *(replace(spec) for spec in UR3E_UAIBOT_PRIMITIVES[2:4]),
     _with_translation_component(
         _with_translation_component(UR3E_UAIBOT_PRIMITIVES[4], 0, 0.2132),
         2,
-        0.02,
+        0.03,
     ),
-    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[5], 2, 0.0225),
+    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[5], 2, 0.027),
     _with_translation_component(UR3E_UAIBOT_PRIMITIVES[6], 2, 0.025),
     _with_translation_component(
-        _with_translation_component(UR3E_UAIBOT_PRIMITIVES[7], 1, 0.02),
+        _with_translation_component(UR3E_UAIBOT_PRIMITIVES[7], 1, -0.02),
         2,
         0.0,
     ),
-    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[8], 2, 0.0),
-    *(replace(spec) for spec in UR3E_UAIBOT_PRIMITIVES[9:11]),
+    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[8], 2, -0.02),
+    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[9], 1, 0.01),
+    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[10], 1, 0.0),
     _with_translation_component(
         _with_translation_component(
             _with_translation_component(UR3E_UAIBOT_PRIMITIVES[11], 0, 0.0),

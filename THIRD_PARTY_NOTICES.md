@@ -8,10 +8,11 @@ transforms used by `cbf_visual_volumes.urdf.xacro` are derived from
 commit `1acb5ed637738aca4ea05945e6c065c3757bc13d`. The transforms were converted
 from the UAIbot DH frames to the corresponding ROS 2 Jazzy URDF link frames.
 The project copy preserves the primitive types, rotations, and dimensions of
-all thirteen upstream UR3e arm objects. Revision 0.6.9 sets the URDF-frame x/z
-of `c21` to 0/0.020 m; z of `c22` to 0.0225 m; preserves z=0.025 m in `c23`;
-sets x/y/z of `c31` to 0/0/0.020 m and x/y of `c32` to zero; preserves the
-`c51` origin at (0, 0, -0.020) m; and sets z of `c52` to -0.015 m. The generic upstream
+all thirteen upstream UR3e arm objects. Revision 0.6.10 sets the URDF-frame z
+of `c11` to zero; x/z of `c21` to 0/0.030 m; z of `c22` to 0.027 m; preserves
+z=0.025 m in `c23`; sets x/y/z of `c31` to 0/0/-0.020 m and x/y of `c32` to
+0/0.020 m; sets z of `c41` and `c42` to -0.010/0 m; preserves `c51`; and keeps
+z=-0.015 m in `c52`. The generic upstream
 gripper geometry is replaced. The project-owned distance evaluator uses
 UAIbot's public `Utils.compute_dist` implementation but replaces the
 incompatible three-value unpacking in UAIbot 1.2.7
