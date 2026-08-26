@@ -11,8 +11,8 @@
   rigidas DH -> elo URDF da descricao oficial Jazzy. Tipos, dimensoes e poses
   locais dos treze objetos do braco partem da fabrica UAIbot fixada. Neste
   ensaio, c11 usa z=0.115 m; c21 usa x=0 e z=0.050 m; c22 preserva z=0.027 m;
-  c23 preserva z=0.025 m; c31 usa x=y=0 e z=0.050 m; c32 usa x=0,
-  y=0.025 m; c41 usa z=0.010 m; c42 preserva z=0; c51 permanece inalterado;
+  c23 preserva z=0.025 m; c31 usa x=y=z=0; c32 usa x=0, y=0.025 m;
+  c41 usa z=0.050 m; c42 usa x=z=0; c51 permanece inalterado;
   e c52 usa z=-0.018 m. A garra generica foi substituida por uma capsula RG2
   pertencente ao projeto.
 
@@ -133,7 +133,7 @@
     <!-- UAIbot link 3; ^wrist_1_link T_DH3 = Rx(pi/2). -->
     <xacro:cbf_cylinder_visual
       name="${prefix}uaibot_c31" parent="${prefix}wrist_1_link"
-      xyz="0 0 0.05" rpy="0 0 3.14159265359"
+      xyz="0 0 0" rpy="0 0 3.14159265359"
       radius="0.035" length="0.09" rgba="${arm_color}"/>
     <xacro:cbf_cylinder_visual
       name="${prefix}uaibot_c32" parent="${prefix}wrist_1_link"
@@ -143,11 +143,11 @@
     <!-- UAIbot link 4; ^wrist_2_link T_DH4 = Rx(-pi/2). -->
     <xacro:cbf_cylinder_visual
       name="${prefix}uaibot_c41" parent="${prefix}wrist_2_link"
-      xyz="0.0011 0 0.01" rpy="0 0 -1.570796326795"
+      xyz="0.0011 0 0.05" rpy="0 0 -1.570796326795"
       radius="0.035" length="0.025" rgba="${arm_color}"/>
     <xacro:cbf_cylinder_visual
       name="${prefix}uaibot_c42" parent="${prefix}wrist_2_link"
-      xyz="0.0011 -0.0025 0" rpy="1.570796326795 1.570796326795 0"
+      xyz="0 -0.0025 0" rpy="1.570796326795 1.570796326795 0"
       radius="0.038" length="0.098" rgba="${arm_color}"/>
 
     <!-- UAIbot link 5; ^wrist_3_link T_DH5 = I. -->

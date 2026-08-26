@@ -12,7 +12,7 @@ UAIBOT_FACTORY_GEOMETRY_SOURCE = (
     "uaibot/robot/_create_ur_ur3e.py"
 )
 PROJECT_GEOMETRY_SOURCE = (
-    "ur-task-space-cbf-ros2@0.6.11:"
+    "ur-task-space-cbf-ros2@0.6.12:"
     "ur_cbf_control/uaibot_collision_model.py#UR3E_RG2_PROJECT_PRIMITIVES"
 )
 
@@ -143,13 +143,17 @@ UR3E_RG2_PROJECT_PRIMITIVES = (
     _with_translation_component(UR3E_UAIBOT_PRIMITIVES[5], 2, 0.027),
     _with_translation_component(UR3E_UAIBOT_PRIMITIVES[6], 2, 0.025),
     _with_translation_component(
-        _with_translation_component(UR3E_UAIBOT_PRIMITIVES[7], 1, 0.05),
+        _with_translation_component(UR3E_UAIBOT_PRIMITIVES[7], 1, 0.0),
         2,
         0.0,
     ),
     _with_translation_component(UR3E_UAIBOT_PRIMITIVES[8], 2, -0.025),
-    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[9], 1, -0.01),
-    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[10], 1, 0.0),
+    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[9], 1, -0.05),
+    _with_translation_component(
+        _with_translation_component(UR3E_UAIBOT_PRIMITIVES[10], 0, 0.0),
+        1,
+        0.0,
+    ),
     _with_translation_component(
         _with_translation_component(
             _with_translation_component(UR3E_UAIBOT_PRIMITIVES[11], 0, 0.0),
