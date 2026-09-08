@@ -317,15 +317,18 @@ def test_rg2_uses_project_capsule_and_rg6_remains_without_unvalidated_tool_volum
     assert "rg2_cbf_visual_volume" not in rg6
 
 
-def test_rg2_capsule_matches_project_collision_dimensions():
+def test_rg2_two_volume_model_matches_project_dimensions():
     volumes = (PACKAGE_ROOT / "urdf" / "cbf_visual_volumes.urdf.xacro").read_text(
         encoding="utf-8"
     )
 
     assert 'parent="${prefix}onrobot_base_link"' in volumes
     assert 'center="0 0 0.110"' in volumes
-    assert 'cap_a="0 0 0.055" cap_b="0 0 0.165"' in volumes
-    assert 'radius="0.090" length="0.110"' in volumes
+    assert 'sphere_center="0 0 0.165"' in volumes
+    assert 'cylinder_radius="0.038" sphere_radius="0.090"' in volumes
+    assert 'length="0.110"' in volumes
+    assert "cbf_cap_a" not in volumes
+    assert "cbf_cap_b" not in volumes
 
 
 def test_cbf_visual_volumes_can_be_toggled_without_editing_env():
