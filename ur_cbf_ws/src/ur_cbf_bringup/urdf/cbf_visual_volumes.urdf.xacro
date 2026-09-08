@@ -14,7 +14,7 @@
   c23 usa x=-0.2121 m e z=0.025 m; c31 usa x=y=0 e z=-0.020 m; c32 usa x=0,
   y=0 m e comprimento=0.0945 m; c41 usa z=-0.027 m; c42 usa
   x=0, y=0 m e z=0; c51 permanece inalterado; e c52 usa x=0.0011 m, y=-0.026 m e z=-0.030 m.
-  A garra generica foi substituida por uma capsula RG2 pertencente ao projeto.
+  A garra generica foi substituida por dois volumes RG2 pertencentes ao projeto.
 
   Estes links nao possuem collision nem inertial: aparecem no RViz e no Gazebo,
   acompanham os elos por juntas fixas e nao alteram a fisica da simulacao.
@@ -60,29 +60,22 @@
     </joint>
   </xacro:macro>
 
-  <xacro:macro name="cbf_capsule_visual"
-               params="name parent center rpy cap_a cap_b radius length rgba">
+  <xacro:macro name="cbf_cylinder_sphere_visual"
+               params="name parent center rpy sphere_center cylinder_radius sphere_radius length rgba">
     <link name="${name}_cbf_volume">
       <visual name="${name}_cbf_cylinder">
         <origin xyz="${center}" rpy="${rpy}"/>
         <geometry>
-          <cylinder radius="${radius}" length="${length}"/>
+          <cylinder radius="${cylinder_radius}" length="${length}"/>
         </geometry>
         <material name="${name}_cbf_material">
           <color rgba="${rgba}"/>
         </material>
       </visual>
-      <visual name="${name}_cbf_cap_a">
-        <origin xyz="${cap_a}" rpy="0 0 0"/>
+      <visual name="${name}_cbf_sphere">
+        <origin xyz="${sphere_center}" rpy="0 0 0"/>
         <geometry>
-          <sphere radius="${radius}"/>
-        </geometry>
-        <material name="${name}_cbf_material"/>
-      </visual>
-      <visual name="${name}_cbf_cap_b">
-        <origin xyz="${cap_b}" rpy="0 0 0"/>
-        <geometry>
-          <sphere radius="${radius}"/>
+          <sphere radius="${sphere_radius}"/>
         </geometry>
         <material name="${name}_cbf_material"/>
       </visual>
@@ -162,11 +155,12 @@
   </xacro:macro>
 
   <xacro:macro name="rg2_cbf_visual_volume" params="prefix">
-    <!-- Mesmos tres objetos anexados ao ultimo elo do modelo UAIbot corrigido. -->
-    <xacro:cbf_capsule_visual
+    <!-- Dois objetos: cilindro com o diametro de C51 e esfera terminal. -->
+    <xacro:cbf_cylinder_sphere_visual
       name="${prefix}rg2" parent="${prefix}onrobot_base_link"
       center="0 0 0.110" rpy="0 0 0"
-      cap_a="0 0 0.055" cap_b="0 0 0.165"
-      radius="0.090" length="0.110" rgba="1.00 0.45 0.00 0.30"/>
+      sphere_center="0 0 0.165"
+      cylinder_radius="0.038" sphere_radius="0.090"
+      length="0.110" rgba="1.00 0.45 0.00 0.30"/>
   </xacro:macro>
 </robot>
