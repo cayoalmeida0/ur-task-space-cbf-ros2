@@ -513,3 +513,11 @@ registra todas as dependencias Python efetivamente instaladas.
 - Pacotes ROS instalados por APT recebem atualizacoes compatíveis com Jazzy durante a
   construcao. Para cada campanha experimental, deve-se arquivar tambem a saida de
   `apt list --installed` e o identificador da imagem Docker utilizada.
+## Revisao experimental 0.6.15 / controle 0.6.15 / bringup 0.3.14 — 11 de setembro de 2026
+
+- introduz uma matriz parametrizada de colisões permitidas por meio de
+  `self_collision_excluded_pairs`;
+- exclui `link_3_obj_1__link_5_obj_0` (`C32` × `C51`), identificado
+  experimentalmente como par estrutural com `d=0,0152 m < d_safe=0,0300 m`;
+- registra a lista de exclusões no JSON de cada ensaio para garantir
+  rastreabilidade e reprodutibilidade.

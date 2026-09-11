@@ -125,6 +125,7 @@ mas não deve ser levado ao robô real antes da validação dimensional da geome
 | `self_collision_cbf_gain` | `5.0` | s⁻¹ | taxa mínima de recuperação da barreira |
 | `self_collision_distance_tolerance` | `5e-4` | m | tolerância do cálculo de distância |
 | `self_collision_distance_max_iterations` | `20` | — | iterações máximas por par |
+| `self_collision_excluded_pairs` | `[link_3_obj_1__link_5_obj_0]` | — | pares estruturais permitidos, removidos da avaliação e do QP |
 
 Os valores são pontos de partida experimentais, não garantias certificadas. A
 taxa de controle real, o erro geométrico, a discretização e a velocidade máxima

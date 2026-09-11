@@ -294,6 +294,7 @@ class UaibotKinematics:
         *,
         tolerance: float = 5e-4,
         max_iterations: int = 20,
+        excluded_pair_labels: Sequence[str] = (),
     ) -> SelfCollisionDistances:
         """Avalia todos os pares nao adjacentes do modelo interno UAIbot.
 
@@ -338,6 +339,7 @@ class UaibotKinematics:
                 tolerance=float(tolerance),
                 max_iterations=int(max_iterations),
                 geometry_source=PROJECT_GEOMETRY_SOURCE,
+                excluded_pair_labels=excluded_pair_labels,
             )
         except SelfCollisionCbfError as error:
             raise KinematicsError(str(error)) from error

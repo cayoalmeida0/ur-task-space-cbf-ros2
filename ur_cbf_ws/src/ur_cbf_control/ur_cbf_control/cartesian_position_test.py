@@ -88,6 +88,10 @@ class CartesianPositionTest(Node):
         self.declare_parameter("self_collision_cbf_gain", 5.0)
         self.declare_parameter("self_collision_distance_tolerance", 5e-4)
         self.declare_parameter("self_collision_distance_max_iterations", 20)
+        self.declare_parameter(
+            "self_collision_excluded_pairs",
+            Parameter.Type.STRING_ARRAY,
+        )
         self.declare_parameter("self_collision_witness_mode", "closest")
         self.declare_parameter(
             "self_collision_witness_topic",
@@ -168,6 +172,9 @@ class CartesianPositionTest(Node):
         )
         self.self_collision_distance_max_iterations = int(
             self.get_parameter("self_collision_distance_max_iterations").value
+        )
+        self.self_collision_excluded_pairs = tuple(
+            self.get_parameter("self_collision_excluded_pairs").value or ()
         )
         self.self_collision_witness_mode = str(
             self.get_parameter("self_collision_witness_mode").value
@@ -312,7 +319,7 @@ class CartesianPositionTest(Node):
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.6.14; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.15; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
 
     def _validate_parameters(self) -> None:
@@ -524,6 +531,7 @@ class CartesianPositionTest(Node):
             model_positions,
             tolerance=self.self_collision_distance_tolerance,
             max_iterations=self.self_collision_distance_max_iterations,
+            excluded_pair_labels=self.self_collision_excluded_pairs,
         )
         constraints = formulate_self_collision_cbf(
             distances,
@@ -672,7 +680,7 @@ class CartesianPositionTest(Node):
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.6.14",
+                "control_package": "ur_cbf_control:0.6.15",
                 "controller_mode": self.controller_mode,
                 "self_collision_cbf_mode": self.self_collision_cbf_mode,
                 "self_collision_witness_mode": self.self_collision_witness_mode,
@@ -751,6 +759,9 @@ class CartesianPositionTest(Node):
                 ),
                 "self_collision_distance_max_iterations": (
                     self.self_collision_distance_max_iterations
+                ),
+                "self_collision_excluded_pairs": list(
+                    self.self_collision_excluded_pairs
                 ),
                 "max_cartesian_speed": self.max_cartesian_speed,
                 "max_abs_joint_velocity": self.max_abs_joint_velocity,

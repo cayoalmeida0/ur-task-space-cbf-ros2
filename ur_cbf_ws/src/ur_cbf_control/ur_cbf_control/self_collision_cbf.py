@@ -195,6 +195,7 @@ def evaluate_uaibot_nonadjacent_distances(
     tolerance: float,
     max_iterations: int,
     geometry_source: str,
+    excluded_pair_labels: Sequence[str] = (),
 ) -> SelfCollisionDistances:
     """Avalia os pares nao adjacentes usando a distancia publica do UAIbot.
 
@@ -225,6 +226,11 @@ def evaluate_uaibot_nonadjacent_distances(
     if not callable(compute_distance):
         raise SelfCollisionCbfError(
             "UAIbot nao expoe Utils.compute_dist para o backend do projeto."
+        )
+    excluded_pairs = frozenset(str(label) for label in excluded_pair_labels)
+    if any(not label for label in excluded_pairs):
+        raise SelfCollisionCbfError(
+            "Rotulos de pares excluidos nao podem ser vazios."
         )
 
     start = time.perf_counter()
@@ -288,6 +294,12 @@ def evaluate_uaibot_nonadjacent_distances(
                 for second_object, second_primitive in enumerate(
                     world_objects[second_link]
                 ):
+                    pair_label = (
+                        f"link_{first_link}_obj_{first_object}__"
+                        f"link_{second_link}_obj_{second_object}"
+                    )
+                    if pair_label in excluded_pairs:
+                        continue
                     initial_point = np.random.uniform(-100.0, 100.0, (3, 1))
                     try:
                         result = compute_distance(
@@ -368,10 +380,7 @@ def evaluate_uaibot_nonadjacent_distances(
                     distance_jacobians.append(jacobian_distance)
                     first_witness_points.append(first_point.copy())
                     second_witness_points.append(second_point.copy())
-                    labels.append(
-                        f"link_{first_link}_obj_{first_object}__"
-                        f"link_{second_link}_obj_{second_object}"
-                    )
+                    labels.append(pair_label)
 
     if not distance_values:
         raise SelfCollisionCbfError(

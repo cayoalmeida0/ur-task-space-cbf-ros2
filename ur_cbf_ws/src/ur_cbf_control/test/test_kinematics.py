@@ -173,6 +173,29 @@ class UaibotKinematicsTest(unittest.TestCase):
             with self.assertRaisesRegex(KinematicsError, "quatro valores"):
                 adapter.evaluate_self_collision((0.0, 0.0, 0.0))
 
+    def test_evaluate_self_collision_skips_explicitly_excluded_pair(self):
+        robot = FakeRobot(joint_count=4)
+        adapter = UaibotKinematics(
+            robot=robot,
+            model_joint_names=("j1", "j2", "j3", "j4"),
+            eef_offset_xyz=(0.0, 0.0, 0.0),
+            eef_offset_rpy=(0.0, 0.0, 0.0),
+            mode="python",
+            distance_utils=FakeDistanceUtils,
+        )
+        with patch(
+            "ur_cbf_control.kinematics."
+            "validate_ur3e_rg2_project_collision_model"
+        ):
+            with self.assertRaisesRegex(
+                KinematicsError,
+                "nao retornou pares nao adjacentes",
+            ):
+                adapter.evaluate_self_collision(
+                    (0.0, 0.0, 0.0, 0.0),
+                    excluded_pair_labels=("link_0_obj_0__link_2_obj_0",),
+                )
+
     def test_rejects_joint_count_mismatch(self):
         with self.assertRaisesRegex(KinematicsError, "Quantidade"):
             UaibotKinematics(
