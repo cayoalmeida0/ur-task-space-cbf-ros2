@@ -521,3 +521,10 @@ registra todas as dependencias Python efetivamente instaladas.
   experimentalmente como par estrutural com `d=0,0152 m < d_safe=0,0300 m`;
 - registra a lista de exclusões no JSON de cada ensaio para garantir
   rastreabilidade e reprodutibilidade.
+## Revisao experimental 0.6.16 / controle 0.6.16 / bringup 0.3.14 — 11 de setembro de 2026
+
+- acrescenta `link_2_obj_2__link_4_obj_1` (`C23` × `C42`) à matriz de
+  colisões permitidas;
+- fundamenta a exclusão no ensaio `cbf_monitor_acm_002`, no qual a distância
+  permaneceu entre `0,0182 m` e `0,0185 m` durante toda a trajetória, abaixo de
+  `d_safe=0,0300 m` por proximidade estrutural da cadeia.
