@@ -130,7 +130,7 @@ def _with_translation_component(
 # nas coordenadas DH; em c31/c32, z_DH controla -y_URDF e y_DH controla z_URDF
 # por causa de Rx(pi/2). Em c41/c42, y_DH controla -z_URDF por causa de
 # Rx(-pi/2). A tabela original permanece separada para validar o wheel antes da
-# troca da garra pela capsula RG2.
+# troca da garra pelos dois volumes simplificados da RG2.
 UR3E_RG2_PROJECT_PRIMITIVES = (
     replace(UR3E_UAIBOT_PRIMITIVES[0]),
     _with_translation_component(UR3E_UAIBOT_PRIMITIVES[1], 2, 0.115),
@@ -138,20 +138,31 @@ UR3E_RG2_PROJECT_PRIMITIVES = (
     _with_translation_component(
         _with_translation_component(UR3E_UAIBOT_PRIMITIVES[4], 0, 0.2132),
         2,
-        0.05,
+        0.0415,
     ),
     _with_translation_component(UR3E_UAIBOT_PRIMITIVES[5], 2, 0.027),
-    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[6], 2, 0.025),
     _with_translation_component(
-        _with_translation_component(UR3E_UAIBOT_PRIMITIVES[7], 1, -0.03),
+        _with_translation_component(UR3E_UAIBOT_PRIMITIVES[6], 0, 0.0011),
+        2,
+        0.025,
+    ),
+    _with_translation_component(
+        _with_translation_component(UR3E_UAIBOT_PRIMITIVES[7], 1, -0.02),
         2,
         0.0,
     ),
-    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[8], 2, -0.025),
-    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[9], 1, 0.05),
+    replace(
+        _with_translation_component(UR3E_UAIBOT_PRIMITIVES[8], 2, 0.0),
+        dimensions=(0.035, 0.0945),
+    ),
+    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[9], 1, 0.027),
     _with_translation_component(
-        _with_translation_component(UR3E_UAIBOT_PRIMITIVES[10], 0, 0.0),
-        1,
+        _with_translation_component(
+            _with_translation_component(UR3E_UAIBOT_PRIMITIVES[10], 0, 0.0),
+            1,
+            0.0,
+        ),
+        2,
         0.0,
     ),
     _with_translation_component(
@@ -163,11 +174,18 @@ UR3E_RG2_PROJECT_PRIMITIVES = (
         2,
         -0.02,
     ),
-    _with_translation_component(UR3E_UAIBOT_PRIMITIVES[12], 2, -0.018),
-    # A capsula RG2 substitui os seis objetos da garra generica UAIbot.
-    UaibotPrimitiveSpec(5, 2, "Cylinder", _translation(0.110), (0.090, 0.110)),
-    UaibotPrimitiveSpec(5, 3, "Ball", _translation(0.055), (0.090,)),
-    UaibotPrimitiveSpec(5, 4, "Ball", _translation(0.165), (0.090,)),
+    _with_translation_component(
+        _with_translation_component(
+            _with_translation_component(UR3E_UAIBOT_PRIMITIVES[12], 0, 0.0011),
+            1,
+            -0.026,
+        ),
+        2,
+        -0.03,
+    ),
+    # Dois volumes RG2 substituem os seis objetos da garra generica UAIbot.
+    UaibotPrimitiveSpec(5, 2, "Cylinder", _translation(0.050), (0.048, 0.110)),
+    UaibotPrimitiveSpec(5, 3, "Ball", _translation(0.165), (0.090,)),
 )
 
 
@@ -263,7 +281,7 @@ def validate_ur3e_rg2_project_collision_model(robot: Any) -> None:
     _validate_collision_model(
         robot,
         specs=UR3E_RG2_PROJECT_PRIMITIVES,
-        expected_counts=(1, 3, 3, 2, 2, 5),
+        expected_counts=(1, 3, 3, 2, 2, 4),
         label="UR3e/RG2 do projeto",
     )
 

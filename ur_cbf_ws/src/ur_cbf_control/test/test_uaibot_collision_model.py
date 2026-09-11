@@ -97,16 +97,17 @@ class UaibotCollisionModelTest(unittest.TestCase):
     def test_project_arm_specs_are_independent_from_factory_contract(self):
         adjusted_components = {
             1: ((2, 0.115),),
-            4: ((0, 0.2132), (2, 0.05)),
+            4: ((0, 0.2132), (2, 0.0415)),
             5: ((2, 0.027),),
-            6: ((2, 0.025),),
-            7: ((1, -0.03), (2, 0.0)),
-            8: ((2, -0.025),),
-            9: ((1, 0.05),),
-            10: ((0, 0.0), (1, 0.0)),
+            6: ((0, 0.0011), (2, 0.025)),
+            7: ((1, -0.02), (2, 0.0)),
+            8: ((2, 0.0),),
+            9: ((1, 0.027),),
+            10: ((0, 0.0), (1, 0.0), (2, 0.0)),
             11: ((0, 0.0), (1, 0.0), (2, -0.02)),
-            12: ((2, -0.018),),
+            12: ((0, 0.0011), (1, -0.026), (2, -0.03)),
         }
+        adjusted_dimensions = {8: (0.035, 0.0945)}
         for index, (factory_spec, project_spec) in enumerate(zip(
             UR3E_UAIBOT_PRIMITIVES[:13],
             UR3E_RG2_PROJECT_PRIMITIVES[:13],
@@ -118,7 +119,10 @@ class UaibotCollisionModelTest(unittest.TestCase):
             expected_translation = np.asarray(factory_spec.htm)[:3, 3].copy()
             for axis, value in adjusted_components[index]:
                 expected_translation[axis] = value
-            self.assertEqual(project_spec.dimensions, factory_spec.dimensions)
+            self.assertEqual(
+                project_spec.dimensions,
+                adjusted_dimensions.get(index, factory_spec.dimensions),
+            )
             factory_rotation = np.asarray(factory_spec.htm)[:3, :3]
             project_rotation = np.asarray(project_spec.htm)[:3, :3]
             np.testing.assert_array_equal(project_rotation, factory_rotation)
@@ -157,15 +161,15 @@ class UaibotCollisionModelTest(unittest.TestCase):
         }
         expected_urdf_origins = {
             1: (0.00185, 0.0, 0.115),
-            4: (0.0, 0.0, 0.05),
+            4: (0.0, 0.0, 0.0415),
             5: (-0.1046, 0.0, 0.027),
-            6: (-0.2146, 0.0, 0.025),
-            7: (0.0, 0.0, -0.03),
-            8: (0.0, 0.025, -0.0011),
-            9: (0.0011, 0.0, -0.05),
-            10: (0.0, -0.0025, 0.0),
+            6: (-0.2121, 0.0, 0.025),
+            7: (0.0, 0.0, -0.02),
+            8: (0.0, 0.0, -0.0011),
+            9: (0.0011, 0.0, -0.027),
+            10: (0.0, 0.0, 0.0),
             11: (0.0, 0.0, -0.02),
-            12: (0.0011, -0.021, -0.018),
+            12: (0.0011, -0.026, -0.03),
         }
 
         for index, expected_origin in expected_urdf_origins.items():
@@ -178,28 +182,26 @@ class UaibotCollisionModelTest(unittest.TestCase):
                 rtol=0.0,
             )
 
-    def test_replaces_generic_gripper_with_rg2_capsule(self):
+    def test_replaces_generic_gripper_with_two_rg2_volumes(self):
         robot = make_factory_robot()
         configure_ur3e_rg2_project_collision_model(robot, FakeUaibot)
         validate_ur3e_rg2_project_collision_model(robot)
 
-        self.assertEqual(len(UR3E_RG2_PROJECT_PRIMITIVES), 16)
+        self.assertEqual(len(UR3E_RG2_PROJECT_PRIMITIVES), 15)
         self.assertEqual(
             tuple(len(link.col_objects) for link in robot.links),
-            (1, 3, 3, 2, 2, 5),
+            (1, 3, 3, 2, 2, 4),
         )
         distal = robot.links[5].col_objects
         self.assertEqual(
             tuple(type(item[0]).__name__ for item in distal),
-            ("Cylinder", "Cylinder", "Cylinder", "Ball", "Ball"),
+            ("Cylinder", "Cylinder", "Cylinder", "Ball"),
         )
-        self.assertAlmostEqual(distal[2][0].radius, 0.090)
+        self.assertAlmostEqual(distal[2][0].radius, 0.048)
         self.assertAlmostEqual(distal[2][0].height, 0.110)
         self.assertAlmostEqual(distal[3][0].radius, 0.090)
-        self.assertAlmostEqual(distal[4][0].radius, 0.090)
-        self.assertAlmostEqual(distal[2][1][2, 3], 0.110)
-        self.assertAlmostEqual(distal[3][1][2, 3], 0.055)
-        self.assertAlmostEqual(distal[4][1][2, 3], 0.165)
+        self.assertAlmostEqual(distal[2][1][2, 3], 0.050)
+        self.assertAlmostEqual(distal[3][1][2, 3], 0.165)
 
     def test_rejects_changed_factory_primitive_count(self):
         robot = make_factory_robot()

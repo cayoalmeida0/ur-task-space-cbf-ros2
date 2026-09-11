@@ -77,9 +77,10 @@ J_d(q) qdot >= -gamma (d(q) - d_safe)
 
 Use `self_collision_cbf_mode:=monitor` para calcular e registrar a distancia
 minima sem alterar o comando. `enforce` acrescenta todas as linhas ao OSQP e so
-e aceito com `controller_mode:=qp`; `off` e o padrao. O projeto preserva 11
-primitivas da fabrica UAIbot, realinha dois objetos do antebraco ao offset
-oficial do UR3e e substitui a garra generica por uma capsula RG2 de tres objetos.
+e aceito com `controller_mode:=qp`; `off` e o padrao. O projeto preserva a
+estrutura das 13 primitivas do braco da fabrica UAIbot, aplica os ajustes
+geometricos validados no RViz e substitui a garra generica por dois volumes RG2:
+um cilindro e uma esfera terminal.
 A mesma lista corrigida e aplicada a `link.col_objects` e exibida pelo Xacro.
 Como o `compute_dist_auto` Python do UAIbot 1.2.7 possui uma incompatibilidade
 de desempacotamento, o avaliador do projeto chama `Utils.compute_dist`

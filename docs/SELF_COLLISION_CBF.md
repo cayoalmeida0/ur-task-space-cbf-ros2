@@ -64,17 +64,16 @@ mas `_compute_dist_auto_python` tenta desempacotar três. O projeto trata
 explicitamente os quatro valores e mantém o wheel instalado sem modificações.
 
 O projeto valida inicialmente as 19 primitivas da fábrica UR3e do UAIbot 1.2.7.
-Em seguida, substitui somente a geometria distal, resultando em um modelo com 16
+Em seguida, substitui somente a geometria distal, resultando em um modelo com 15
 objetos. As 13 primitivas do braço partem da fábrica; nesta revisão, os origins
-URDF usam `z=0,115 m` em `c11`, `x=0; z=0,050 m` em `c21`, preservam
-`z=0,027 m` em `c22` e `z=0,025 m` em `c23`, usam
-`x=y=0; z=-0,030 m` em `c31`, `x=0; y=0,025 m` em `c32`,
-`z=-0,050 m` em `c41`,
-`x=z=0` em `c42`, preservam `c51` e usam
-`z=-0,018 m` em `c52`. Tipos, dimensões e
-rotações permanecem originais. Os seis
-objetos da garra genérica são removidos e substituídos por uma cápsula RG2
-formada pela união de um cilindro e duas esferas.
+URDF usam `z=0,115 m` em `c11`, `x=y=0; z=0,0415 m` em `c21`,
+`z=0,027 m` em `c22`, `x=-0,2121 m; z=0,025 m` em `c23` e
+`x=y=0; z=-0,020 m` em `c31`. Em `c32`, usam `x=y=0`,
+`z=-0,0011 m` e comprimento `0,0945 m`; em `c41`, `z=-0,027 m`;
+em `c42`, `x=y=z=0`; preservam `c51`; e usam
+`x=0,0011 m; y=-0,026 m; z=-0,030 m` em `c52`. As rotações permanecem
+originais. Os seis objetos da garra genérica são removidos e substituídos por
+dois volumes da RG2: um cilindro e uma esfera terminal.
 
 As matrizes do braço, relativas aos frames DH, foram convertidas para os frames
 dos elos da descrição oficial Jazzy por transformações rígidas constantes. A
@@ -82,9 +81,9 @@ cópia visual aplica as transformações rígidas necessárias para expressar as
 matrizes DH nos frames dos elos URDF. Os ajustes são aplicados simultaneamente
 à tabela matemática e ao Xacro. Em `c31/c32`, a rotação fixa `Rx(pi/2)` faz as
 componentes `y/z` do frame DH corresponderem a `z/-y` no frame URDF. Em
-`c41/c42`, `Rx(-pi/2)` faz essas componentes corresponderem a `-z/y`. A cápsula usa raio de
-`0,090 m`, trecho cilíndrico de `0,110 m` e centros das
-extremidades em `z=0,055 m` e `z=0,165 m` no frame da RG2. Esses mesmos valores
+`c41/c42`, `Rx(-pi/2)` faz essas componentes corresponderem a `-z/y`. O cilindro
+da RG2 usa raio `0,048 m`, comprimento `0,110 m` e centro em `z=0,050 m`; a
+esfera terminal usa raio `0,090 m` e centro em `z=0,165 m`. Esses mesmos valores
 são anexados ao último elo do modelo UAIbot. Assim, a cena transparente e os
 cálculos de `d_k(q)` e `J_{d,k}(q)` usam a mesma geometria versionada.
 

@@ -132,7 +132,7 @@ def test_cbf_visual_volumes_use_project_model_and_remain_visual_only():
     assert text.count("<xacro:cbf_sphere_visual") == 1
     assert text.count("<xacro:cbf_cylinder_visual") == 12
     assert "cbf_box_visual" not in text
-    assert "cbf_capsule_visual" in text
+    assert "cbf_cylinder_sphere_visual" in text
     assert "1acb5ed637738aca4ea05945e6c065c3757bc13d" in text
     assert "<visibility_flags>" not in text
     assert "gazebo_visible" not in text
@@ -175,15 +175,15 @@ def test_uaibot_visual_primitives_preserve_converted_origins_and_sizes():
         "c11": ("cylinder", "upper_arm_link", "0.00185 0 0.115", "0 0 1.570796326795", "0.052", "0.13"),
         "c12": ("cylinder", "upper_arm_link", "-0.11815 0 0.12", "-1.570796326795 0 1.570796326795", "0.05", "0.2"),
         "c13": ("cylinder", "upper_arm_link", "-0.24315 0 0.118", "0 0 1.570796326795", "0.05", "0.12"),
-        "c21": ("sphere", "forearm_link", "0 0 0.05", None, "0.05", None),
+        "c21": ("sphere", "forearm_link", "0 0 0.0415", None, "0.05", None),
         "c22": ("cylinder", "forearm_link", "-0.1046 0 0.027", "-1.570796326795 0 1.570796326795", "0.04", "0.2"),
-        "c23": ("cylinder", "forearm_link", "-0.2146 0 0.025", "0 0 1.570796326795", "0.035", "0.09"),
-        "c31": ("cylinder", "wrist_1_link", "0 0 -0.03", "0 0 3.14159265359", "0.035", "0.09"),
-        "c32": ("cylinder", "wrist_1_link", "0 0.025 -0.0011", "-1.570796326795 0 -3.14159265359", "0.035", "0.045"),
-        "c41": ("cylinder", "wrist_2_link", "0.0011 0 -0.05", "0 0 -1.570796326795", "0.035", "0.025"),
-        "c42": ("cylinder", "wrist_2_link", "0 -0.0025 0", "1.570796326795 1.570796326795 0", "0.038", "0.098"),
+        "c23": ("cylinder", "forearm_link", "-0.2121 0 0.025", "0 0 1.570796326795", "0.035", "0.09"),
+        "c31": ("cylinder", "wrist_1_link", "0 0 -0.02", "0 0 3.14159265359", "0.035", "0.09"),
+        "c32": ("cylinder", "wrist_1_link", "0 0 -0.0011", "-1.570796326795 0 -3.14159265359", "0.035", "0.0945"),
+        "c41": ("cylinder", "wrist_2_link", "0.0011 0 -0.027", "0 0 -1.570796326795", "0.035", "0.025"),
+        "c42": ("cylinder", "wrist_2_link", "0 0 0", "1.570796326795 1.570796326795 0", "0.038", "0.098"),
         "c51": ("cylinder", "wrist_3_link", "0 0 -0.02", "3.14159265359 0 1.570796326795", "0.038", "0.046"),
-        "c52": ("cylinder", "wrist_3_link", "0.0011 -0.021 -0.018", "1.570796326795 1.570796326795 0", "0.01", "0.028"),
+        "c52": ("cylinder", "wrist_3_link", "0.0011 -0.026 -0.03", "1.570796326795 1.570796326795 0", "0.01", "0.028"),
     }
 
     assert set(calls) == set(expected)
@@ -300,7 +300,7 @@ def test_uaibot_dh_to_urdf_link_maps_are_configuration_independent():
             )
 
 
-def test_rg2_uses_project_capsule_and_rg6_remains_without_unvalidated_tool_volume():
+def test_rg2_uses_project_volumes_and_rg6_remains_without_unvalidated_tool_volume():
     rg2 = (PACKAGE_ROOT / "urdf" / "ur_rg2_gz.urdf.xacro").read_text(
         encoding="utf-8"
     )

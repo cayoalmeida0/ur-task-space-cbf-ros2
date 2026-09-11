@@ -8,13 +8,14 @@ real: velocidades articulares em
 
 > **Estado atual — revisão experimental 0.6.13:** infraestrutura Docker `0.2.0`,
 > `ur_cbf_bringup` `0.3.13` e `ur_cbf_control` `0.6.13`. O QP já aceita a primeira
-> CBF cinemática de autocolisão nos modos `monitor` e `enforce`. As 16 primitivas
+> CBF cinemática de autocolisão nos modos `monitor` e `enforce`. As 15 primitivas
 > transparentes partem das 13 primitivas originais do braço UR3e no UAIbot; o
-> ensaio atual usa `z=0,115 m` em `c11`, `x=0; z=0,050 m` em `c21`, mantém
-> `z=0,027 m` em `c22` e `z=0,025 m` em `c23`, usa `x=y=0; z=-0,030 m`
-> em `c31`, mantém `x=0; y=0,025 m` em `c32` e usa `z=-0,050 m`
-> em `c41`, `x=z=0` em `c42`, preserva `c51` e usa `z=-0,018 m` em `c52`,
-> além da cápsula RG2.
+> ensaio atual usa `z=0,115 m` em `c11`, `x=y=0; z=0,0415 m` em `c21`, mantém
+> `z=0,027 m` em `c22`, usa `x=-0,2121 m; z=0,025 m` em `c23` e
+> `x=y=0; z=-0,020 m` em `c31`. Em `c32`, usa `x=y=0`, `z=-0,0011 m` e
+> comprimento `0,0945 m`; em `c41`, `z=-0,027 m`; em `c42`, `x=y=z=0`;
+> preserva `c51`; e usa `x=0,0011 m; y=-0,026 m; z=-0,030 m` em `c52`.
+> A RG2 é representada por um cilindro e uma esfera terminal.
 > O padrão permanece `off` até validarmos poses e custo no container.
 
 ## Visão geral
@@ -45,7 +46,7 @@ flowchart TD
 - formulação de autocolisão `J_d qdot >= -gamma (d-d_safe)` integrada ao QP;
 - TCP controlado em `gripper_tcp`, no centro dos dedos fechados;
 - watchdogs, comando nulo em falhas e ensaios explicitamente armados;
-- 16 primitivas visuais idênticas ao modelo UAIbot corrigido do projeto;
+- 15 primitivas visuais idênticas ao modelo UAIbot corrigido do projeto;
 - resultados experimentais em JSON com parâmetros, versões, seed e métricas.
 
 ### Escopo dos modelos
@@ -56,7 +57,7 @@ flowchart TD
 | Gripper | RG2 consolidada; RG6 disponível para comparação |
 | Adaptador cinemático UAIbot | UR3e implementado e validado |
 | CBF de autocolisão | núcleo/QP implementado; backend UAIbot em validação |
-| Volumes visuais para CBF | 13 primitivas UR3e + cápsula RG2 de três objetos |
+| Volumes visuais para CBF | 13 primitivas UR3e + RG2 simplificada em dois objetos |
 | Hardware real | UR via `ur_robot_driver`; RG2 via driver OnRobot |
 
 Modelos sem adaptador ou geometria explícita são recusados, em vez de receberem

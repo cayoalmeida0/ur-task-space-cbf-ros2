@@ -65,15 +65,16 @@ plugin Gazebo Classic do driver OnRobot.
 
 ## Volumes geométricos para as CBFs
 
-O conjunto UR3e/RG2 apresenta 16 primitivas sem colisão física:
+O conjunto UR3e/RG2 apresenta 15 primitivas sem colisão física:
 
 - 13 objetos do braço derivados da fábrica UAIbot fixada; o ensaio `0.6.13`
-  mantém tipos e dimensões, usa `z=0,115 m` em `c11`,
-  `x=0; z=0,050 m` em `c21`, preserva `z=0,027 m` em `c22` e
-  `z=0,025 m` em `c23`, usa `x=y=0; z=-0,030 m` em `c31`, mantém
-  `x=0; y=0,025 m` em `c32`, usa `z=-0,050 m` em `c41`, `x=z=0` em
-  `c42`, preserva `c51` e usa `z=-0,018 m` em `c52`;
-- um cilindro e duas esferas que formam a cápsula da RG2.
+  `z=0,115 m` em `c11`, `x=y=0; z=0,0415 m` em `c21`, `z=0,027 m`
+  em `c22`, `x=-0,2121 m; z=0,025 m` em `c23` e
+  `x=y=0; z=-0,020 m` em `c31`. Em `c32`, usa `x=y=0`,
+  `z=-0,0011 m` e comprimento `0,0945 m`; em `c41`, `z=-0,027 m`;
+  em `c42`, `x=y=z=0`; preserva `c51`; e usa
+  `x=0,0011 m; y=-0,026 m; z=-0,030 m` em `c52`;
+- um cilindro e uma esfera terminal que representam a RG2.
 
 As matrizes `htm_obj` do UAIbot são relativas aos frames DH posteriores às
 juntas. Antes da transcrição para `<origin>`, elas foram convertidas aos frames
@@ -84,13 +85,14 @@ descrição oficial Jazzy. A fonte está fixada no commit
 Esses elementos possuem apenas `<visual>`: não têm `<collision>`, massa, inércia
 ou interfaces de controle. Portanto, não alteram contato ou dinâmica. Ao criar o
 modelo matemático, o projeto substitui os objetos de colisão da fábrica pelas
-mesmas 16 primitivas usadas na visualização. O avaliador do projeto percorre
+mesmas 15 primitivas usadas na visualização. O avaliador do projeto percorre
 essa lista e chama `UAIbot.Utils.compute_dist` para cada par não adjacente.
 
-A cápsula RG2 tem raio de `0,090 m`, comprimento cilíndrico de `0,110 m` e
-extremidades centradas em `z=0,055 m` e `z=0,165 m` no `onrobot_base_link`.
-Ela é uma aproximação conservadora única do corpo e dos dedos, não uma cópia do
-mesh. A RG6 permanece disponível na simulação, mas os modos `monitor` e
+O modelo simplificado da RG2 possui um cilindro de raio `0,048 m`, comprimento
+`0,110 m` e centro em `z=0,050 m`, além de uma esfera terminal de raio
+`0,090 m` centrada em `z=0,165 m`, todos no `onrobot_base_link`. Ele aproxima o
+corpo e os dedos, não sendo uma cópia do mesh. A RG6 permanece disponível na
+simulação, mas os modos `monitor` e
 `enforce` da CBF recusam essa combinação enquanto não houver geometria própria.
 
 As dimensões físicas foram confrontadas com os arquivos oficiais:
