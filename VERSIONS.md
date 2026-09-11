@@ -2,6 +2,16 @@
 
 Data da definicao do ambiente: 17 de julho de 2026.
 
+## Revisao experimental 0.6.14 / controle 0.6.14 / bringup 0.3.14 — 11 de setembro de 2026
+
+- Sincroniza as 15 primitivas finais do UR3e/RG2 entre o Xacro e o modelo
+  matematico utilizado pela CBF de autocolisao.
+- Preserva os dois witness points retornados por `UAIbot.Utils.compute_dist` e
+  publica pontos e segmentos em `/self_collision/witness_markers`.
+- Adiciona os modos de visualizacao `off`, `closest` e `all`, com cores verde,
+  amarela e vermelha determinadas pela distancia segura.
+- Inclui uma configuracao RViz que carrega automaticamente o `MarkerArray`.
+
 ## Revisao experimental 0.6.13 / controle 0.6.13 / bringup 0.3.13 — 26 de agosto de 2026
 
 - Define no frame URDF `z=-0,030 m` em `c31` e `z=-0,050 m` em `c41`.

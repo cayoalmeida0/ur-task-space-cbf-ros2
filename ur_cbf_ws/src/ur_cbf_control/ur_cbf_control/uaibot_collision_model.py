@@ -12,7 +12,7 @@ UAIBOT_FACTORY_GEOMETRY_SOURCE = (
     "uaibot/robot/_create_ur_ur3e.py"
 )
 PROJECT_GEOMETRY_SOURCE = (
-    "ur-task-space-cbf-ros2@0.6.13:"
+    "ur-task-space-cbf-ros2@0.6.14:"
     "ur_cbf_control/uaibot_collision_model.py#UR3E_RG2_PROJECT_PRIMITIVES"
 )
 

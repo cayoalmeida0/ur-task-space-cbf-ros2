@@ -87,6 +87,13 @@ esfera terminal usa raio `0,090 m` e centro em `z=0,165 m`. Esses mesmos valores
 são anexados ao último elo do modelo UAIbot. Assim, a cena transparente e os
 cálculos de `d_k(q)` e `J_{d,k}(q)` usam a mesma geometria versionada.
 
+Os dois pontos testemunha retornados para cada par também são preservados no
+resultado da avaliação. O nó de ensaio pode publicá-los como `MarkerArray` em
+`/self_collision/witness_markers`, usando esferas nos pontos e um segmento entre
+eles. O modo `closest` exibe somente o par de menor distância; `all` exibe todos
+os pares usados na CBF; e `off` limpa os marcadores. Essa visualização não altera
+a matriz de restrições nem o comando calculado pelo QP.
+
 O código da dependência instalada não é alterado. A substituição ocorre após
 `Robot.create_ur_ur3e()` por meio dos objetos de cada `Link`. Antes e depois da
 troca, o adaptador verifica contagem, tipo, matriz e dimensões; qualquer

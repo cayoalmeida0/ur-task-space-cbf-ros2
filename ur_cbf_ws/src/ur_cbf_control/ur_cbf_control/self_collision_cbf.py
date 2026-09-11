@@ -31,6 +31,8 @@ class SelfCollisionDistances:
     distances: np.ndarray
     jacobian: np.ndarray
     pair_labels: tuple[str, ...]
+    first_witness_points: np.ndarray
+    second_witness_points: np.ndarray
     geometry_source: str
     evaluation_time: float = 0.0
 
@@ -60,6 +62,8 @@ class SelfCollisionCbfConstraints:
     barrier_values: np.ndarray
     distances: np.ndarray
     pair_labels: tuple[str, ...]
+    first_witness_points: np.ndarray
+    second_witness_points: np.ndarray
     safe_distance: float
     gain: float
     geometry_source: str
@@ -137,6 +141,22 @@ def formulate_self_collision_cbf(
         raise SelfCollisionCbfError(
             "Quantidade de rotulos difere da quantidade de distancias."
         )
+    first_witness_points = np.asarray(
+        distances.first_witness_points, dtype=float
+    )
+    second_witness_points = np.asarray(
+        distances.second_witness_points, dtype=float
+    )
+    expected_witness_shape = (distance_vector.size, 3)
+    if (
+        first_witness_points.shape != expected_witness_shape
+        or second_witness_points.shape != expected_witness_shape
+        or not np.all(np.isfinite(first_witness_points))
+        or not np.all(np.isfinite(second_witness_points))
+    ):
+        raise SelfCollisionCbfError(
+            "Witness points devem formar duas matrizes finitas N x 3."
+        )
     if not np.all(np.isfinite(distance_vector)) or np.any(distance_vector < 0.0):
         raise SelfCollisionCbfError(
             "Distancias de autocolisao devem ser finitas e nao negativas."
@@ -158,6 +178,8 @@ def formulate_self_collision_cbf(
         barrier_values=barrier_values,
         distances=distance_vector.copy(),
         pair_labels=tuple(distances.pair_labels),
+        first_witness_points=first_witness_points.copy(),
+        second_witness_points=second_witness_points.copy(),
         safe_distance=float(safe_distance),
         gain=float(gain),
         geometry_source=str(distances.geometry_source),
@@ -255,6 +277,8 @@ def evaluate_uaibot_nonadjacent_distances(
 
     distance_values: list[float] = []
     distance_jacobians: list[np.ndarray] = []
+    first_witness_points: list[np.ndarray] = []
+    second_witness_points: list[np.ndarray] = []
     labels: list[str] = []
     for first_link in range(len(links)):
         for second_link in range(first_link + 2, len(links)):
@@ -342,6 +366,8 @@ def evaluate_uaibot_nonadjacent_distances(
 
                     distance_values.append(distance_value)
                     distance_jacobians.append(jacobian_distance)
+                    first_witness_points.append(first_point.copy())
+                    second_witness_points.append(second_point.copy())
                     labels.append(
                         f"link_{first_link}_obj_{first_object}__"
                         f"link_{second_link}_obj_{second_object}"
@@ -355,6 +381,8 @@ def evaluate_uaibot_nonadjacent_distances(
         distances=np.asarray(distance_values, dtype=float),
         jacobian=np.vstack(distance_jacobians),
         pair_labels=tuple(labels),
+        first_witness_points=np.vstack(first_witness_points),
+        second_witness_points=np.vstack(second_witness_points),
         geometry_source=str(geometry_source),
         evaluation_time=time.perf_counter() - start,
     )

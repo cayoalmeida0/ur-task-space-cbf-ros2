@@ -5,7 +5,7 @@
 ?>
 <package format="3">
   <name>ur_cbf_control</name>
-  <version>0.6.13</version>
+  <version>0.6.14</version>
   <description>
     Controladores seguros no espaco de tarefa para manipuladores Universal Robots.
   </description>
@@ -21,6 +21,8 @@
   <exec_depend>rclpy</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>visualization_msgs</exec_depend>
 
   <test_depend>python3-pytest</test_depend>
 

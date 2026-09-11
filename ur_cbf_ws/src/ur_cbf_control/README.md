@@ -89,6 +89,11 @@ sao recusados para combinacoes diferentes de `ur3e + rg2`. Consulte
 [`docs/SELF_COLLISION_CBF.md`](../../../docs/SELF_COLLISION_CBF.md) antes de
 ativar a restricao.
 
+Os witness points podem ser exibidos no RViz pelo topico
+`/self_collision/witness_markers`. Use `self_collision_witness_mode:=closest`
+para mostrar apenas o par critico, `all` para todos os pares avaliados ou `off`
+para ocultar e limpar os marcadores.
+
 O UAIbot 1.2.7 fornece `p` e `J_v`. O vetor `q` vem exclusivamente de
 `/joint_states`, cuja ordem e convertida explicitamente para a ordem configurada
 do modelo. A saida e convertida novamente para a ordem consultada no parametro

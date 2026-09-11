@@ -357,6 +357,12 @@ def test_cbf_visual_volumes_can_be_toggled_without_editing_env():
     assert "gazebo_description_content = _description_command(" in simulation_launch
     assert '"robot_description": ParameterValue(' in simulation_launch
     assert '"-string",\n            gazebo_description_content,' in simulation_launch
+    assert '"cbf_witness.rviz"' in simulation_launch
+    rviz_config = (PACKAGE_ROOT / "rviz" / "cbf_witness.rviz").read_text(
+        encoding="utf-8"
+    )
+    assert "rviz_default_plugins/MarkerArray" in rviz_config
+    assert "/self_collision/witness_markers" in rviz_config
 
 
 @pytest.mark.parametrize(

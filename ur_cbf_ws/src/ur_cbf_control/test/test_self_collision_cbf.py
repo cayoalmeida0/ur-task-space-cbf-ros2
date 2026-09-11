@@ -12,6 +12,8 @@ class SelfCollisionCbfTest(unittest.TestCase):
             distances=np.array((0.08, 0.03)),
             jacobian=np.array(((1.0, 0.0), (0.0, -2.0))),
             pair_labels=("pair_a", "pair_b"),
+            first_witness_points=np.array(((0.0, 0.0, 0.0), (1.0, 0.0, 0.0))),
+            second_witness_points=np.array(((0.08, 0.0, 0.0), (1.03, 0.0, 0.0))),
             geometry_source="test",
         )
         constraints = formulate_self_collision_cbf(
@@ -24,12 +26,18 @@ class SelfCollisionCbfTest(unittest.TestCase):
         np.testing.assert_allclose(constraints.matrix, distances.jacobian)
         self.assertEqual(constraints.closest_pair, "pair_b")
         self.assertAlmostEqual(constraints.minimum_distance, 0.03)
+        np.testing.assert_allclose(
+            constraints.first_witness_points,
+            distances.first_witness_points,
+        )
 
     def test_rejects_negative_distance(self):
         distances = SelfCollisionDistances(
             distances=np.array((-0.01,)),
             jacobian=np.array(((1.0,),)),
             pair_labels=("pair",),
+            first_witness_points=np.zeros((1, 3)),
+            second_witness_points=np.zeros((1, 3)),
             geometry_source="test",
         )
         with self.assertRaisesRegex(SelfCollisionCbfError, "nao negativas"):
@@ -44,6 +52,8 @@ class SelfCollisionCbfTest(unittest.TestCase):
             distances=np.array((0.1, 0.2)),
             jacobian=np.array(((1.0,),)),
             pair_labels=("a", "b"),
+            first_witness_points=np.zeros((2, 3)),
+            second_witness_points=np.zeros((2, 3)),
             geometry_source="test",
         )
         with self.assertRaisesRegex(SelfCollisionCbfError, "Quantidade"):

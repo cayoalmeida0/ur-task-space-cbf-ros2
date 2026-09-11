@@ -67,7 +67,7 @@ plugin Gazebo Classic do driver OnRobot.
 
 O conjunto UR3e/RG2 apresenta 15 primitivas sem colisão física:
 
-- 13 objetos do braço derivados da fábrica UAIbot fixada; o ensaio `0.6.13`
+- 13 objetos do braço derivados da fábrica UAIbot fixada; o ensaio `0.6.14`
   `z=0,115 m` em `c11`, `x=y=0; z=0,0415 m` em `c21`, `z=0,027 m`
   em `c22`, `x=-0,2121 m; z=0,025 m` em `c23` e
   `x=y=0; z=-0,020 m` em `c31`. Em `c32`, usa `x=y=0`,
@@ -139,6 +139,29 @@ gráfica.
 O erro `ERRO: /gz_ros_control nao foi encontrado` significa que a simulação não
 está ativa ou ainda não terminou de inicializar. O comando `make` não deve ser
 executado dentro do container, pois o Docker pertence ao host.
+
+### Witness points da autocolisão
+
+O ensaio cartesiano publica os pontos testemunha e os segmentos entre os pares
+avaliados em `/self_collision/witness_markers`. A configuração padrão do RViz já
+inclui esse `MarkerArray`. A cor indica a margem em relação a `d_safe`: verde
+acima de `1,5 d_safe`, amarelo entre `d_safe` e `1,5 d_safe`, e vermelho abaixo
+de `d_safe`.
+
+O parâmetro `self_collision_witness_mode` aceita `off`, `closest` e `all`. O
+padrão `closest` mostra apenas o par de menor distância. Para exibir todos os
+pares durante o monitoramento:
+
+```bash
+ros2 launch ur_cbf_control cartesian_position.launch.py \
+  ur_type:=ur3e \
+  onrobot_type:=rg2 \
+  controller_mode:=qp \
+  self_collision_cbf_mode:=monitor \
+  self_collision_witness_mode:=all \
+  experiment_id:=self_collision_witness_all_001 \
+  execute_test:=true
+```
 
 ## Frames do efetuador
 

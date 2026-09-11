@@ -38,6 +38,9 @@ def launch_setup(context):
                     "self_collision_cbf_mode": LaunchConfiguration(
                         "self_collision_cbf_mode"
                     ),
+                    "self_collision_witness_mode": LaunchConfiguration(
+                        "self_collision_witness_mode"
+                    ),
                     "max_control_duration": ParameterValue(
                         LaunchConfiguration("max_control_duration"),
                         value_type=float,
@@ -90,6 +93,12 @@ def generate_launch_description():
                 description=(
                     "Desliga, monitora ou impoe a CBF de autocolisao no QP."
                 ),
+            ),
+            DeclareLaunchArgument(
+                "self_collision_witness_mode",
+                default_value="closest",
+                choices=["off", "closest", "all"],
+                description="Seleciona os pares exibidos como witness points.",
             ),
             DeclareLaunchArgument(
                 "max_control_duration",

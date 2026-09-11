@@ -31,6 +31,10 @@ cartesian_position_test:
     self_collision_cbf_gain: 5.0
     self_collision_distance_tolerance: 5.0e-4
     self_collision_distance_max_iterations: 20
+    # off: oculta; closest: menor distancia; all: todos os pares avaliados.
+    self_collision_witness_mode: closest
+    self_collision_witness_topic: /self_collision/witness_markers
+    self_collision_witness_frame: base
     max_cartesian_speed: 0.01
     max_abs_joint_velocity: 0.10
     position_tolerance: 0.001

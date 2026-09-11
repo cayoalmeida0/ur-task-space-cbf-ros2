@@ -17,6 +17,7 @@ from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
+from visualization_msgs.msg import MarkerArray
 
 from ur_cbf_control.experiment import ControlTiming
 from ur_cbf_control.experiment import evaluate_control_timing
@@ -41,6 +42,8 @@ from ur_cbf_control.self_collision_cbf import formulate_self_collision_cbf
 from ur_cbf_control.self_collision_cbf import SelfCollisionCbfConstraints
 from ur_cbf_control.self_collision_cbf import SelfCollisionCbfError
 from ur_cbf_control.task_frames import get_task_frame_spec
+from ur_cbf_control.witness_visualization import build_witness_marker_array
+from ur_cbf_control.witness_visualization import WITNESS_VISUALIZATION_MODES
 
 
 class Phase(Enum):
@@ -85,6 +88,12 @@ class CartesianPositionTest(Node):
         self.declare_parameter("self_collision_cbf_gain", 5.0)
         self.declare_parameter("self_collision_distance_tolerance", 5e-4)
         self.declare_parameter("self_collision_distance_max_iterations", 20)
+        self.declare_parameter("self_collision_witness_mode", "closest")
+        self.declare_parameter(
+            "self_collision_witness_topic",
+            "/self_collision/witness_markers",
+        )
+        self.declare_parameter("self_collision_witness_frame", "base")
         self.declare_parameter("max_cartesian_speed", 0.01)
         self.declare_parameter("max_abs_joint_velocity", 0.10)
         self.declare_parameter("position_tolerance", 0.001)
@@ -159,6 +168,15 @@ class CartesianPositionTest(Node):
         )
         self.self_collision_distance_max_iterations = int(
             self.get_parameter("self_collision_distance_max_iterations").value
+        )
+        self.self_collision_witness_mode = str(
+            self.get_parameter("self_collision_witness_mode").value
+        ).lower()
+        self.self_collision_witness_topic = str(
+            self.get_parameter("self_collision_witness_topic").value
+        )
+        self.self_collision_witness_frame = str(
+            self.get_parameter("self_collision_witness_frame").value
         )
         self.max_cartesian_speed = float(
             self.get_parameter("max_cartesian_speed").value
@@ -255,6 +273,11 @@ class CartesianPositionTest(Node):
             self.command_topic,
             command_qos,
         )
+        self.witness_publisher = self.create_publisher(
+            MarkerArray,
+            self.self_collision_witness_topic,
+            10,
+        )
         self.create_subscription(
             JointState,
             self.joint_states_topic,
@@ -289,7 +312,7 @@ class CartesianPositionTest(Node):
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.6.13; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.14; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
 
     def _validate_parameters(self) -> None:
@@ -324,6 +347,14 @@ class CartesianPositionTest(Node):
             raise ValueError(
                 "self_collision_cbf_mode deve ser off, monitor ou enforce."
             )
+        if self.self_collision_witness_mode not in WITNESS_VISUALIZATION_MODES:
+            raise ValueError(
+                "self_collision_witness_mode deve ser off, closest ou all."
+            )
+        if not self.self_collision_witness_topic.strip():
+            raise ValueError("self_collision_witness_topic nao pode ser vazio.")
+        if not self.self_collision_witness_frame.strip():
+            raise ValueError("self_collision_witness_frame nao pode ser vazio.")
         if self.self_collision_cbf_mode != "off" and (
             self.ur_type,
             self.onrobot_type,
@@ -499,6 +530,14 @@ class CartesianPositionTest(Node):
             safe_distance=self.self_collision_safe_distance,
             gain=self.self_collision_cbf_gain,
         )
+        self.witness_publisher.publish(
+            build_witness_marker_array(
+                constraints,
+                mode=self.self_collision_witness_mode,
+                frame_id=self.self_collision_witness_frame,
+                stamp=self.get_clock().now().to_msg(),
+            )
+        )
         self._last_self_collision_cbf = constraints
         return constraints
 
@@ -633,9 +672,10 @@ class CartesianPositionTest(Node):
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.6.13",
+                "control_package": "ur_cbf_control:0.6.14",
                 "controller_mode": self.controller_mode,
                 "self_collision_cbf_mode": self.self_collision_cbf_mode,
+                "self_collision_witness_mode": self.self_collision_witness_mode,
                 "osqp": self.qp_solver.solver_version,
                 "ros_distro": os.environ.get("ROS_DISTRO", "unknown"),
                 "ur_type": self.ur_type,
