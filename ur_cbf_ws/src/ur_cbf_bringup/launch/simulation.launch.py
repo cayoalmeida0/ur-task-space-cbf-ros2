@@ -282,11 +282,7 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "rviz_config_file",
                 default_value=PathJoinSubstitution(
-                    [
-                        FindPackageShare("ur_cbf_bringup"),
-                        "rviz",
-                        "cbf_witness.rviz",
-                    ]
+                    [FindPackageShare("ur_description"), "rviz", "view_robot.rviz"]
                 ),
             ),
             DeclareLaunchArgument("gazebo_gui", default_value="true"),
