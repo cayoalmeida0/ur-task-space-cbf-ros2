@@ -535,3 +535,10 @@ registra todas as dependencias Python efetivamente instaladas.
 - fundamenta a exclusão no ensaio `cbf_monitor_acm_003`, cuja distância
   permaneceu entre `0,0267 m` e `0,0271 m` durante a trajetória, ligeiramente
   abaixo de `d_safe=0,0300 m` por proximidade estrutural da cadeia.
+## Revisao experimental 0.6.18 / controle 0.6.18 / bringup 0.3.14 — 11 de setembro de 2026
+
+- acrescenta `link_2_obj_2__link_4_obj_0` (`C23` × `C41`) à matriz de
+  colisões permitidas;
+- fundamenta a exclusão no ensaio `cbf_monitor_acm_004`, cuja distância
+  permaneceu entre `0,0287 m` e `0,0288 m` durante toda a trajetória, abaixo de
+  `d_safe=0,0300 m` por proximidade estrutural do punho.
