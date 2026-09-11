@@ -6,7 +6,7 @@ package_name = "ur_cbf_control"
 
 setup(
     name=package_name,
-    version="0.6.16",
+    version="0.6.17",
     packages=find_packages(exclude=["test"]),
     data_files=[
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
