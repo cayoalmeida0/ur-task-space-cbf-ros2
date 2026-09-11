@@ -323,7 +323,7 @@ def test_rg2_two_volume_model_matches_project_dimensions():
     )
 
     assert 'parent="${prefix}onrobot_base_link"' in volumes
-    assert 'center="0 0 0.110"' in volumes
+    assert 'center="0 0 0.050"' in volumes
     assert 'sphere_center="0 0 0.165"' in volumes
     assert 'cylinder_radius="0.038" sphere_radius="0.090"' in volumes
     assert 'length="0.110"' in volumes
