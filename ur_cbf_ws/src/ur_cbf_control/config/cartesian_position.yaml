@@ -44,7 +44,7 @@ cartesian_position_test:
     self_collision_witness_frame: base
     max_cartesian_speed: 0.01
     max_abs_joint_velocity: 0.10
-    # Limites efetivos usados apenas por trajectory_profile=complex.
+    # Limites efetivos usados pelos perfis complex e challenging.
     complex_max_cartesian_speed: 0.04
     complex_max_abs_joint_velocity: 0.30
     complex_max_control_duration: 120.0

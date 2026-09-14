@@ -552,3 +552,10 @@ registra todas as dependencias Python efetivamente instaladas.
 - fundamenta a exclusão no ensaio `cbf_monitor_acm_004`, cuja distância
   permaneceu entre `0,0287 m` e `0,0288 m` durante toda a trajetória, abaixo de
   `d_safe=0,0300 m` por proximidade estrutural do punho.
+## Revisao experimental 0.6.20 / controle 0.6.20 / bringup 0.3.14 — 14 de setembro de 2026
+
+- adiciona o perfil `challenging` sem alterar os perfis `simple` e `complex`;
+- percorre regiões mais baixas e próximas ao eixo da base, alternando entre
+  `X+` e `X-`, para exigir maior reconfiguração cinemática;
+- mantém os limites validados de `0,04 m/s` e `0,30 rad/s` e retorna à posição
+  inicial no quinto waypoint.

@@ -243,7 +243,7 @@ class CartesianPositionTest(Node):
             self.trajectory_profile,
             self.target_offset,
         )
-        if self.trajectory_profile == "complex":
+        if self.trajectory_profile in {"complex", "challenging"}:
             self.max_cartesian_speed = self.complex_max_cartesian_speed
             self.max_abs_joint_velocity = self.complex_max_abs_joint_velocity
             self.max_control_duration = self.complex_max_control_duration
@@ -353,7 +353,7 @@ class CartesianPositionTest(Node):
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.6.19; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.20; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
 
     def _validate_parameters(self) -> None:
@@ -726,7 +726,7 @@ class CartesianPositionTest(Node):
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.6.19",
+                "control_package": "ur_cbf_control:0.6.20",
                 "controller_mode": self.controller_mode,
                 "self_collision_cbf_mode": self.self_collision_cbf_mode,
                 "self_collision_witness_mode": self.self_collision_witness_mode,

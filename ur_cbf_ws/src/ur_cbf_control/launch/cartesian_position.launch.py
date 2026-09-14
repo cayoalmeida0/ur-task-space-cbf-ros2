@@ -86,7 +86,7 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "trajectory_profile",
                 default_value="simple",
-                choices=["simple", "complex"],
+                choices=["simple", "complex", "challenging"],
                 description="Seleciona regulacao simples ou trajetoria multi-waypoint.",
             ),
             DeclareLaunchArgument(
