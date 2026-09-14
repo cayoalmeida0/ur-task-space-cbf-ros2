@@ -42,6 +42,7 @@ from ur_cbf_control.self_collision_cbf import formulate_self_collision_cbf
 from ur_cbf_control.self_collision_cbf import SelfCollisionCbfConstraints
 from ur_cbf_control.self_collision_cbf import SelfCollisionCbfError
 from ur_cbf_control.task_frames import get_task_frame_spec
+from ur_cbf_control.trajectory import resolve_trajectory_waypoints
 from ur_cbf_control.witness_visualization import build_witness_marker_array
 from ur_cbf_control.witness_visualization import WITNESS_VISUALIZATION_MODES
 
@@ -74,6 +75,7 @@ class CartesianPositionTest(Node):
         )
         self.declare_parameter("uaibot_mode", "auto")
         self.declare_parameter("onrobot_type", "rg2")
+        self.declare_parameter("trajectory_profile", "simple")
         self.declare_parameter("target_offset", [0.0, 0.0, 0.01])
         self.declare_parameter("position_gains", [1.0, 1.0, 1.0])
         self.declare_parameter("damping", 0.05)
@@ -100,6 +102,10 @@ class CartesianPositionTest(Node):
         self.declare_parameter("self_collision_witness_frame", "base")
         self.declare_parameter("max_cartesian_speed", 0.01)
         self.declare_parameter("max_abs_joint_velocity", 0.10)
+        self.declare_parameter("complex_max_cartesian_speed", 0.04)
+        self.declare_parameter("complex_max_abs_joint_velocity", 0.30)
+        self.declare_parameter("complex_max_control_duration", 120.0)
+        self.declare_parameter("complex_max_wall_control_duration", 600.0)
         self.declare_parameter("position_tolerance", 0.001)
         self.declare_parameter("settle_duration", 0.5)
         self.declare_parameter("success_hold_duration", 0.5)
@@ -128,6 +134,9 @@ class CartesianPositionTest(Node):
         self.model_joint_names = tuple(model_names_value or ())
         self.uaibot_mode = str(self.get_parameter("uaibot_mode").value)
         self.onrobot_type = str(self.get_parameter("onrobot_type").value)
+        self.trajectory_profile = str(
+            self.get_parameter("trajectory_profile").value
+        ).lower()
         self.task_frame = get_task_frame_spec(self.onrobot_type)
         self.controlled_frame = self.task_frame.controlled_frame
         self.eef_offset_xyz = self.task_frame.eef_offset_xyz
@@ -191,6 +200,18 @@ class CartesianPositionTest(Node):
         self.max_abs_joint_velocity = float(
             self.get_parameter("max_abs_joint_velocity").value
         )
+        self.complex_max_cartesian_speed = float(
+            self.get_parameter("complex_max_cartesian_speed").value
+        )
+        self.complex_max_abs_joint_velocity = float(
+            self.get_parameter("complex_max_abs_joint_velocity").value
+        )
+        self.complex_max_control_duration = float(
+            self.get_parameter("complex_max_control_duration").value
+        )
+        self.complex_max_wall_control_duration = float(
+            self.get_parameter("complex_max_wall_control_duration").value
+        )
         self.position_tolerance = float(
             self.get_parameter("position_tolerance").value
         )
@@ -218,6 +239,15 @@ class CartesianPositionTest(Node):
         self.require_result_record = bool(
             self.get_parameter("require_result_record").value
         )
+        self.waypoint_offsets = resolve_trajectory_waypoints(
+            self.trajectory_profile,
+            self.target_offset,
+        )
+        if self.trajectory_profile == "complex":
+            self.max_cartesian_speed = self.complex_max_cartesian_speed
+            self.max_abs_joint_velocity = self.complex_max_abs_joint_velocity
+            self.max_control_duration = self.complex_max_control_duration
+            self.max_wall_control_duration = self.complex_max_wall_control_duration
 
         self._validate_parameters()
         np.random.seed(self.random_seed)
@@ -258,6 +288,8 @@ class CartesianPositionTest(Node):
         self.latest_state_receipt: float | None = None
         self.initial_position: np.ndarray | None = None
         self.target_position: np.ndarray | None = None
+        self.waypoint_index = 0
+        self._waypoint_arrivals: list[dict[str, object]] = []
         self._last_position: np.ndarray | None = None
         self.pending_failure: str | None = None
         self._joint_parameter_future = None
@@ -314,12 +346,14 @@ class CartesianPositionTest(Node):
                 f"Ensaio {self.experiment_id} armado; ur_type={self.ur_type}; "
                 f"onrobot_type={self.onrobot_type}; "
                 f"frame={self.controlled_frame}; "
+                f"trajetoria={self.trajectory_profile}; "
+                f"waypoints={len(self.waypoint_offsets)}; "
                 f"modo={self.controller_mode}; "
                 f"self_collision_cbf={self.self_collision_cbf_mode}; "
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.6.18; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.19; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
 
     def _validate_parameters(self) -> None:
@@ -330,6 +364,12 @@ class CartesianPositionTest(Node):
             "qp_time_limit": self.qp_time_limit,
             "max_cartesian_speed": self.max_cartesian_speed,
             "max_abs_joint_velocity": self.max_abs_joint_velocity,
+            "complex_max_cartesian_speed": self.complex_max_cartesian_speed,
+            "complex_max_abs_joint_velocity": self.complex_max_abs_joint_velocity,
+            "complex_max_control_duration": self.complex_max_control_duration,
+            "complex_max_wall_control_duration": (
+                self.complex_max_wall_control_duration
+            ),
             "position_tolerance": self.position_tolerance,
             "settle_duration": self.settle_duration,
             "success_hold_duration": self.success_hold_duration,
@@ -403,10 +443,14 @@ class CartesianPositionTest(Node):
             for value in self.position_gains
         ):
             raise ValueError("position_gains deve conter tres valores positivos.")
-        if self.execute_test and np.linalg.norm(self.target_offset) <= (
-            2.0 * self.position_tolerance
+        if self.execute_test and all(
+            np.linalg.norm(offset) <= 2.0 * self.position_tolerance
+            for offset in self.waypoint_offsets
         ):
-            raise ValueError("target_offset deve superar duas vezes a tolerancia.")
+            raise ValueError(
+                "A trajetoria deve conter ao menos um deslocamento superior "
+                "a duas vezes a tolerancia."
+            )
         if not self.result_directory.strip():
             raise ValueError("result_directory nao pode ser vazio.")
 
@@ -596,6 +640,8 @@ class CartesianPositionTest(Node):
         self._trace_samples.append(
             {
                 "phase": phase,
+                "waypoint_index": self.waypoint_index,
+                "waypoint_count": len(self.waypoint_offsets),
                 "simulated_seconds": timing.simulated_seconds,
                 "wall_seconds": timing.wall_seconds,
                 "error": [float(value) for value in error],
@@ -674,13 +720,13 @@ class CartesianPositionTest(Node):
             simulated_seconds = self._trace_samples[-1]["simulated_seconds"]
             wall_seconds = self._trace_samples[-1]["wall_seconds"]
         return {
-            "schema_version": "1.4",
+            "schema_version": "1.5",
             "experiment_id": self.experiment_id,
             "result": result,
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.6.18",
+                "control_package": "ur_cbf_control:0.6.19",
                 "controller_mode": self.controller_mode,
                 "self_collision_cbf_mode": self.self_collision_cbf_mode,
                 "self_collision_witness_mode": self.self_collision_witness_mode,
@@ -697,6 +743,13 @@ class CartesianPositionTest(Node):
                 ],
             },
             "random_seed": self.random_seed,
+            "trajectory": {
+                "profile": self.trajectory_profile,
+                "waypoint_offsets_m": [
+                    list(offset) for offset in self.waypoint_offsets
+                ],
+                "arrivals": list(self._waypoint_arrivals),
+            },
             "joint_order": {
                 "model": list(self.model_joint_names),
                 "controller": list(self.controller_joints or ()),
@@ -722,7 +775,7 @@ class CartesianPositionTest(Node):
                 "initial_error_norm": (
                     None
                     if self.target_position is None
-                    else float(np.linalg.norm(self.target_offset))
+                    else float(np.linalg.norm(self.waypoint_offsets[0]))
                 ),
                 "final_error_norm": final_error_norm,
                 "max_abs_joint_velocity": self._maximum_command,
@@ -740,6 +793,7 @@ class CartesianPositionTest(Node):
                 ),
             },
             "parameters": {
+                "trajectory_profile": self.trajectory_profile,
                 "target_offset": self.target_offset.tolist(),
                 "position_gains": list(self.position_gains),
                 "damping": self.damping,
@@ -925,7 +979,11 @@ class CartesianPositionTest(Node):
             if settle_timing.simulated_limit_reached:
                 state = self._evaluate_kinematics()
                 self.initial_position = np.asarray(state.position)
-                self.target_position = self.initial_position + self.target_offset
+                self.waypoint_index = 0
+                self.target_position = (
+                    self.initial_position
+                    + np.asarray(self.waypoint_offsets[self.waypoint_index])
+                )
                 self.phase = Phase.CONTROLLING
                 self.phase_start_monotonic = now
                 self.control_start_monotonic = now
@@ -945,8 +1003,12 @@ class CartesianPositionTest(Node):
                 )
                 self.get_logger().info(
                     "Posicao inicial="
-                    f"{self.initial_position.tolist()}; alvo={self.target_position.tolist()}; "
-                    f"offset={self.target_offset.tolist()}."
+                    f"{self.initial_position.tolist()}; "
+                    f"waypoint={self.waypoint_index + 1}/{len(self.waypoint_offsets)}; "
+                    f"alvo={self.target_position.tolist()}; "
+                    f"offset={list(self.waypoint_offsets[self.waypoint_index])}; "
+                    f"v_cart_max={self.max_cartesian_speed:.3f} m/s; "
+                    f"qdot_max={self.max_abs_joint_velocity:.3f} rad/s."
                 )
             return
 
@@ -1092,6 +1154,8 @@ class CartesianPositionTest(Node):
                     )
                 )
                 self.get_logger().info(
+                    f"waypoint={self.waypoint_index + 1}/"
+                    f"{len(self.waypoint_offsets)}; "
                     f"erro={result.error_norm:.6f} m; "
                     f"cart_sat={result.cartesian_saturated}; "
                     f"joint_sat={joint_saturated}; "
@@ -1141,7 +1205,34 @@ class CartesianPositionTest(Node):
                 max_wall=self.max_wall_control_duration,
             )
             if hold_timing.simulated_limit_reached:
-                self._finish_success(state)
+                self._waypoint_arrivals.append(
+                    {
+                        "waypoint_index": self.waypoint_index,
+                        "offset_m": list(
+                            self.waypoint_offsets[self.waypoint_index]
+                        ),
+                        "simulated_seconds": timing.simulated_seconds,
+                        "wall_seconds": timing.wall_seconds,
+                        "error_norm_m": error_norm,
+                    }
+                )
+                if self.waypoint_index + 1 < len(self.waypoint_offsets):
+                    self.waypoint_index += 1
+                    self.target_position = (
+                        self.initial_position
+                        + np.asarray(self.waypoint_offsets[self.waypoint_index])
+                    )
+                    self.phase = Phase.CONTROLLING
+                    self.phase_start_monotonic = now
+                    self.phase_start_sim_seconds = now_simulated
+                    self.get_logger().info(
+                        f"Iniciando waypoint {self.waypoint_index + 1}/"
+                        f"{len(self.waypoint_offsets)}; "
+                        f"alvo={self.target_position.tolist()}; "
+                        f"offset={list(self.waypoint_offsets[self.waypoint_index])}."
+                    )
+                else:
+                    self._finish_success(state)
             return
 
         if self.phase is Phase.STOPPING:

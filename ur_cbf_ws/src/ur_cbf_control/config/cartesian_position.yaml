@@ -16,6 +16,7 @@ cartesian_position_test:
       - wrist_3_joint
     uaibot_mode: auto
     onrobot_type: rg2
+    trajectory_profile: simple
     target_offset: [0.0, 0.0, 0.01]
     position_gains: [1.0, 1.0, 1.0]
     damping: 0.05
@@ -43,6 +44,11 @@ cartesian_position_test:
     self_collision_witness_frame: base
     max_cartesian_speed: 0.01
     max_abs_joint_velocity: 0.10
+    # Limites efetivos usados apenas por trajectory_profile=complex.
+    complex_max_cartesian_speed: 0.04
+    complex_max_abs_joint_velocity: 0.30
+    complex_max_control_duration: 120.0
+    complex_max_wall_control_duration: 600.0
     position_tolerance: 0.001
     settle_duration: 0.5
     success_hold_duration: 0.5

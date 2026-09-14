@@ -1,3 +1,13 @@
+## Revisao experimental 0.6.19 / controle 0.6.19 / bringup 0.3.14 — 14 de setembro de 2026
+
+- adiciona o perfil `complex` com cinco waypoints cartesianos relativos e retorno
+  à posição inicial;
+- eleva, somente nesse perfil, os limites para `0,04 m/s` no espaço cartesiano e
+  `0,30 rad/s` nas juntas;
+- registra perfil, waypoints, índice por amostra e tempos de chegada no JSON
+  experimental de esquema 1.5;
+- preserva `trajectory_profile=simple` como comportamento padrão compatível.
+
 # Registro inicial de versoes
 
 Data da definicao do ambiente: 17 de julho de 2026.

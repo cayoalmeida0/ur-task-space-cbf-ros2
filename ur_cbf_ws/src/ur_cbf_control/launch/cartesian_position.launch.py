@@ -35,6 +35,9 @@ def launch_setup(context):
                     "ur_type": LaunchConfiguration("ur_type"),
                     "onrobot_type": onrobot_type,
                     "controller_mode": LaunchConfiguration("controller_mode"),
+                    "trajectory_profile": LaunchConfiguration(
+                        "trajectory_profile"
+                    ),
                     "self_collision_cbf_mode": LaunchConfiguration(
                         "self_collision_cbf_mode"
                     ),
@@ -79,6 +82,12 @@ def generate_launch_description():
                 ),
                 choices=SUPPORTED_ONROBOT_TYPES,
                 description="Gripper que define o frame cartesiano controlado.",
+            ),
+            DeclareLaunchArgument(
+                "trajectory_profile",
+                default_value="simple",
+                choices=["simple", "complex"],
+                description="Seleciona regulacao simples ou trajetoria multi-waypoint.",
             ),
             DeclareLaunchArgument(
                 "controller_mode",
