@@ -43,14 +43,10 @@ def launch_setup(context):
                     "manipulation_object_frame": LaunchConfiguration(
                         "manipulation_object_frame"
                     ),
-                    "cube_position": ParameterValue(
-                        LaunchConfiguration("cube_position"),
-                        value_type=list,
-                    ),
-                    "drop_position": ParameterValue(
-                        LaunchConfiguration("drop_position"),
-                        value_type=list,
-                    ),
+                    # Sem value_type explicito, o launch_ros interpreta as
+                    # listas YAML como arrays de parametros ROS.
+                    "cube_position": LaunchConfiguration("cube_position"),
+                    "drop_position": LaunchConfiguration("drop_position"),
                     "trajectory_profile": LaunchConfiguration(
                         "trajectory_profile"
                     ),
