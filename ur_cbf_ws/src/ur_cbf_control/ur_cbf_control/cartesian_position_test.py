@@ -89,6 +89,9 @@ class CartesianPositionTest(Node):
         self.declare_parameter("orientation_gains", [0.5, 0.5, 0.5])
         self.declare_parameter("orientation_target_mode", "initial")
         self.declare_parameter("target_orientation_rpy", [0.0, 0.0, 0.0])
+        # Objetos da cena Gazebo sao descritos em base_link por padrao. O
+        # controlador/UAIbot trabalha no frame DH base, rotacionado pi em Z.
+        self.declare_parameter("manipulation_object_frame", "base_link")
         self.declare_parameter("cube_position", [-0.25, 0.0, 0.32])
         self.declare_parameter("drop_position", [0.20, 0.0])
         self.declare_parameter("manipulation_approach_height", 0.10)
@@ -198,12 +201,21 @@ class CartesianPositionTest(Node):
             float(value)
             for value in self.get_parameter("target_orientation_rpy").value
         )
-        self.cube_position = np.asarray(
+        self.manipulation_object_frame = str(
+            self.get_parameter("manipulation_object_frame").value
+        ).lower()
+        self.cube_position_scene = np.asarray(
             self.get_parameter("cube_position").value, dtype=float
         ).reshape(-1)
-        self.drop_position = np.asarray(
+        self.drop_position_scene = np.asarray(
             self.get_parameter("drop_position").value, dtype=float
         ).reshape(-1)
+        self.cube_position = self._scene_position_to_base(
+            self.cube_position_scene
+        )
+        self.drop_position = self._scene_position_to_base(
+            self.drop_position_scene
+        )
         self.manipulation_approach_height = float(
             self.get_parameter("manipulation_approach_height").value
         )
@@ -482,8 +494,30 @@ class CartesianPositionTest(Node):
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.6.23; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.24; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
+            if self.task_type == "manipulation":
+                self.get_logger().info(
+                    "Objetos: "
+                    f"frame={self.manipulation_object_frame}; "
+                    f"cubo_cena={self.cube_position_scene.tolist()} -> "
+                    f"cubo_base={self.cube_position.tolist()}; "
+                    f"caixa_cena={self.drop_position_scene.tolist()} -> "
+                    f"caixa_base={self.drop_position.tolist()}."
+                )
+
+    def _scene_position_to_base(self, position: np.ndarray) -> np.ndarray:
+        """Converte uma posicao da cena para o frame DH do controlador.
+
+        A cena Gazebo usa ``base_link`` como frame visual. O modelo DH/UAIbot
+        usa ``base``; nesta montagem os frames compartilham a origem e diferem
+        por uma rotacao de pi em Z, portanto X e Y trocam de sinal.
+        """
+
+        converted = np.asarray(position, dtype=float).copy()
+        if self.manipulation_object_frame == "base_link":
+            converted[:2] *= -1.0
+        return converted
 
     def _validate_parameters(self) -> None:
         positive_values = {
@@ -529,6 +563,10 @@ class CartesianPositionTest(Node):
             )
         if self.task_type not in {"cartesian", "manipulation"}:
             raise ValueError("task_type deve ser cartesian ou manipulation.")
+        if self.manipulation_object_frame not in {"base", "base_link"}:
+            raise ValueError(
+                "manipulation_object_frame deve ser base ou base_link."
+            )
         if len(self.position_gains) not in {1, 3} or not all(
             math.isfinite(value) and value > 0.0
             for value in self.position_gains
@@ -1047,7 +1085,7 @@ class CartesianPositionTest(Node):
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.6.23",
+                "control_package": "ur_cbf_control:0.6.24",
                 "controller_mode": self.controller_mode,
                 "self_collision_cbf_mode": self.self_collision_cbf_mode,
                 "self_collision_witness_mode": self.self_collision_witness_mode,
@@ -1138,6 +1176,9 @@ class CartesianPositionTest(Node):
                 "orientation_gains": list(self.orientation_gains),
                 "orientation_target_mode": self.orientation_target_mode,
                 "target_orientation_rpy": list(self.target_orientation_rpy),
+                "manipulation_object_frame": self.manipulation_object_frame,
+                "cube_position_scene": self.cube_position_scene.tolist(),
+                "drop_position_scene": self.drop_position_scene.tolist(),
                 "cube_position": self.cube_position.tolist(),
                 "drop_position": self.drop_position.tolist(),
                 "manipulation_approach_height": self.manipulation_approach_height,
