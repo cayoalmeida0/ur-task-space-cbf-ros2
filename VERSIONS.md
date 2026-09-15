@@ -1,4 +1,6 @@
-## Revisao experimental 0.6.28 / controle 0.6.28 / bringup 0.3.14 — 15 de setembro de 2026
+## Revisao experimental 0.6.29 / controle 0.6.29 / bringup 0.3.14 — 15 de setembro de 2026
+
+- Reduz a altura da mesa de 0,30 m para 0,15 m, ajusta table_z para 0,075 m e mantém o cubo sobre a superfície em z=0,17 m.
 
 - Corrige a conversao das posicoes do cubo e da caixa entre `base_link` (cena
   Gazebo) e `base` (referencial DH/UAIbot), invertendo X e Y na montagem atual.
