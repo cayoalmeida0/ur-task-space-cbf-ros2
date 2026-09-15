@@ -223,6 +223,11 @@ O cilindro fino `C52` do ultimo elo (`link_5_obj_1`) permanece disponivel para
 visualizacao, mas suas combinacoes de distancia sao excluidas por configuracao
 quando a geometria causa uma restricao artificial durante a aproximacao.
 
+Na tarefa de manipulacao, `manipulation_approach_height` e
+`manipulation_lift_height` controlam, respectivamente, a folga acima do cubo
+antes da descida e a altura de elevacao depois da pega. Os valores padrao desta
+revisao sao `0,20 m` e `0,22 m`.
+
 Esta revisao suporta o UR3e no adaptador UAIbot. Modelos adicionais devem declarar
 sua fabrica e a ordem de juntas correspondente; a execucao e recusada se o modelo
 nao estiver implementado.
