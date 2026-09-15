@@ -32,7 +32,7 @@ cartesian_position_test:
     drop_position: [0.30, 0.0]
     # Folga vertical adicional para passar sobre a mesa antes da descida.
     manipulation_approach_height: 0.05
-    manipulation_lift_height: 0.22
+    manipulation_lift_height: 0.05
     manipulation_drop_approach_height: 0.14
     manipulation_release_height: 0.08
     manipulation_retract_height: 0.16
