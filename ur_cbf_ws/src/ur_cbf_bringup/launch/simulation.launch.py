@@ -362,7 +362,7 @@ def generate_launch_description():
             DeclareLaunchArgument("table_x", default_value="-0.35"),
             DeclareLaunchArgument("table_y", default_value="0.0"),
             DeclareLaunchArgument("table_radius", default_value="0.08"),
-            DeclareLaunchArgument("table_height", default_value="0.30"),
+            DeclareLaunchArgument("table_height", default_value="0.15"),
             DeclareLaunchArgument("cube_x", default_value="-0.35"),
             DeclareLaunchArgument("cube_y", default_value="0.0"),
             DeclareLaunchArgument("cube_size", default_value="0.04"),
