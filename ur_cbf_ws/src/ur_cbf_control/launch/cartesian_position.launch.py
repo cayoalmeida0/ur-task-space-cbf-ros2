@@ -162,7 +162,7 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "manipulation_approach_height",
-                default_value="0.10",
+                default_value="0.05",
                 description="Altura acima do centro do cubo antes da aproximacao.",
             ),
             DeclareLaunchArgument(
