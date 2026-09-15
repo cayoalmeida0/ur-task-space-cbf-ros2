@@ -67,6 +67,16 @@ Visualization Manager:
         Value: /self_collision/witness_markers
       Name: CBF Witness Points
       Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Marker Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /workspace/boundary_markers
+      Name: Workspace Boundary
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48

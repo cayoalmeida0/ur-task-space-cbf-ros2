@@ -16,8 +16,9 @@
   x=0, y=0 m e z=0; c51 permanece inalterado; e c52 usa x=0.0011 m, y=-0.026 m e z=-0.030 m.
   A garra generica foi substituida por dois volumes RG2 pertencentes ao projeto.
 
-  Estes links nao possuem collision nem inertial: aparecem no RViz e no Gazebo,
-  acompanham os elos por juntas fixas e nao alteram a fisica da simulacao.
+  Estes links nao possuem collision nem inertial: aparecem apenas na descricao
+  visual usada pelo RViz, acompanham os elos por juntas fixas e nao alteram a
+  fisica da simulacao no Gazebo.
 -->
 <robot xmlns:xacro="http://wiki.ros.org/xacro">
   <xacro:macro name="cbf_sphere_visual"

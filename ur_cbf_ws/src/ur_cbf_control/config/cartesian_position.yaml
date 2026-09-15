@@ -42,6 +42,14 @@ cartesian_position_test:
     self_collision_witness_mode: closest
     self_collision_witness_topic: /self_collision/witness_markers
     self_collision_witness_frame: base
+    # Envelope axis-aligned no frame base: xmin, xmax, ymin, ymax, zmin, zmax.
+    workspace_cbf_mode: monitor
+    workspace_bounds: [-0.60, 0.60, -0.70, 0.70, 0.20, 0.90]
+    workspace_safe_margin: 0.05
+    workspace_cbf_gain: 7.0
+    workspace_boundary_topic: /workspace/boundary_markers
+    workspace_boundary_frame: base
+    workspace_boundary_line_width: 0.005
     max_cartesian_speed: 0.01
     max_abs_joint_velocity: 0.10
     # Limites efetivos usados pelos perfis complex e challenging.

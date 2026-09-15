@@ -559,3 +559,13 @@ registra todas as dependencias Python efetivamente instaladas.
   `X+` e `X-`, para exigir maior reconfiguração cinemática;
 - mantém os limites validados de `0,04 m/s` e `0,30 rad/s` e retorna à posição
   inicial no quinto waypoint.
+
+## Revisao experimental 0.6.21 / controle 0.6.21 / bringup 0.3.14 — 15 de setembro de 2026
+
+- adiciona seis restrições CBF parametrizadas para o envelope cartesiano no frame
+  `base`, com margem de segurança e ganho configuráveis;
+- publica o envelope como linhas finas em `/workspace/boundary_markers` e o inclui
+  automaticamente nas configurações do RViz;
+- mantém os volumes primitivos disponíveis no `robot_description` do RViz, mas os
+  remove por padrão da descrição enviada ao Gazebo, que passa a representar apenas
+  a planta física simulada.

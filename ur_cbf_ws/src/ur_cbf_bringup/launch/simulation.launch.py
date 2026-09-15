@@ -297,7 +297,7 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "show_cbf_volumes_gazebo",
                 default_value=EnvironmentVariable(
-                    "CBF_VOLUMES_GAZEBO", default_value="true"
+                    "CBF_VOLUMES_GAZEBO", default_value="false"
                 ),
                 choices=["true", "false"],
             ),

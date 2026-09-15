@@ -42,7 +42,7 @@ pela infraestrutura são sincronizadas automaticamente:
 IMAGE_TAG=0.2.0
 ONROBOT_TYPE=rg2
 CBF_VOLUMES=true
-CBF_VOLUMES_GAZEBO=true
+CBF_VOLUMES_GAZEBO=false
 ```
 
 Valores locais já preenchidos, como `ROBOT_IP`, `ROS_DOMAIN_ID` e parâmetros da

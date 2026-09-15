@@ -43,6 +43,10 @@ from ur_cbf_control.self_collision_cbf import SelfCollisionCbfConstraints
 from ur_cbf_control.self_collision_cbf import SelfCollisionCbfError
 from ur_cbf_control.task_frames import get_task_frame_spec
 from ur_cbf_control.trajectory import resolve_trajectory_waypoints
+from ur_cbf_control.workspace_boundary import WorkspaceBoundaryCbfConstraints
+from ur_cbf_control.workspace_boundary import WorkspaceBoundaryCbfError
+from ur_cbf_control.workspace_boundary import build_workspace_boundary_marker_array
+from ur_cbf_control.workspace_boundary import formulate_workspace_boundary_cbf
 from ur_cbf_control.witness_visualization import build_witness_marker_array
 from ur_cbf_control.witness_visualization import WITNESS_VISUALIZATION_MODES
 
@@ -100,6 +104,18 @@ class CartesianPositionTest(Node):
             "/self_collision/witness_markers",
         )
         self.declare_parameter("self_collision_witness_frame", "base")
+        self.declare_parameter("workspace_cbf_mode", "monitor")
+        self.declare_parameter(
+            "workspace_bounds",
+            [-0.60, 0.60, -0.70, 0.70, 0.20, 0.90],
+        )
+        self.declare_parameter("workspace_safe_margin", 0.05)
+        self.declare_parameter("workspace_cbf_gain", 7.0)
+        self.declare_parameter(
+            "workspace_boundary_topic", "/workspace/boundary_markers"
+        )
+        self.declare_parameter("workspace_boundary_frame", "base")
+        self.declare_parameter("workspace_boundary_line_width", 0.005)
         self.declare_parameter("max_cartesian_speed", 0.01)
         self.declare_parameter("max_abs_joint_velocity", 0.10)
         self.declare_parameter("complex_max_cartesian_speed", 0.04)
@@ -193,6 +209,27 @@ class CartesianPositionTest(Node):
         )
         self.self_collision_witness_frame = str(
             self.get_parameter("self_collision_witness_frame").value
+        )
+        self.workspace_cbf_mode = str(
+            self.get_parameter("workspace_cbf_mode").value
+        ).lower()
+        self.workspace_bounds = tuple(
+            float(value) for value in self.get_parameter("workspace_bounds").value
+        )
+        self.workspace_safe_margin = float(
+            self.get_parameter("workspace_safe_margin").value
+        )
+        self.workspace_cbf_gain = float(
+            self.get_parameter("workspace_cbf_gain").value
+        )
+        self.workspace_boundary_topic = str(
+            self.get_parameter("workspace_boundary_topic").value
+        )
+        self.workspace_boundary_frame = str(
+            self.get_parameter("workspace_boundary_frame").value
+        )
+        self.workspace_boundary_line_width = float(
+            self.get_parameter("workspace_boundary_line_width").value
         )
         self.max_cartesian_speed = float(
             self.get_parameter("max_cartesian_speed").value
@@ -301,6 +338,7 @@ class CartesianPositionTest(Node):
         self._trace_samples: list[dict[str, object]] = []
         self._result_path: str | None = None
         self._last_self_collision_cbf: SelfCollisionCbfConstraints | None = None
+        self._last_workspace_cbf: WorkspaceBoundaryCbfConstraints | None = None
 
         command_qos = QoSProfile(
             depth=1,
@@ -317,6 +355,20 @@ class CartesianPositionTest(Node):
             self.self_collision_witness_topic,
             10,
         )
+        self.workspace_boundary_publisher = self.create_publisher(
+            MarkerArray,
+            self.workspace_boundary_topic,
+            10,
+        )
+        if self.workspace_cbf_mode != "off":
+            self.workspace_boundary_publisher.publish(
+                build_workspace_boundary_marker_array(
+                    self.workspace_bounds,
+                    frame_id=self.workspace_boundary_frame,
+                    stamp=self.get_clock().now().to_msg(),
+                    line_width=self.workspace_boundary_line_width,
+                )
+            )
         self.create_subscription(
             JointState,
             self.joint_states_topic,
@@ -350,10 +402,11 @@ class CartesianPositionTest(Node):
                 f"waypoints={len(self.waypoint_offsets)}; "
                 f"modo={self.controller_mode}; "
                 f"self_collision_cbf={self.self_collision_cbf_mode}; "
+                f"workspace_cbf={self.workspace_cbf_mode}; "
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.6.20; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.21; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
 
     def _validate_parameters(self) -> None:
@@ -384,6 +437,8 @@ class CartesianPositionTest(Node):
             "self_collision_distance_tolerance": (
                 self.self_collision_distance_tolerance
             ),
+            "workspace_cbf_gain": self.workspace_cbf_gain,
+            "workspace_boundary_line_width": self.workspace_boundary_line_width,
         }
         for name, value in positive_values.items():
             if not math.isfinite(value) or value <= 0.0:
@@ -402,6 +457,32 @@ class CartesianPositionTest(Node):
             raise ValueError("self_collision_witness_topic nao pode ser vazio.")
         if not self.self_collision_witness_frame.strip():
             raise ValueError("self_collision_witness_frame nao pode ser vazio.")
+        if self.workspace_cbf_mode not in {"off", "monitor", "enforce"}:
+            raise ValueError(
+                "workspace_cbf_mode deve ser off, monitor ou enforce."
+            )
+        if len(self.workspace_bounds) != 6:
+            raise ValueError(
+                "workspace_bounds deve conter [xmin, xmax, ymin, ymax, zmin, zmax]."
+            )
+        if not math.isfinite(self.workspace_safe_margin) or (
+            self.workspace_safe_margin < 0.0
+        ):
+            raise ValueError("workspace_safe_margin deve ser finita e nao negativa.")
+        if not self.workspace_boundary_topic.strip():
+            raise ValueError("workspace_boundary_topic nao pode ser vazio.")
+        if not self.workspace_boundary_frame.strip():
+            raise ValueError("workspace_boundary_frame nao pode ser vazio.")
+        try:
+            formulate_workspace_boundary_cbf(
+                (0.0, 0.0, 0.0),
+                np.zeros((3, max(1, len(self.model_joint_names)))),
+                bounds=self.workspace_bounds,
+                safety_margin=self.workspace_safe_margin,
+                gain=self.workspace_cbf_gain,
+            )
+        except WorkspaceBoundaryCbfError as error:
+            raise ValueError(str(error)) from error
         if self.self_collision_cbf_mode != "off" and (
             self.ur_type,
             self.onrobot_type,
@@ -593,6 +674,31 @@ class CartesianPositionTest(Node):
         self._last_self_collision_cbf = constraints
         return constraints
 
+    def _evaluate_workspace_cbf(
+        self,
+        state: KinematicState,
+    ) -> WorkspaceBoundaryCbfConstraints | None:
+        if self.workspace_cbf_mode == "off":
+            self._last_workspace_cbf = None
+            return None
+        constraints = formulate_workspace_boundary_cbf(
+            state.position,
+            state.translational_jacobian,
+            bounds=self.workspace_bounds,
+            safety_margin=self.workspace_safe_margin,
+            gain=self.workspace_cbf_gain,
+        )
+        self.workspace_boundary_publisher.publish(
+            build_workspace_boundary_marker_array(
+                self.workspace_bounds,
+                frame_id=self.workspace_boundary_frame,
+                stamp=self.get_clock().now().to_msg(),
+                line_width=self.workspace_boundary_line_width,
+            )
+        )
+        self._last_workspace_cbf = constraints
+        return constraints
+
     def _simulation_seconds(self) -> float:
         seconds = self.get_clock().now().nanoseconds * 1e-9
         if not math.isfinite(seconds):
@@ -634,8 +740,10 @@ class CartesianPositionTest(Node):
         joint_saturated: bool = False,
         joint_constraint_active: bool = False,
         self_collision_constraint_active: bool = False,
+        workspace_constraint_active: bool = False,
         qp_diagnostics: QpDiagnostics | None = None,
         self_collision_cbf: SelfCollisionCbfConstraints | None = None,
+        workspace_cbf: WorkspaceBoundaryCbfConstraints | None = None,
     ) -> None:
         self._trace_samples.append(
             {
@@ -653,10 +761,14 @@ class CartesianPositionTest(Node):
                 "self_collision_constraint_active": bool(
                     self_collision_constraint_active
                 ),
+                "workspace_constraint_active": bool(workspace_constraint_active),
                 "self_collision_cbf": (
                     None
                     if self_collision_cbf is None
                     else self_collision_cbf.to_record()
+                ),
+                "workspace_cbf": (
+                    None if workspace_cbf is None else workspace_cbf.to_record()
                 ),
                 "qp": (
                     None
@@ -726,10 +838,11 @@ class CartesianPositionTest(Node):
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.6.20",
+                "control_package": "ur_cbf_control:0.6.21",
                 "controller_mode": self.controller_mode,
                 "self_collision_cbf_mode": self.self_collision_cbf_mode,
                 "self_collision_witness_mode": self.self_collision_witness_mode,
+                "workspace_cbf_mode": self.workspace_cbf_mode,
                 "osqp": self.qp_solver.solver_version,
                 "ros_distro": os.environ.get("ROS_DISTRO", "unknown"),
                 "ur_type": self.ur_type,
@@ -791,6 +904,11 @@ class CartesianPositionTest(Node):
                     if self._last_self_collision_cbf is None
                     else self._last_self_collision_cbf.to_record()
                 ),
+                "workspace_cbf": (
+                    None
+                    if self._last_workspace_cbf is None
+                    else self._last_workspace_cbf.to_record()
+                ),
             },
             "parameters": {
                 "trajectory_profile": self.trajectory_profile,
@@ -817,6 +935,13 @@ class CartesianPositionTest(Node):
                 "self_collision_excluded_pairs": list(
                     self.self_collision_excluded_pairs
                 ),
+                "workspace_cbf_mode": self.workspace_cbf_mode,
+                "workspace_bounds": list(self.workspace_bounds),
+                "workspace_safe_margin": self.workspace_safe_margin,
+                "workspace_cbf_gain": self.workspace_cbf_gain,
+                "workspace_boundary_topic": self.workspace_boundary_topic,
+                "workspace_boundary_frame": self.workspace_boundary_frame,
+                "workspace_boundary_line_width": self.workspace_boundary_line_width,
                 "max_cartesian_speed": self.max_cartesian_speed,
                 "max_abs_joint_velocity": self.max_abs_joint_velocity,
                 "position_tolerance": self.position_tolerance,
@@ -1023,6 +1148,7 @@ class CartesianPositionTest(Node):
             self_collision_cbf = self._evaluate_self_collision_cbf(
                 model_positions
             )
+            workspace_cbf = self._evaluate_workspace_cbf(state)
             error = self.target_position - np.asarray(state.position)
             error_norm = float(np.linalg.norm(error))
             if error_norm <= self.position_tolerance:
@@ -1040,6 +1166,7 @@ class CartesianPositionTest(Node):
                     cartesian_saturated=False,
                     joint_saturated=False,
                     self_collision_cbf=self_collision_cbf,
+                    workspace_cbf=workspace_cbf,
                 )
                 self.get_logger().info(
                     f"Tolerancia atingida: erro={error_norm:.6f} m; "
@@ -1056,6 +1183,7 @@ class CartesianPositionTest(Node):
                     cartesian_saturated=False,
                     joint_saturated=False,
                     self_collision_cbf=self_collision_cbf,
+                    workspace_cbf=workspace_cbf,
                 )
                 self.request_abort(
                     "Tempo simulado maximo de controle excedido."
@@ -1070,6 +1198,7 @@ class CartesianPositionTest(Node):
                     cartesian_saturated=False,
                     joint_saturated=False,
                     self_collision_cbf=self_collision_cbf,
+                    workspace_cbf=workspace_cbf,
                 )
                 self.request_abort(
                     "Tempo real maximo de seguranca do controle excedido."
@@ -1078,6 +1207,7 @@ class CartesianPositionTest(Node):
             qp_diagnostics = None
             joint_constraint_active = False
             self_collision_constraint_active = False
+            workspace_constraint_active = False
             joint_saturated = False
             common_arguments = {
                 "error": error,
@@ -1090,13 +1220,24 @@ class CartesianPositionTest(Node):
                 "max_abs_joint_velocity": self.max_abs_joint_velocity,
             }
             if self.controller_mode == "qp":
+                cbf_matrices = []
+                cbf_lower_bounds = []
                 if (
                     self.self_collision_cbf_mode == "enforce"
                     and self_collision_cbf is not None
                 ):
-                    common_arguments["cbf_matrix"] = self_collision_cbf.matrix
-                    common_arguments["cbf_lower_bound"] = (
-                        self_collision_cbf.lower_bound
+                    cbf_matrices.append(self_collision_cbf.matrix)
+                    cbf_lower_bounds.append(self_collision_cbf.lower_bound)
+                if (
+                    self.workspace_cbf_mode == "enforce"
+                    and workspace_cbf is not None
+                ):
+                    cbf_matrices.append(workspace_cbf.matrix)
+                    cbf_lower_bounds.append(workspace_cbf.lower_bound)
+                if cbf_matrices:
+                    common_arguments["cbf_matrix"] = np.vstack(cbf_matrices)
+                    common_arguments["cbf_lower_bound"] = np.concatenate(
+                        cbf_lower_bounds
                     )
                 result = compute_qp_position_control(
                     **common_arguments,
@@ -1104,9 +1245,20 @@ class CartesianPositionTest(Node):
                 )
                 qp_diagnostics = result.diagnostics
                 joint_constraint_active = result.joint_constraint_active
-                self_collision_constraint_active = (
-                    result.cbf_constraint_active
+                self_cbf_count = (
+                    self_collision_cbf.count
+                    if self.self_collision_cbf_mode == "enforce"
+                    and self_collision_cbf is not None
+                    else 0
                 )
+                self_collision_constraint_active = any(
+                    index < self_cbf_count
+                    for index in result.diagnostics.active_cbf
+                )
+                workspace_constraint_active = any(
+                    index >= self_cbf_count
+                    for index in result.diagnostics.active_cbf
+                ) and self.workspace_cbf_mode == "enforce"
             else:
                 result = compute_position_control(**common_arguments)
                 joint_saturated = result.joint_saturated
@@ -1126,8 +1278,10 @@ class CartesianPositionTest(Node):
                 self_collision_constraint_active=(
                     self_collision_constraint_active
                 ),
+                workspace_constraint_active=workspace_constraint_active,
                 qp_diagnostics=qp_diagnostics,
                 self_collision_cbf=self_collision_cbf,
+                workspace_cbf=workspace_cbf,
             )
             if now - self._last_progress_log >= 1.0:
                 real_time_factor = (
@@ -1153,6 +1307,14 @@ class CartesianPositionTest(Node):
                         f"par={self_collision_cbf.closest_pair}; "
                     )
                 )
+                workspace_progress = (
+                    ""
+                    if workspace_cbf is None
+                    else (
+                        f"h_workspace_min={workspace_cbf.minimum_barrier:.4f} m; "
+                        f"boundary={workspace_cbf.closest_boundary}; "
+                    )
+                )
                 self.get_logger().info(
                     f"waypoint={self.waypoint_index + 1}/"
                     f"{len(self.waypoint_offsets)}; "
@@ -1161,8 +1323,10 @@ class CartesianPositionTest(Node):
                     f"joint_sat={joint_saturated}; "
                     f"joint_active={joint_constraint_active}; "
                     f"self_cbf_active={self_collision_constraint_active}; "
+                    f"workspace_cbf_active={workspace_constraint_active}; "
                     f"{qp_progress}"
                     f"{cbf_progress}"
+                    f"{workspace_progress}"
                     f"t_sim={timing.simulated_seconds:.3f} s; "
                     f"t_real={timing.wall_seconds:.3f} s; "
                     f"RTF={real_time_factor:.3f}."

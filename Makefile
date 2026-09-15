@@ -4,7 +4,7 @@ ONROBOT_DEVICE ?= /tmp/ttyUR
 ONROBOT_IP ?= 192.168.1.1
 ONROBOT_PORT ?= 502
 CBF_VOLUMES ?= true
-CBF_VOLUMES_GAZEBO ?= true
+CBF_VOLUMES_GAZEBO ?= false
 
 .PHONY: init configure-real diagnose build shell check gui-auth sim test-cbf-motion real down
 

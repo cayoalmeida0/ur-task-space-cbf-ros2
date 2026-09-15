@@ -44,6 +44,9 @@ def launch_setup(context):
                     "self_collision_witness_mode": LaunchConfiguration(
                         "self_collision_witness_mode"
                     ),
+                    "workspace_cbf_mode": LaunchConfiguration(
+                        "workspace_cbf_mode"
+                    ),
                     "max_control_duration": ParameterValue(
                         LaunchConfiguration("max_control_duration"),
                         value_type=float,
@@ -108,6 +111,14 @@ def generate_launch_description():
                 default_value="closest",
                 choices=["off", "closest", "all"],
                 description="Seleciona os pares exibidos como witness points.",
+            ),
+            DeclareLaunchArgument(
+                "workspace_cbf_mode",
+                default_value="monitor",
+                choices=["off", "monitor", "enforce"],
+                description=(
+                    "Desliga, monitora ou impoe a CBF do envelope cartesiano."
+                ),
             ),
             DeclareLaunchArgument(
                 "max_control_duration",

@@ -104,7 +104,7 @@ As dimensões físicas foram confrontadas com os arquivos oficiais:
 
 | Comando | RViz | Gazebo |
 |---|---|---|
-| `make sim` | visíveis | visíveis |
+| `make sim` | visíveis | ocultos |
 | `make sim CBF_VOLUMES_GAZEBO=false` | visíveis | ocultos |
 | `make sim CBF_VOLUMES=false` | ausentes | ausentes |
 
@@ -119,6 +119,14 @@ O launch gera descrições Xacro independentes: o `robot_state_publisher` recebe
 árvore completa para o RViz, e `ros_gz_sim create` recebe a árvore apropriada ao
 Gazebo. Isso evita depender de `visibility_flags` em links fixos agrupados pela
 conversão URDF/SDFormat.
+
+O envelope cartesiano da CBF é publicado no tópico
+`/workspace/boundary_markers` e carregado automaticamente pela configuração
+`ur_cbf.rviz`. Por padrão, ele utiliza `x=[-0,60; 0,60] m`, `y=[-0,70; 0,70] m`
+e `z=[0,20; 0,90] m`, com margem de segurança de `0,05 m`; os parâmetros podem
+ser alterados em `ur_cbf_control/config/cartesian_position.yaml`. Para impor as
+seis restrições no QP, acrescente `workspace_cbf_mode:=enforce` ao lançamento do
+ensaio; `monitor` apenas calcula e registra as barreiras.
 
 ### Ensaio visual de movimento
 

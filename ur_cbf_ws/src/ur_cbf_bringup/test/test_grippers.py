@@ -342,15 +342,15 @@ def test_cbf_visual_volumes_can_be_toggled_without_editing_env():
     )
 
     assert "CBF_VOLUMES: ${CBF_VOLUMES:-true}" in compose
-    assert "CBF_VOLUMES_GAZEBO: ${CBF_VOLUMES_GAZEBO:-true}" in compose
+    assert "CBF_VOLUMES_GAZEBO: ${CBF_VOLUMES_GAZEBO:-false}" in compose
     assert "CBF_VOLUMES ?= true" in makefile
-    assert "CBF_VOLUMES_GAZEBO ?= true" in makefile
+    assert "CBF_VOLUMES_GAZEBO ?= false" in makefile
     assert 'CBF_VOLUMES="$(CBF_VOLUMES)" \\' in makefile
     assert 'CBF_VOLUMES_GAZEBO="$(CBF_VOLUMES_GAZEBO)" \\' in makefile
     assert "test-cbf-motion: init" in makefile
     assert "./scripts/test_cbf_volume_motion.sh" in makefile
     assert "CBF_VOLUMES=true" in env_example
-    assert "CBF_VOLUMES_GAZEBO=true" in env_example
+    assert "CBF_VOLUMES_GAZEBO=false" in env_example
     assert "make sim CBF_VOLUMES=false" in env_example
     assert "make sim CBF_VOLUMES_GAZEBO=false" in env_example
     assert "rviz_description_content = _description_command(" in simulation_launch
