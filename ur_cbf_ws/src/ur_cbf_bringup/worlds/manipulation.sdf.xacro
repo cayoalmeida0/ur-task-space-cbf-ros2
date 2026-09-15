@@ -96,7 +96,7 @@
       </link>
     </model>
 
-    <model name="manipulation_cube" static="false">
+    <model name="manipulation_cube">
       <pose>$(arg cube_x) $(arg cube_y) $(arg cube_z) 0 0 0</pose>
       <link name="cube_link">
         <inertial>
