@@ -219,6 +219,10 @@ drop_position:="[0.20,0.0]" \
 manipulation_object_frame:=base_link
 ```
 
+O cilindro fino `C52` do ultimo elo (`link_5_obj_1`) permanece disponivel para
+visualizacao, mas suas combinacoes de distancia sao excluidas por configuracao
+quando a geometria causa uma restricao artificial durante a aproximacao.
+
 Esta revisao suporta o UR3e no adaptador UAIbot. Modelos adicionais devem declarar
 sua fabrica e a ordem de juntas correspondente; a execucao e recusada se o modelo
 nao estiver implementado.
