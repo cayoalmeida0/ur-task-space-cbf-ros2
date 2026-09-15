@@ -1,4 +1,4 @@
-## Revisao experimental 0.6.27 / controle 0.6.27 / bringup 0.3.14 — 15 de setembro de 2026
+## Revisao experimental 0.6.28 / controle 0.6.28 / bringup 0.3.14 — 15 de setembro de 2026
 
 - Corrige a conversao das posicoes do cubo e da caixa entre `base_link` (cena
   Gazebo) e `base` (referencial DH/UAIbot), invertendo X e Y na montagem atual.
@@ -10,6 +10,8 @@
   restricoes de autocolisao, mantendo o volume visual no ultimo elo.
 - Afasta radialmente a mesa/cubo para `x=-0,35 m` e a caixa para `x=+0,30 m`,
   preservando os demais eixos e alturas.
+- Aumenta a aproximação vertical do cubo para `0,20 m` e a elevação após a
+  pega para `0,22 m`, reduzindo o risco de contato da garra com a mesa.
 
 ## Revisao experimental 0.6.19 / controle 0.6.19 / bringup 0.3.14 — 14 de setembro de 2026
 
