@@ -1,4 +1,4 @@
-## Revisao experimental 0.6.25 / controle 0.6.25 / bringup 0.3.14 — 15 de setembro de 2026
+## Revisao experimental 0.6.26 / controle 0.6.26 / bringup 0.3.14 — 15 de setembro de 2026
 
 - Corrige a conversao das posicoes do cubo e da caixa entre `base_link` (cena
   Gazebo) e `base` (referencial DH/UAIbot), invertendo X e Y na montagem atual.
@@ -6,6 +6,8 @@
   argumentos do launch para permitir novos cenarios sem editar o codigo.
 - Mantem o perfil `challenging` com limites de `0,04 m/s` e `0,30 rad/s`.
 - Corrige a interpretacao das listas YAML no arquivo de launch.
+- Exclui todas as combinacoes envolvendo `C52` (`link_5_obj_1`) das
+  restricoes de autocolisao, mantendo o volume visual no ultimo elo.
 
 ## Revisao experimental 0.6.19 / controle 0.6.19 / bringup 0.3.14 — 14 de setembro de 2026
 
