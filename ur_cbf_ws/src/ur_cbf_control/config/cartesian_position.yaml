@@ -51,12 +51,24 @@ cartesian_position_test:
     self_collision_cbf_gain: 5.0
     self_collision_distance_tolerance: 5.0e-4
     self_collision_distance_max_iterations: 20
-    # Matriz de colisoes permitidas: C32 x C51 e um par estrutural do punho.
+    # Pares excluidos por serem adjacentes/estruturais ou geometricamente
+    # artificiais; C52 tambem e excluido integralmente mais abaixo.
     self_collision_excluded_pairs:
       - link_3_obj_1__link_5_obj_0
       - link_2_obj_2__link_4_obj_1
       - link_3_obj_0__link_5_obj_0
       - link_2_obj_2__link_4_obj_0
+      # C52 = link_5_obj_1: cilindro fino do ultimo elo, mantido apenas
+      # como referencia visual e excluido das restricoes de autocolisao.
+      - link_0_obj_0__link_5_obj_1
+      - link_1_obj_0__link_5_obj_1
+      - link_1_obj_1__link_5_obj_1
+      - link_1_obj_2__link_5_obj_1
+      - link_2_obj_0__link_5_obj_1
+      - link_2_obj_1__link_5_obj_1
+      - link_2_obj_2__link_5_obj_1
+      - link_3_obj_0__link_5_obj_1
+      - link_3_obj_1__link_5_obj_1
     # off: oculta; closest: menor distancia; all: todos os pares avaliados.
     self_collision_witness_mode: closest
     self_collision_witness_topic: /self_collision/witness_markers
