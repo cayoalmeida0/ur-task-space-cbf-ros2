@@ -40,7 +40,34 @@
       <specular>0.2 0.2 0.2 1</specular>
     </light>
 
-    <model name="manipulation_table" static="true">
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="ground_link">
+        <collision name="ground_collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>10 10</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="ground_visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>10 10</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.18 0.18 0.18 1</ambient>
+            <diffuse>0.25 0.25 0.25 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="manipulation_table">
+      <static>true</static>
       <pose>$(arg table_x) $(arg table_y) $(arg table_z) 0 0 0</pose>
       <link name="table_link">
         <collision name="table_collision">
@@ -96,7 +123,8 @@
       </link>
     </model>
 
-    <model name="drop_box" static="true">
+    <model name="drop_box">
+      <static>true</static>
       <pose>$(arg drop_x) $(arg drop_y) 0 0 0 0</pose>
       <link name="box_link">
         <collision name="box_base_collision">
