@@ -66,6 +66,26 @@ essa solucao coincide numericamente com DLS. O OSQP 1.1.3 reutiliza o workspace 
 o warm start entre iteracoes; qualquer status diferente de `solved` ou
 `solved inaccurate` causa comando nulo e reprova o ensaio.
 
+O controlador tambem oferece controle de pose com o Jacobiano geometrico completo
+`J = [J_v; J_omega]` (tres linhas lineares e tres angulares). Esse e o modo
+padrao (`task_control_mode:=pose`): a orientacao observada na estabilizacao e
+mantida durante os waypoints, evitando que a garra incline enquanto a posicao e
+regulada. Para reproduzir somente o ensaio translacional legado, use
+`task_control_mode:=position`.
+
+O alvo angular pode ser mantido no estado inicial (`orientation_target_mode:=initial`)
+ou definido por RPY no frame `base` com `orientation_target_mode:=rpy` e
+`target_orientation_rpy:=[roll,pitch,yaw]`. O erro angular e calculado por uma
+representacao vetorial de rotacao, sem singularidade de Euler no controlador.
+
+## CBF de workspace
+
+O envelope axis-aligned visivel em `/workspace/boundary_markers` foi reduzido para
+`x=[-0.45,0.45] m`, `y=[-0.55,0.55] m` e `z=[0.05,0.90] m`. O limite inferior
+fica próximo ao piso para permitir a futura tarefa mesa--cubo, enquanto as
+direcoes laterais deixam uma margem menor para o manipulador. Os modos `monitor`
+e `enforce` têm o mesmo significado da CBF de autocolisao.
+
 ## CBF de autocolisao
 
 Para cada par nao adjacente, a barreira e `h(q) = d(q) - d_safe`. Como o

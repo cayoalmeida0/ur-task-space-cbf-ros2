@@ -120,6 +120,27 @@ def damped_least_squares(
     return solution.reshape(-1)
 
 
+def rotation_error(
+    current_rotation: Sequence[Sequence[float]],
+    target_rotation: Sequence[Sequence[float]],
+) -> np.ndarray:
+    """Retorna o erro de orientacao ``e_R`` para o controle de pose.
+
+    A convencao e ``e_R = 1/2 vee(R_d R^T - R R_d^T)``. Ela e localmente
+    equivalente ao erro angular do frame atual para o frame desejado e evita
+    introduzir uma parametrizacao singular por angulos de Euler.
+    """
+
+    current = np.asarray(current_rotation, dtype=float)
+    target = np.asarray(target_rotation, dtype=float)
+    if current.shape != (3, 3) or target.shape != (3, 3):
+        raise NominalControlError("Rotacoes devem ser matrizes 3x3.")
+    if not np.all(np.isfinite(current)) or not np.all(np.isfinite(target)):
+        raise NominalControlError("Rotacoes contem NaN ou infinito.")
+    skew = target @ current.T - current @ target.T
+    return 0.5 * np.array((skew[2, 1], skew[0, 2], skew[1, 0]), dtype=float)
+
+
 def saturate_joint_velocity(
     values: Sequence[float],
     max_abs_velocity: float | Sequence[float],
@@ -146,7 +167,8 @@ def saturate_joint_velocity(
 def compute_position_control(
     *,
     error: Sequence[float],
-    translational_jacobian: Sequence[Sequence[float]],
+    translational_jacobian: Sequence[Sequence[float]] | None = None,
+    task_jacobian: Sequence[Sequence[float]] | None = None,
     model_joint_names: Sequence[str],
     controller_joint_names: Sequence[str],
     gains: float | Sequence[float],
@@ -184,8 +206,14 @@ def compute_position_control(
         desired_cartesian,
         max_cartesian_speed,
     )
+    if task_jacobian is None:
+        if translational_jacobian is None:
+            raise NominalControlError(
+                "Informe translational_jacobian ou task_jacobian."
+            )
+        task_jacobian = translational_jacobian
     model_velocity = damped_least_squares(
-        translational_jacobian,
+        task_jacobian,
         cartesian_velocity,
         damping,
     )

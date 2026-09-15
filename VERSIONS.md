@@ -569,3 +569,12 @@ registra todas as dependencias Python efetivamente instaladas.
 - mantém os volumes primitivos disponíveis no `robot_description` do RViz, mas os
   remove por padrão da descrição enviada ao Gazebo, que passa a representar apenas
   a planta física simulada.
+
+## Revisao experimental 0.6.22 / controle 0.6.22 / bringup 0.3.14 — 15 de setembro de 2026
+
+- reduz o envelope cartesiano para `x=[-0,45; 0,45] m`, `y=[-0,55; 0,55] m`
+  e `z=[0,05; 0,90] m`, aproximando o limite inferior do piso e restringindo
+  as direções laterais;
+- expõe o Jacobiano geométrico completo `J=[J_v;J_omega]` no estado cinemático;
+- habilita o controle de pose como padrão, mantendo a orientação estabilizada
+  durante os waypoints e preservando o modo translacional por compatibilidade.

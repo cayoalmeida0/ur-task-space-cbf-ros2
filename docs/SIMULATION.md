@@ -122,8 +122,8 @@ conversão URDF/SDFormat.
 
 O envelope cartesiano da CBF é publicado no tópico
 `/workspace/boundary_markers` e carregado automaticamente pela configuração
-`ur_cbf.rviz`. Por padrão, ele utiliza `x=[-0,60; 0,60] m`, `y=[-0,70; 0,70] m`
-e `z=[0,20; 0,90] m`, com margem de segurança de `0,05 m`; os parâmetros podem
+`ur_cbf.rviz`. Por padrão, ele utiliza `x=[-0,45; 0,45] m`, `y=[-0,55; 0,55] m`
+e `z=[0,05; 0,90] m`, com margem de segurança de `0,05 m`; os parâmetros podem
 ser alterados em `ur_cbf_control/config/cartesian_position.yaml`. Para impor as
 seis restrições no QP, acrescente `workspace_cbf_mode:=enforce` ao lançamento do
 ensaio; `monitor` apenas calcula e registra as barreiras.

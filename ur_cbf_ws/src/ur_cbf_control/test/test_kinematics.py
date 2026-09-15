@@ -123,6 +123,8 @@ class UaibotKinematicsTest(unittest.TestCase):
         state = adapter.evaluate((0.0, 0.0, 0.0, 0.0))
         self.assertEqual(state.position, (0.1, 0.2, 0.3))
         self.assertEqual(state.translational_jacobian.shape, (3, 4))
+        self.assertEqual(state.geometric_jacobian.shape, (6, 4))
+        np.testing.assert_allclose(state.orientation_matrix, np.eye(3))
 
     def test_evaluate_self_collision_uses_all_nonadjacent_uaibot_pairs(self):
         robot = FakeRobot(joint_count=4)

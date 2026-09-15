@@ -35,6 +35,7 @@ def launch_setup(context):
                     "ur_type": LaunchConfiguration("ur_type"),
                     "onrobot_type": onrobot_type,
                     "controller_mode": LaunchConfiguration("controller_mode"),
+                    "task_control_mode": LaunchConfiguration("task_control_mode"),
                     "trajectory_profile": LaunchConfiguration(
                         "trajectory_profile"
                     ),
@@ -97,6 +98,14 @@ def generate_launch_description():
                 default_value="qp",
                 choices=["dls", "qp"],
                 description="Resolvedor nominal usado no ensaio comparativo.",
+            ),
+            DeclareLaunchArgument(
+                "task_control_mode",
+                default_value="pose",
+                choices=["position", "pose"],
+                description=(
+                    "position usa Jv; pose usa o Jacobiano geometrico completo [v; omega]."
+                ),
             ),
             DeclareLaunchArgument(
                 "self_collision_cbf_mode",

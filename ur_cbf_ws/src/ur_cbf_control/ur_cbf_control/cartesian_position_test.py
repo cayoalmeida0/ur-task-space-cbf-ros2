@@ -26,9 +26,11 @@ from ur_cbf_control.experiment import write_experiment_record
 from ur_cbf_control.kinematics import KinematicState
 from ur_cbf_control.kinematics import KinematicsError
 from ur_cbf_control.kinematics import UaibotKinematics
+from ur_cbf_control.kinematics import homogeneous_transform_from_xyz_rpy
 from ur_cbf_control.nominal_control import compute_position_control
 from ur_cbf_control.nominal_control import NominalControlError
 from ur_cbf_control.nominal_control import reorder_vector
+from ur_cbf_control.nominal_control import rotation_error
 from ur_cbf_control.qp_control import BoxConstrainedQpSolver
 from ur_cbf_control.qp_control import compute_qp_position_control
 from ur_cbf_control.qp_control import QpControlError
@@ -82,6 +84,10 @@ class CartesianPositionTest(Node):
         self.declare_parameter("trajectory_profile", "simple")
         self.declare_parameter("target_offset", [0.0, 0.0, 0.01])
         self.declare_parameter("position_gains", [1.0, 1.0, 1.0])
+        self.declare_parameter("task_control_mode", "pose")
+        self.declare_parameter("orientation_gains", [0.5, 0.5, 0.5])
+        self.declare_parameter("orientation_target_mode", "initial")
+        self.declare_parameter("target_orientation_rpy", [0.0, 0.0, 0.0])
         self.declare_parameter("damping", 0.05)
         self.declare_parameter("controller_mode", "qp")
         self.declare_parameter("qp_absolute_tolerance", 1e-6)
@@ -107,7 +113,7 @@ class CartesianPositionTest(Node):
         self.declare_parameter("workspace_cbf_mode", "monitor")
         self.declare_parameter(
             "workspace_bounds",
-            [-0.60, 0.60, -0.70, 0.70, 0.20, 0.90],
+            [-0.45, 0.45, -0.55, 0.55, 0.05, 0.90],
         )
         self.declare_parameter("workspace_safe_margin", 0.05)
         self.declare_parameter("workspace_cbf_gain", 7.0)
@@ -163,6 +169,20 @@ class CartesianPositionTest(Node):
         ).reshape(-1)
         self.position_gains = tuple(
             float(value) for value in self.get_parameter("position_gains").value
+        )
+        self.task_control_mode = str(
+            self.get_parameter("task_control_mode").value
+        ).lower()
+        self.orientation_gains = tuple(
+            float(value)
+            for value in self.get_parameter("orientation_gains").value
+        )
+        self.orientation_target_mode = str(
+            self.get_parameter("orientation_target_mode").value
+        ).lower()
+        self.target_orientation_rpy = tuple(
+            float(value)
+            for value in self.get_parameter("target_orientation_rpy").value
         )
         self.damping = float(self.get_parameter("damping").value)
         self.controller_mode = str(
@@ -325,6 +345,8 @@ class CartesianPositionTest(Node):
         self.latest_state_receipt: float | None = None
         self.initial_position: np.ndarray | None = None
         self.target_position: np.ndarray | None = None
+        self.initial_orientation: np.ndarray | None = None
+        self.target_orientation: np.ndarray | None = None
         self.waypoint_index = 0
         self._waypoint_arrivals: list[dict[str, object]] = []
         self._last_position: np.ndarray | None = None
@@ -406,7 +428,7 @@ class CartesianPositionTest(Node):
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.6.21; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.22; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
 
     def _validate_parameters(self) -> None:
@@ -445,6 +467,30 @@ class CartesianPositionTest(Node):
                 raise ValueError(f"{name} deve ser finito e positivo.")
         if self.controller_mode not in {"dls", "qp"}:
             raise ValueError("controller_mode deve ser dls ou qp.")
+        if self.task_control_mode not in {"position", "pose"}:
+            raise ValueError("task_control_mode deve ser position ou pose.")
+        if self.orientation_target_mode not in {"initial", "rpy"}:
+            raise ValueError(
+                "orientation_target_mode deve ser initial ou rpy."
+            )
+        if len(self.position_gains) not in {1, 3} or not all(
+            math.isfinite(value) and value > 0.0
+            for value in self.position_gains
+        ):
+            raise ValueError("position_gains deve ter 1 ou 3 valores positivos.")
+        if len(self.orientation_gains) not in {1, 3} or not all(
+            math.isfinite(value) and value > 0.0
+            for value in self.orientation_gains
+        ):
+            raise ValueError(
+                "orientation_gains deve ter 1 ou 3 valores positivos."
+            )
+        if len(self.target_orientation_rpy) != 3 or not all(
+            math.isfinite(value) for value in self.target_orientation_rpy
+        ):
+            raise ValueError(
+                "target_orientation_rpy deve conter tres valores finitos."
+            )
         if self.self_collision_cbf_mode not in {"off", "monitor", "enforce"}:
             raise ValueError(
                 "self_collision_cbf_mode deve ser off, monitor ou enforce."
@@ -645,6 +691,36 @@ class CartesianPositionTest(Node):
         self._last_position = np.asarray(state.position, dtype=float)
         return state
 
+    def _task_error(self, state: KinematicState) -> np.ndarray:
+        """Monta o erro cartesiano de posicao ou de pose completa."""
+
+        if self.target_position is None:
+            raise NominalControlError("Alvo cartesiano ainda nao foi definido.")
+        position_error = self.target_position - np.asarray(state.position)
+        if self.task_control_mode == "position":
+            return position_error
+        if self.target_orientation is None:
+            raise NominalControlError("Alvo de orientacao ainda nao foi definido.")
+        return np.concatenate(
+            (position_error, rotation_error(state.orientation_matrix, self.target_orientation))
+        )
+
+    def _task_jacobian(self, state: KinematicState) -> np.ndarray:
+        if self.task_control_mode == "position":
+            return state.translational_jacobian
+        return state.geometric_jacobian
+
+    def _task_gains(self) -> tuple[float, ...]:
+        if self.task_control_mode == "position":
+            return self.position_gains
+        position_gains = self.position_gains
+        orientation_gains = self.orientation_gains
+        if len(position_gains) == 1:
+            position_gains = position_gains * 3
+        if len(orientation_gains) == 1:
+            orientation_gains = orientation_gains * 3
+        return tuple(position_gains) + tuple(orientation_gains)
+
     def _evaluate_self_collision_cbf(
         self,
         model_positions: tuple[float, ...],
@@ -832,13 +908,13 @@ class CartesianPositionTest(Node):
             simulated_seconds = self._trace_samples[-1]["simulated_seconds"]
             wall_seconds = self._trace_samples[-1]["wall_seconds"]
         return {
-            "schema_version": "1.5",
+            "schema_version": "1.6",
             "experiment_id": self.experiment_id,
             "result": result,
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.6.21",
+                "control_package": "ur_cbf_control:0.6.22",
                 "controller_mode": self.controller_mode,
                 "self_collision_cbf_mode": self.self_collision_cbf_mode,
                 "self_collision_witness_mode": self.self_collision_witness_mode,
@@ -878,6 +954,16 @@ class CartesianPositionTest(Node):
                     if self.target_position is None
                     else self.target_position.tolist()
                 ),
+                "initial_orientation_matrix": (
+                    None
+                    if self.initial_orientation is None
+                    else self.initial_orientation.tolist()
+                ),
+                "target_orientation_matrix": (
+                    None
+                    if self.target_orientation is None
+                    else self.target_orientation.tolist()
+                ),
                 "final": (
                     None
                     if self._last_position is None
@@ -914,6 +1000,10 @@ class CartesianPositionTest(Node):
                 "trajectory_profile": self.trajectory_profile,
                 "target_offset": self.target_offset.tolist(),
                 "position_gains": list(self.position_gains),
+                "task_control_mode": self.task_control_mode,
+                "orientation_gains": list(self.orientation_gains),
+                "orientation_target_mode": self.orientation_target_mode,
+                "target_orientation_rpy": list(self.target_orientation_rpy),
                 "damping": self.damping,
                 "controller_mode": self.controller_mode,
                 "qp_absolute_tolerance": self.qp_absolute_tolerance,
@@ -993,9 +1083,8 @@ class CartesianPositionTest(Node):
         self._publish_zero()
         final_error_norm = None
         if self.target_position is not None and self._last_position is not None:
-            final_error_norm = float(
-                np.linalg.norm(self.target_position - self._last_position)
-            )
+            state = self._evaluate_kinematics()
+            final_error_norm = float(np.linalg.norm(self._task_error(state)))
         self._save_result(
             result="rejected",
             reason=reason,
@@ -1007,7 +1096,7 @@ class CartesianPositionTest(Node):
 
     def _finish_success(self, state: KinematicState) -> None:
         self._publish_zero()
-        error = self.target_position - np.asarray(state.position)
+        error = self._task_error(state)
         timing = self._control_timing()
         self._record_trace(
             timing=timing,
@@ -1104,6 +1193,14 @@ class CartesianPositionTest(Node):
             if settle_timing.simulated_limit_reached:
                 state = self._evaluate_kinematics()
                 self.initial_position = np.asarray(state.position)
+                self.initial_orientation = np.asarray(state.orientation_matrix)
+                if self.orientation_target_mode == "initial":
+                    self.target_orientation = self.initial_orientation.copy()
+                else:
+                    self.target_orientation = homogeneous_transform_from_xyz_rpy(
+                        (0.0, 0.0, 0.0),
+                        self.target_orientation_rpy,
+                    )[:3, :3]
                 self.waypoint_index = 0
                 self.target_position = (
                     self.initial_position
@@ -1117,7 +1214,7 @@ class CartesianPositionTest(Node):
                     now_wall=now,
                     now_simulated=self.control_start_sim_seconds,
                 )
-                initial_error = self.target_position - self.initial_position
+                initial_error = self._task_error(state)
                 self._record_trace(
                     timing=timing,
                     error=initial_error,
@@ -1149,7 +1246,7 @@ class CartesianPositionTest(Node):
                 model_positions
             )
             workspace_cbf = self._evaluate_workspace_cbf(state)
-            error = self.target_position - np.asarray(state.position)
+            error = self._task_error(state)
             error_norm = float(np.linalg.norm(error))
             if error_norm <= self.position_tolerance:
                 self.phase = Phase.HOLDING
@@ -1169,7 +1266,7 @@ class CartesianPositionTest(Node):
                     workspace_cbf=workspace_cbf,
                 )
                 self.get_logger().info(
-                    f"Tolerancia atingida: erro={error_norm:.6f} m; "
+                    f"Tolerancia atingida: erro_tarefa={error_norm:.6f}; "
                     f"t_sim={timing.simulated_seconds:.3f} s; "
                     f"t_real={timing.wall_seconds:.3f} s; validando parada."
                 )
@@ -1211,10 +1308,10 @@ class CartesianPositionTest(Node):
             joint_saturated = False
             common_arguments = {
                 "error": error,
-                "translational_jacobian": state.translational_jacobian,
+                "task_jacobian": self._task_jacobian(state),
                 "model_joint_names": self.model_joint_names,
                 "controller_joint_names": self.controller_joints,
-                "gains": self.position_gains,
+                "gains": self._task_gains(),
                 "damping": self.damping,
                 "max_cartesian_speed": self.max_cartesian_speed,
                 "max_abs_joint_velocity": self.max_abs_joint_velocity,
@@ -1318,7 +1415,7 @@ class CartesianPositionTest(Node):
                 self.get_logger().info(
                     f"waypoint={self.waypoint_index + 1}/"
                     f"{len(self.waypoint_offsets)}; "
-                    f"erro={result.error_norm:.6f} m; "
+                    f"erro_tarefa={result.error_norm:.6f}; "
                     f"cart_sat={result.cartesian_saturated}; "
                     f"joint_sat={joint_saturated}; "
                     f"joint_active={joint_constraint_active}; "
@@ -1342,7 +1439,7 @@ class CartesianPositionTest(Node):
                 now_simulated=now_simulated,
             )
             state = self._evaluate_kinematics()
-            error = self.target_position - np.asarray(state.position)
+            error = self._task_error(state)
             error_norm = float(np.linalg.norm(error))
             if timing.wall_limit_reached:
                 self.request_abort(
@@ -1377,7 +1474,7 @@ class CartesianPositionTest(Node):
                         ),
                         "simulated_seconds": timing.simulated_seconds,
                         "wall_seconds": timing.wall_seconds,
-                        "error_norm_m": error_norm,
+                        "error_norm_task": error_norm,
                     }
                 )
                 if self.waypoint_index + 1 < len(self.waypoint_offsets):

@@ -45,10 +45,18 @@ class KinematicModelCorrection:
 
 @dataclass(frozen=True)
 class KinematicState:
-    """Posição do efetuador e Jacobiano translacional na ordem do modelo."""
+    """Estado cartesiano completo na ordem de juntas do modelo.
+
+    O Jacobiano geometrico usa a convencao do UAIbot ``[v; omega]``:
+    as tres primeiras linhas sao lineares (m/s) e as tres ultimas angulares
+    (rad/s). ``translational_jacobian`` e mantido como campo explicito para
+    as CBFs que atuam somente na posicao.
+    """
 
     position: tuple[float, float, float]
     translational_jacobian: np.ndarray
+    geometric_jacobian: np.ndarray
+    orientation_matrix: np.ndarray
 
 
 def homogeneous_transform_from_xyz_rpy(
@@ -251,7 +259,7 @@ class UaibotKinematics:
         )
 
     def evaluate(self, model_positions: Sequence[float]) -> KinematicState:
-        """Calcula posição e Jacobiano translacional para uma configuração."""
+        """Calcula pose e Jacobiano geometrico para uma configuração."""
 
         positions = np.asarray(model_positions, dtype=float).reshape(-1)
         if positions.size != len(self.model_joint_names):
@@ -286,6 +294,8 @@ class UaibotKinematics:
         return KinematicState(
             position=position,
             translational_jacobian=jacobian_array[:3, :].copy(),
+            geometric_jacobian=jacobian_array.copy(),
+            orientation_matrix=htm_array[:3, :3].copy(),
         )
 
     def evaluate_self_collision(

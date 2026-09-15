@@ -6,7 +6,7 @@ from ur_cbf_control.workspace_boundary import formulate_workspace_boundary_cbf
 from ur_cbf_control.workspace_boundary import workspace_boundary_vertices
 
 
-BOUNDS = [-0.60, 0.60, -0.70, 0.70, 0.20, 0.90]
+BOUNDS = [-0.45, 0.45, -0.55, 0.55, 0.05, 0.90]
 
 
 def test_workspace_cbf_has_six_plane_constraints_in_axis_order():
@@ -36,8 +36,8 @@ def test_workspace_cbf_has_six_plane_constraints_in_axis_order():
 def test_workspace_vertices_form_closed_box():
     vertices = workspace_boundary_vertices(BOUNDS)
     assert vertices.shape == (8, 3)
-    np.testing.assert_allclose(vertices[0], [-0.60, -0.70, 0.20])
-    np.testing.assert_allclose(vertices[6], [0.60, 0.70, 0.90])
+    np.testing.assert_allclose(vertices[0], [-0.45, -0.55, 0.05])
+    np.testing.assert_allclose(vertices[6], [0.45, 0.55, 0.90])
 
 
 @pytest.mark.parametrize(

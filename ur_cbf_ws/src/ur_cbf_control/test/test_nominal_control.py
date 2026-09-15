@@ -4,6 +4,7 @@ import unittest
 import numpy as np
 
 from ur_cbf_control.nominal_control import compute_position_control
+from ur_cbf_control.nominal_control import rotation_error
 from ur_cbf_control.nominal_control import damped_least_squares
 from ur_cbf_control.nominal_control import limit_vector_norm
 from ur_cbf_control.nominal_control import NominalControlError
@@ -12,6 +13,24 @@ from ur_cbf_control.nominal_control import saturate_joint_velocity
 
 
 class NominalControlTest(unittest.TestCase):
+    def test_rotation_error_is_zero_for_equal_frames(self):
+        np.testing.assert_allclose(rotation_error(np.eye(3), np.eye(3)), np.zeros(3))
+
+    def test_rotation_error_uses_full_pose_jacobian(self):
+        jacobian = np.vstack((np.eye(3), np.eye(3)))
+        result = compute_position_control(
+            error=(0.01, 0.0, 0.0, 0.0, 0.0, 0.02),
+            task_jacobian=jacobian,
+            model_joint_names=("a", "b", "c"),
+            controller_joint_names=("a", "b", "c"),
+            gains=1.0,
+            damping=0.05,
+            max_cartesian_speed=0.1,
+            max_abs_joint_velocity=1.0,
+        )
+        self.assertEqual(len(result.model_velocity), 3)
+        self.assertTrue(np.all(np.isfinite(result.model_velocity)))
+
     def test_reorders_between_model_and_controller(self):
         reordered = reorder_vector(
             values=(1.0, 2.0, 3.0),

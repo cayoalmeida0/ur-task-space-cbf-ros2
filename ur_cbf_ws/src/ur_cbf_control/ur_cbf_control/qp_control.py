@@ -419,7 +419,8 @@ class BoxConstrainedQpSolver:
 def compute_qp_position_control(
     *,
     error: Sequence[float],
-    translational_jacobian: Sequence[Sequence[float]],
+    translational_jacobian: Sequence[Sequence[float]] | None = None,
+    task_jacobian: Sequence[Sequence[float]] | None = None,
     model_joint_names: Sequence[str],
     controller_joint_names: Sequence[str],
     gains: float | Sequence[float],
@@ -444,13 +445,19 @@ def compute_qp_position_control(
         raise QpControlError("Ganhos devem ser finitos e positivos.")
 
     desired_cartesian = gain_vector * error_vector
+    if task_jacobian is None:
+        if translational_jacobian is None:
+            raise QpControlError(
+                "Informe translational_jacobian ou task_jacobian."
+            )
+        task_jacobian = translational_jacobian
     try:
         cartesian_velocity, cartesian_saturated = limit_vector_norm(
             desired_cartesian,
             max_cartesian_speed,
         )
         model_velocity, diagnostics = solver.solve(
-            jacobian=translational_jacobian,
+            jacobian=task_jacobian,
             task_velocity=cartesian_velocity,
             damping=damping,
             max_abs_joint_velocity=max_abs_joint_velocity,
