@@ -206,6 +206,19 @@ correcao aplicada e registrada no JSON experimental de esquema `1.3`.
 O modo efetivo do UAIbot e `python`, garantindo que o DH e o TCP corrigidos nao
 sejam substituidos por uma copia C++ criada anteriormente pela dependencia.
 
+Na tarefa `manipulation`, as posicoes de `cube_position` e `drop_position`
+referem-se por padrao ao frame visual `base_link` da cena Gazebo. Como o
+controlador opera no frame DH `base`, o ensaio converte automaticamente X e Y
+para os sinais opostos antes de construir os waypoints. Para fornecer
+coordenadas ja expressas no frame DH, use `manipulation_object_frame:=base`.
+Os parametros tambem podem ser sobrescritos no proprio launch:
+
+```bash
+cube_position:="[-0.25,0.0,0.32]" \
+drop_position:="[0.20,0.0]" \
+manipulation_object_frame:=base_link
+```
+
 Esta revisao suporta o UR3e no adaptador UAIbot. Modelos adicionais devem declarar
 sua fabrica e a ordem de juntas correspondente; a execucao e recusada se o modelo
 nao estiver implementado.
