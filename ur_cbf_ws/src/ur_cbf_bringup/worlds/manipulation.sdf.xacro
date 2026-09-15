@@ -4,7 +4,7 @@
   <xacro:arg name="table_x" default="-0.35"/>
   <xacro:arg name="table_y" default="0.0"/>
   <xacro:arg name="table_radius" default="0.08"/>
-  <xacro:arg name="table_height" default="0.30"/>
+  <xacro:arg name="table_height" default="0.15"/>
   <xacro:arg name="cube_x" default="-0.35"/>
   <xacro:arg name="cube_y" default="0.0"/>
   <xacro:arg name="cube_size" default="0.04"/>
@@ -14,8 +14,8 @@
   <xacro:arg name="box_size_y" default="0.08"/>
   <xacro:arg name="box_height" default="0.04"/>
   <xacro:arg name="box_wall_thickness" default="0.005"/>
-  <xacro:arg name="table_z" default="0.15"/>
-  <xacro:arg name="cube_z" default="0.32"/>
+  <xacro:arg name="table_z" default="0.075"/>
+  <xacro:arg name="cube_z" default="0.17"/>
   <xacro:arg name="box_base_z" default="0.0025"/>
   <xacro:arg name="box_wall_z" default="0.02"/>
   <xacro:arg name="box_wall_x" default="0.0375"/>
