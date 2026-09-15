@@ -5,7 +5,7 @@ package_name = "ur_cbf_bringup"
 
 setup(
     name=package_name,
-    version="0.3.14",
+    version="0.3.15",
     packages=find_packages(exclude=["test"]),
     data_files=[
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
@@ -14,6 +14,7 @@ setup(
         (f"share/{package_name}/rviz", glob("rviz/*.rviz")),
         (f"share/{package_name}/launch", glob("launch/*.launch.py")),
         (f"share/{package_name}/urdf", glob("urdf/*.xacro")),
+        (f"share/{package_name}/worlds", glob("worlds/*.xacro")),
     ],
     install_requires=["setuptools"],
     extras_require={

@@ -23,6 +23,8 @@
 # para robot_state_publisher/RViz e para a entidade criada no Gazebo.
 
 from pathlib import Path
+import os
+import tempfile
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -87,6 +89,62 @@ def _description_command(
     )
 
 
+def _resolve_world_file(context, source_file, mappings):
+    """Processa uma cena Xacro para um SDF temporario aceito pelo Gazebo."""
+
+    source = Path(source_file)
+    if source.suffix != ".xacro":
+        return str(source)
+    try:
+        import xacro
+
+        document = xacro.process_file(str(source), mappings=mappings)
+    except Exception as error:
+        raise RuntimeError(
+            f"Falha ao processar a cena Xacro {source}: {error}"
+        ) from error
+    generated = Path(tempfile.gettempdir()) / (
+        f"ur_cbf_world_{os.getpid()}_{abs(hash(str(source)))}.sdf"
+    )
+    generated.write_text(document.toxml(), encoding="utf-8")
+    return str(generated)
+
+
+def _manipulation_world_mappings(context):
+    """Lê dimensões da cena e calcula as poses derivadas para o Xacro."""
+
+    def value(name):
+        return float(LaunchConfiguration(name).perform(context))
+
+    table_height = value("table_height")
+    cube_size = value("cube_size")
+    box_size_x = value("box_size_x")
+    box_size_y = value("box_size_y")
+    box_height = value("box_height")
+    wall = value("box_wall_thickness")
+    return {
+        "table_x": str(value("table_x")),
+        "table_y": str(value("table_y")),
+        "table_radius": str(value("table_radius")),
+        "table_height": str(table_height),
+        "cube_x": str(value("cube_x")),
+        "cube_y": str(value("cube_y")),
+        "cube_size": str(cube_size),
+        "cube_z": str(table_height + cube_size / 2.0),
+        "table_z": str(table_height / 2.0),
+        "drop_x": str(value("drop_x")),
+        "drop_y": str(value("drop_y")),
+        "box_size_x": str(box_size_x),
+        "box_size_y": str(box_size_y),
+        "box_height": str(box_height),
+        "box_wall_thickness": str(wall),
+        "box_base_z": str(wall / 2.0),
+        "box_wall_z": str(box_height / 2.0),
+        "box_wall_x": str(box_size_x / 2.0 - wall / 2.0),
+        "box_wall_y": str(box_size_y / 2.0 - wall / 2.0),
+    }
+
+
 def launch_setup(context):
     ur_type = LaunchConfiguration("ur_type")
     tf_prefix = LaunchConfiguration("tf_prefix")
@@ -104,6 +162,11 @@ def launch_setup(context):
     )
 
     onrobot_type = LaunchConfiguration("onrobot_type").perform(context)
+    resolved_world_file = _resolve_world_file(
+        context,
+        world_file.perform(context),
+        _manipulation_world_mappings(context),
+    )
     gripper_spec = get_gripper_spec(onrobot_type)
     bringup_share = Path(get_package_share_directory("ur_cbf_bringup"))
     onrobot_share = Path(get_package_share_directory("onrobot_description"))
@@ -191,10 +254,10 @@ def launch_setup(context):
             [FindPackageShare("ros_gz_sim"), "/launch/gz_sim.launch.py"]
         ),
         launch_arguments={
-            "gz_args": IfElseSubstitution(
+                "gz_args": IfElseSubstitution(
                 gazebo_gui,
-                if_value=[" -r -v 4 ", world_file],
-                else_value=[" -s -r -v 4 ", world_file],
+                if_value=[" -r -v 4 ", resolved_world_file],
+                else_value=[" -s -r -v 4 ", resolved_world_file],
             )
         }.items(),
     )
@@ -286,7 +349,29 @@ def generate_launch_description():
                 ),
             ),
             DeclareLaunchArgument("gazebo_gui", default_value="true"),
-            DeclareLaunchArgument("world_file", default_value="empty.sdf"),
+            DeclareLaunchArgument(
+                "world_file",
+                default_value=PathJoinSubstitution(
+                    [
+                        FindPackageShare("ur_cbf_bringup"),
+                        "worlds",
+                        "manipulation.sdf.xacro",
+                    ]
+                ),
+            ),
+            DeclareLaunchArgument("table_x", default_value="0.0"),
+            DeclareLaunchArgument("table_y", default_value="0.0"),
+            DeclareLaunchArgument("table_radius", default_value="0.08"),
+            DeclareLaunchArgument("table_height", default_value="0.30"),
+            DeclareLaunchArgument("cube_x", default_value="0.0"),
+            DeclareLaunchArgument("cube_y", default_value="0.0"),
+            DeclareLaunchArgument("cube_size", default_value="0.04"),
+            DeclareLaunchArgument("drop_x", default_value="0.20"),
+            DeclareLaunchArgument("drop_y", default_value="0.0"),
+            DeclareLaunchArgument("box_size_x", default_value="0.08"),
+            DeclareLaunchArgument("box_size_y", default_value="0.08"),
+            DeclareLaunchArgument("box_height", default_value="0.04"),
+            DeclareLaunchArgument("box_wall_thickness", default_value="0.005"),
             DeclareLaunchArgument(
                 "show_cbf_volumes",
                 default_value=EnvironmentVariable(

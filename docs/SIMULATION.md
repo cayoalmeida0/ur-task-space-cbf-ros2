@@ -128,6 +128,21 @@ ser alterados em `ur_cbf_control/config/cartesian_position.yaml`. Para impor as
 seis restrições no QP, acrescente `workspace_cbf_mode:=enforce` ao lançamento do
 ensaio; `monitor` apenas calcula e registra as barreiras.
 
+### Cena de manipulação
+
+O mundo padrão agora contém uma mesa cilíndrica de raio `0,08 m` e altura
+`0,30 m`, um cubo dinâmico de aresta `0,04 m` e uma caixa aberta de
+`0,08×0,08×0,04 m`, posicionada inicialmente a `0,20 m` do eixo da base. A
+posição da mesa, do cubo, da caixa e suas dimensões podem ser alteradas pelos
+argumentos do launch (`table_x`, `table_y`, `table_height`, `cube_x`, `cube_y`,
+`drop_x`, `drop_y`, entre outros).
+
+O controlador de manipulação não faz uma triagem de factibilidade. Ele sempre
+executa a sequência de aproximação, descida, fechamento, elevação, transferência,
+abertura e retração. Portanto, uma posição fora do envelope é deliberadamente
+um ensaio de segurança: o robô tenta seguir o alvo até que a CBF limite ou
+impeça o comando.
+
 ### Ensaio visual de movimento
 
 Mantenha `make sim` ativo no primeiro terminal. Em um segundo terminal do host,

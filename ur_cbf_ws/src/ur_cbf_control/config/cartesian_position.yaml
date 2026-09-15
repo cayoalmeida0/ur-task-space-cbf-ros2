@@ -16,6 +16,7 @@ cartesian_position_test:
       - wrist_3_joint
     uaibot_mode: auto
     onrobot_type: rg2
+    task_type: cartesian
     trajectory_profile: simple
     target_offset: [0.0, 0.0, 0.01]
     position_gains: [1.0, 1.0, 1.0]
@@ -25,6 +26,16 @@ cartesian_position_test:
     orientation_gains: [0.5, 0.5, 0.5]
     orientation_target_mode: initial
     target_orientation_rpy: [0.0, 0.0, 0.0]
+    cube_position: [0.0, 0.0, 0.32]
+    drop_position: [0.20, 0.0]
+    manipulation_approach_height: 0.10
+    manipulation_lift_height: 0.12
+    manipulation_drop_approach_height: 0.14
+    manipulation_release_height: 0.08
+    manipulation_retract_height: 0.16
+    gripper_open_width: 0.08
+    gripper_grasp_width: 0.035
+    gripper_width_topic: /finger_width_controller/commands
     damping: 0.05
     controller_mode: qp
     qp_absolute_tolerance: 1.0e-6

@@ -110,6 +110,31 @@ def test_simulation_exposes_onrobot_meshes_to_gazebo():
     assert "str(onrobot_share.parent)" in launch_text
 
 
+def test_simulation_declares_parametric_manipulation_scene():
+    launch_text = (PACKAGE_ROOT / "launch" / "simulation.launch.py").read_text(
+        encoding="utf-8"
+    )
+    world = (PACKAGE_ROOT / "worlds" / "manipulation.sdf.xacro").read_text(
+        encoding="utf-8"
+    )
+    assert "manipulation.sdf.xacro" in launch_text
+    for argument in (
+        "table_x",
+        "table_y",
+        "table_radius",
+        "table_height",
+        "cube_x",
+        "cube_y",
+        "drop_x",
+        "drop_y",
+    ):
+        assert f'"{argument}"' in launch_text
+        assert f'xacro:arg name="{argument}"' in world
+    assert "manipulation_table" in world
+    assert "manipulation_cube" in world
+    assert "drop_box" in world
+
+
 @pytest.mark.parametrize("model", SUPPORTED_ONROBOT_TYPES)
 def test_real_visual_xacro_attaches_gripper_to_tool0(model):
     visual = PACKAGE_ROOT / "urdf" / get_gripper_spec(model).visual_description_file

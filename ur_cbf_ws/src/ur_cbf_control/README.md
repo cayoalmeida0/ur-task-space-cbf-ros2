@@ -78,6 +78,13 @@ ou definido por RPY no frame `base` com `orientation_target_mode:=rpy` e
 `target_orientation_rpy:=[roll,pitch,yaw]`. O erro angular e calculado por uma
 representacao vetorial de rotacao, sem singularidade de Euler no controlador.
 
+Com `task_type:=manipulation`, o mesmo QP executa a sequencia física de
+pick-and-place e publica a largura desejada em
+`/finger_width_controller/commands`. O modo `orientation_target_mode:=vertical`
+constrói uma orientação cujo eixo `z` do `gripper_tcp` aponta para o piso. A
+posição do cubo é convertida diretamente em alvos cartesianos; não existe uma
+rotina de pré-validação contra o workspace.
+
 ## CBF de workspace
 
 O envelope axis-aligned visivel em `/workspace/boundary_markers` foi reduzido para

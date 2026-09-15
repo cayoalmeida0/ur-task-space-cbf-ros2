@@ -578,3 +578,13 @@ registra todas as dependencias Python efetivamente instaladas.
 - expõe o Jacobiano geométrico completo `J=[J_v;J_omega]` no estado cinemático;
 - habilita o controle de pose como padrão, mantendo a orientação estabilizada
   durante os waypoints e preservando o modo translacional por compatibilidade.
+
+## Revisao experimental 0.6.23 / controle 0.6.23 / bringup 0.3.15 — 15 de setembro de 2026
+
+- adiciona uma cena Gazebo Harmonic parametrizada com mesa cilíndrica, cubo
+  dinâmico de `40 mm` e caixa aberta de `80×80×40 mm`;
+- integra a sequência experimental `aproximação → descida → pega → elevação →
+  transferência → soltura → retração` com comando físico da RG2;
+- mantém a política experimental de não testar factibilidade antes da execução:
+  posições de cubo fora do envelope são enviadas ao controlador e devem revelar
+  a atuação das CBFs de workspace.

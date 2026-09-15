@@ -81,6 +81,7 @@ class CartesianPositionTest(Node):
         )
         self.declare_parameter("uaibot_mode", "auto")
         self.declare_parameter("onrobot_type", "rg2")
+        self.declare_parameter("task_type", "cartesian")
         self.declare_parameter("trajectory_profile", "simple")
         self.declare_parameter("target_offset", [0.0, 0.0, 0.01])
         self.declare_parameter("position_gains", [1.0, 1.0, 1.0])
@@ -88,6 +89,18 @@ class CartesianPositionTest(Node):
         self.declare_parameter("orientation_gains", [0.5, 0.5, 0.5])
         self.declare_parameter("orientation_target_mode", "initial")
         self.declare_parameter("target_orientation_rpy", [0.0, 0.0, 0.0])
+        self.declare_parameter("cube_position", [0.0, 0.0, 0.32])
+        self.declare_parameter("drop_position", [0.20, 0.0])
+        self.declare_parameter("manipulation_approach_height", 0.10)
+        self.declare_parameter("manipulation_lift_height", 0.12)
+        self.declare_parameter("manipulation_drop_approach_height", 0.14)
+        self.declare_parameter("manipulation_release_height", 0.08)
+        self.declare_parameter("manipulation_retract_height", 0.16)
+        self.declare_parameter("gripper_open_width", 0.08)
+        self.declare_parameter("gripper_grasp_width", 0.035)
+        self.declare_parameter(
+            "gripper_width_topic", "/finger_width_controller/commands"
+        )
         self.declare_parameter("damping", 0.05)
         self.declare_parameter("controller_mode", "qp")
         self.declare_parameter("qp_absolute_tolerance", 1e-6)
@@ -156,6 +169,7 @@ class CartesianPositionTest(Node):
         self.model_joint_names = tuple(model_names_value or ())
         self.uaibot_mode = str(self.get_parameter("uaibot_mode").value)
         self.onrobot_type = str(self.get_parameter("onrobot_type").value)
+        self.task_type = str(self.get_parameter("task_type").value).lower()
         self.trajectory_profile = str(
             self.get_parameter("trajectory_profile").value
         ).lower()
@@ -183,6 +197,36 @@ class CartesianPositionTest(Node):
         self.target_orientation_rpy = tuple(
             float(value)
             for value in self.get_parameter("target_orientation_rpy").value
+        )
+        self.cube_position = np.asarray(
+            self.get_parameter("cube_position").value, dtype=float
+        ).reshape(-1)
+        self.drop_position = np.asarray(
+            self.get_parameter("drop_position").value, dtype=float
+        ).reshape(-1)
+        self.manipulation_approach_height = float(
+            self.get_parameter("manipulation_approach_height").value
+        )
+        self.manipulation_lift_height = float(
+            self.get_parameter("manipulation_lift_height").value
+        )
+        self.manipulation_drop_approach_height = float(
+            self.get_parameter("manipulation_drop_approach_height").value
+        )
+        self.manipulation_release_height = float(
+            self.get_parameter("manipulation_release_height").value
+        )
+        self.manipulation_retract_height = float(
+            self.get_parameter("manipulation_retract_height").value
+        )
+        self.gripper_open_width = float(
+            self.get_parameter("gripper_open_width").value
+        )
+        self.gripper_grasp_width = float(
+            self.get_parameter("gripper_grasp_width").value
+        )
+        self.gripper_width_topic = str(
+            self.get_parameter("gripper_width_topic").value
         )
         self.damping = float(self.get_parameter("damping").value)
         self.controller_mode = str(
@@ -348,6 +392,8 @@ class CartesianPositionTest(Node):
         self.initial_orientation: np.ndarray | None = None
         self.target_orientation: np.ndarray | None = None
         self.waypoint_index = 0
+        self.manipulation_targets: tuple[np.ndarray, ...] = ()
+        self.gripper_width = self.gripper_open_width
         self._waypoint_arrivals: list[dict[str, object]] = []
         self._last_position: np.ndarray | None = None
         self.pending_failure: str | None = None
@@ -371,6 +417,11 @@ class CartesianPositionTest(Node):
             Float64MultiArray,
             self.command_topic,
             command_qos,
+        )
+        self.gripper_width_publisher = self.create_publisher(
+            Float64MultiArray,
+            self.gripper_width_topic,
+            10,
         )
         self.witness_publisher = self.create_publisher(
             MarkerArray,
@@ -416,11 +467,12 @@ class CartesianPositionTest(Node):
             self.finished = True
             self.exit_code = 2
         else:
+            self._set_gripper_width(self.gripper_open_width)
             self.get_logger().info(
                 f"Ensaio {self.experiment_id} armado; ur_type={self.ur_type}; "
                 f"onrobot_type={self.onrobot_type}; "
                 f"frame={self.controlled_frame}; "
-                f"trajetoria={self.trajectory_profile}; "
+                f"tarefa={self.task_type}; trajetoria={self.trajectory_profile}; "
                 f"waypoints={len(self.waypoint_offsets)}; "
                 f"modo={self.controller_mode}; "
                 f"self_collision_cbf={self.self_collision_cbf_mode}; "
@@ -428,7 +480,7 @@ class CartesianPositionTest(Node):
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.6.22; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.23; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
 
     def _validate_parameters(self) -> None:
@@ -469,10 +521,12 @@ class CartesianPositionTest(Node):
             raise ValueError("controller_mode deve ser dls ou qp.")
         if self.task_control_mode not in {"position", "pose"}:
             raise ValueError("task_control_mode deve ser position ou pose.")
-        if self.orientation_target_mode not in {"initial", "rpy"}:
+        if self.orientation_target_mode not in {"initial", "rpy", "vertical"}:
             raise ValueError(
-                "orientation_target_mode deve ser initial ou rpy."
+                "orientation_target_mode deve ser initial, vertical ou rpy."
             )
+        if self.task_type not in {"cartesian", "manipulation"}:
+            raise ValueError("task_type deve ser cartesian ou manipulation.")
         if len(self.position_gains) not in {1, 3} or not all(
             math.isfinite(value) and value > 0.0
             for value in self.position_gains
@@ -491,6 +545,32 @@ class CartesianPositionTest(Node):
             raise ValueError(
                 "target_orientation_rpy deve conter tres valores finitos."
             )
+        if self.task_type == "manipulation":
+            if self.cube_position.size != 3 or not np.all(
+                np.isfinite(self.cube_position)
+            ):
+                raise ValueError("cube_position deve conter tres valores finitos.")
+            if self.drop_position.size != 2 or not np.all(
+                np.isfinite(self.drop_position)
+            ):
+                raise ValueError("drop_position deve conter x e y finitos.")
+            for name, value in {
+                "manipulation_approach_height": self.manipulation_approach_height,
+                "manipulation_lift_height": self.manipulation_lift_height,
+                "manipulation_drop_approach_height": self.manipulation_drop_approach_height,
+                "manipulation_release_height": self.manipulation_release_height,
+                "manipulation_retract_height": self.manipulation_retract_height,
+                "gripper_open_width": self.gripper_open_width,
+                "gripper_grasp_width": self.gripper_grasp_width,
+            }.items():
+                if not math.isfinite(value) or value < 0.0:
+                    raise ValueError(f"{name} deve ser finito e nao negativo.")
+            if self.gripper_grasp_width > self.gripper_open_width:
+                raise ValueError(
+                    "gripper_grasp_width nao pode exceder gripper_open_width."
+                )
+            if not self.gripper_width_topic.strip():
+                raise ValueError("gripper_width_topic nao pode ser vazio.")
         if self.self_collision_cbf_mode not in {"off", "monitor", "enforce"}:
             raise ValueError(
                 "self_collision_cbf_mode deve ser off, monitor ou enforce."
@@ -705,6 +785,43 @@ class CartesianPositionTest(Node):
             (position_error, rotation_error(state.orientation_matrix, self.target_orientation))
         )
 
+    @staticmethod
+    def _vertical_target_orientation(current: np.ndarray) -> np.ndarray:
+        """Constroi uma orientacao com o eixo z do TCP apontando para baixo."""
+
+        x_axis = np.asarray(current[:, 0], dtype=float).copy()
+        x_axis[2] = 0.0
+        norm = float(np.linalg.norm(x_axis))
+        if norm < 1e-9:
+            x_axis = np.array((1.0, 0.0, 0.0), dtype=float)
+        else:
+            x_axis /= norm
+        z_axis = np.array((0.0, 0.0, -1.0), dtype=float)
+        y_axis = np.cross(z_axis, x_axis)
+        y_axis /= np.linalg.norm(y_axis)
+        return np.column_stack((x_axis, y_axis, z_axis))
+
+    def _manipulation_waypoints(self) -> tuple[np.ndarray, ...]:
+        """Retorna a sequencia fixa de pick-and-place sem teste de factibilidade."""
+
+        cube = self.cube_position.copy()
+        drop = np.array((self.drop_position[0], self.drop_position[1]), dtype=float)
+        return (
+            cube + np.array((0.0, 0.0, self.manipulation_approach_height)),
+            cube.copy(),
+            cube + np.array((0.0, 0.0, self.manipulation_lift_height)),
+            np.array((drop[0], drop[1], self.manipulation_drop_approach_height)),
+            np.array((drop[0], drop[1], self.manipulation_release_height)),
+            np.array((drop[0], drop[1], self.manipulation_retract_height)),
+        )
+
+    def _set_gripper_width(self, width: float) -> None:
+        message = Float64MultiArray()
+        message.data = [float(width)]
+        self.gripper_width_publisher.publish(message)
+        self.gripper_width = float(width)
+        self.get_logger().info(f"Garra: largura comandada={width:.4f} m.")
+
     def _task_jacobian(self, state: KinematicState) -> np.ndarray:
         if self.task_control_mode == "position":
             return state.translational_jacobian
@@ -914,7 +1031,7 @@ class CartesianPositionTest(Node):
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.6.22",
+                "control_package": "ur_cbf_control:0.6.23",
                 "controller_mode": self.controller_mode,
                 "self_collision_cbf_mode": self.self_collision_cbf_mode,
                 "self_collision_witness_mode": self.self_collision_witness_mode,
@@ -998,12 +1115,22 @@ class CartesianPositionTest(Node):
             },
             "parameters": {
                 "trajectory_profile": self.trajectory_profile,
+                "task_type": self.task_type,
                 "target_offset": self.target_offset.tolist(),
                 "position_gains": list(self.position_gains),
                 "task_control_mode": self.task_control_mode,
                 "orientation_gains": list(self.orientation_gains),
                 "orientation_target_mode": self.orientation_target_mode,
                 "target_orientation_rpy": list(self.target_orientation_rpy),
+                "cube_position": self.cube_position.tolist(),
+                "drop_position": self.drop_position.tolist(),
+                "manipulation_approach_height": self.manipulation_approach_height,
+                "manipulation_lift_height": self.manipulation_lift_height,
+                "manipulation_drop_approach_height": self.manipulation_drop_approach_height,
+                "manipulation_release_height": self.manipulation_release_height,
+                "manipulation_retract_height": self.manipulation_retract_height,
+                "gripper_open_width": self.gripper_open_width,
+                "gripper_grasp_width": self.gripper_grasp_width,
                 "damping": self.damping,
                 "controller_mode": self.controller_mode,
                 "qp_absolute_tolerance": self.qp_absolute_tolerance,
@@ -1196,16 +1323,28 @@ class CartesianPositionTest(Node):
                 self.initial_orientation = np.asarray(state.orientation_matrix)
                 if self.orientation_target_mode == "initial":
                     self.target_orientation = self.initial_orientation.copy()
+                elif self.orientation_target_mode == "vertical":
+                    self.target_orientation = self._vertical_target_orientation(
+                        self.initial_orientation
+                    )
                 else:
                     self.target_orientation = homogeneous_transform_from_xyz_rpy(
                         (0.0, 0.0, 0.0),
                         self.target_orientation_rpy,
                     )[:3, :3]
                 self.waypoint_index = 0
-                self.target_position = (
-                    self.initial_position
-                    + np.asarray(self.waypoint_offsets[self.waypoint_index])
-                )
+                if self.task_type == "manipulation":
+                    self.manipulation_targets = self._manipulation_waypoints()
+                    self.waypoint_offsets = tuple(
+                        tuple(target - self.initial_position)
+                        for target in self.manipulation_targets
+                    )
+                    self.target_position = self.manipulation_targets[0].copy()
+                else:
+                    self.target_position = (
+                        self.initial_position
+                        + np.asarray(self.waypoint_offsets[self.waypoint_index])
+                    )
                 self.phase = Phase.CONTROLLING
                 self.phase_start_monotonic = now
                 self.control_start_monotonic = now
@@ -1466,6 +1605,11 @@ class CartesianPositionTest(Node):
                 max_wall=self.max_wall_control_duration,
             )
             if hold_timing.simulated_limit_reached:
+                if self.task_type == "manipulation":
+                    if self.waypoint_index == 1:
+                        self._set_gripper_width(self.gripper_grasp_width)
+                    elif self.waypoint_index == 4:
+                        self._set_gripper_width(self.gripper_open_width)
                 self._waypoint_arrivals.append(
                     {
                         "waypoint_index": self.waypoint_index,
@@ -1479,10 +1623,15 @@ class CartesianPositionTest(Node):
                 )
                 if self.waypoint_index + 1 < len(self.waypoint_offsets):
                     self.waypoint_index += 1
-                    self.target_position = (
-                        self.initial_position
-                        + np.asarray(self.waypoint_offsets[self.waypoint_index])
-                    )
+                    if self.task_type == "manipulation":
+                        self.target_position = self.manipulation_targets[
+                            self.waypoint_index
+                        ].copy()
+                    else:
+                        self.target_position = (
+                            self.initial_position
+                            + np.asarray(self.waypoint_offsets[self.waypoint_index])
+                        )
                     self.phase = Phase.CONTROLLING
                     self.phase_start_monotonic = now
                     self.phase_start_sim_seconds = now_simulated

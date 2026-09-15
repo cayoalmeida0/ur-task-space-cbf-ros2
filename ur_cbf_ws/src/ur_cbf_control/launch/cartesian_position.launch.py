@@ -34,8 +34,12 @@ def launch_setup(context):
                     ),
                     "ur_type": LaunchConfiguration("ur_type"),
                     "onrobot_type": onrobot_type,
+                    "task_type": LaunchConfiguration("task_type"),
                     "controller_mode": LaunchConfiguration("controller_mode"),
                     "task_control_mode": LaunchConfiguration("task_control_mode"),
+                    "orientation_target_mode": LaunchConfiguration(
+                        "orientation_target_mode"
+                    ),
                     "trajectory_profile": LaunchConfiguration(
                         "trajectory_profile"
                     ),
@@ -94,6 +98,12 @@ def generate_launch_description():
                 description="Seleciona regulacao simples ou trajetoria multi-waypoint.",
             ),
             DeclareLaunchArgument(
+                "task_type",
+                default_value="cartesian",
+                choices=["cartesian", "manipulation"],
+                description="Ensaio cartesiano simples ou pick-and-place fisico.",
+            ),
+            DeclareLaunchArgument(
                 "controller_mode",
                 default_value="qp",
                 choices=["dls", "qp"],
@@ -106,6 +116,12 @@ def generate_launch_description():
                 description=(
                     "position usa Jv; pose usa o Jacobiano geometrico completo [v; omega]."
                 ),
+            ),
+            DeclareLaunchArgument(
+                "orientation_target_mode",
+                default_value="initial",
+                choices=["initial", "vertical", "rpy"],
+                description="Alvo angular inicial, vertical ou RPY configurado.",
             ),
             DeclareLaunchArgument(
                 "self_collision_cbf_mode",
