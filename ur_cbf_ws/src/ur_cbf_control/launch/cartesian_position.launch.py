@@ -47,6 +47,14 @@ def launch_setup(context):
                     # listas YAML como arrays de parametros ROS.
                     "cube_position": LaunchConfiguration("cube_position"),
                     "drop_position": LaunchConfiguration("drop_position"),
+                    "manipulation_approach_height": ParameterValue(
+                        LaunchConfiguration("manipulation_approach_height"),
+                        value_type=float,
+                    ),
+                    "manipulation_lift_height": ParameterValue(
+                        LaunchConfiguration("manipulation_lift_height"),
+                        value_type=float,
+                    ),
                     "trajectory_profile": LaunchConfiguration(
                         "trajectory_profile"
                     ),
@@ -151,6 +159,16 @@ def generate_launch_description():
                 description=(
                     "Posicao x,y da caixa no frame manipulation_object_frame."
                 ),
+            ),
+            DeclareLaunchArgument(
+                "manipulation_approach_height",
+                default_value="0.20",
+                description="Altura acima do centro do cubo antes da aproximacao.",
+            ),
+            DeclareLaunchArgument(
+                "manipulation_lift_height",
+                default_value="0.22",
+                description="Altura acima do centro do cubo apos a pega.",
             ),
             DeclareLaunchArgument(
                 "self_collision_cbf_mode",
