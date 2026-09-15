@@ -89,7 +89,7 @@ class CartesianPositionTest(Node):
         self.declare_parameter("orientation_gains", [0.5, 0.5, 0.5])
         self.declare_parameter("orientation_target_mode", "initial")
         self.declare_parameter("target_orientation_rpy", [0.0, 0.0, 0.0])
-        self.declare_parameter("cube_position", [0.0, 0.0, 0.32])
+        self.declare_parameter("cube_position", [-0.25, 0.0, 0.32])
         self.declare_parameter("drop_position", [0.20, 0.0])
         self.declare_parameter("manipulation_approach_height", 0.10)
         self.declare_parameter("manipulation_lift_height", 0.12)
