@@ -140,14 +140,14 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "cube_position",
-                default_value="[-0.25, 0.0, 0.32]",
+                default_value="[-0.35, 0.0, 0.32]",
                 description=(
                     "Posicao do centro do cubo no frame manipulation_object_frame."
                 ),
             ),
             DeclareLaunchArgument(
                 "drop_position",
-                default_value="[0.20, 0.0]",
+                default_value="[0.30, 0.0]",
                 description=(
                     "Posicao x,y da caixa no frame manipulation_object_frame."
                 ),
