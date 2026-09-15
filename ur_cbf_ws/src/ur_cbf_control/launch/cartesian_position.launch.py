@@ -40,6 +40,17 @@ def launch_setup(context):
                     "orientation_target_mode": LaunchConfiguration(
                         "orientation_target_mode"
                     ),
+                    "manipulation_object_frame": LaunchConfiguration(
+                        "manipulation_object_frame"
+                    ),
+                    "cube_position": ParameterValue(
+                        LaunchConfiguration("cube_position"),
+                        value_type=list,
+                    ),
+                    "drop_position": ParameterValue(
+                        LaunchConfiguration("drop_position"),
+                        value_type=list,
+                    ),
                     "trajectory_profile": LaunchConfiguration(
                         "trajectory_profile"
                     ),
@@ -122,6 +133,28 @@ def generate_launch_description():
                 default_value="initial",
                 choices=["initial", "vertical", "rpy"],
                 description="Alvo angular inicial, vertical ou RPY configurado.",
+            ),
+            DeclareLaunchArgument(
+                "manipulation_object_frame",
+                default_value="base_link",
+                choices=["base_link", "base"],
+                description=(
+                    "Frame das posicoes do cubo e da caixa na cena de manipulacao."
+                ),
+            ),
+            DeclareLaunchArgument(
+                "cube_position",
+                default_value="[-0.25, 0.0, 0.32]",
+                description=(
+                    "Posicao do centro do cubo no frame manipulation_object_frame."
+                ),
+            ),
+            DeclareLaunchArgument(
+                "drop_position",
+                default_value="[0.20, 0.0]",
+                description=(
+                    "Posicao x,y da caixa no frame manipulation_object_frame."
+                ),
             ),
             DeclareLaunchArgument(
                 "self_collision_cbf_mode",
