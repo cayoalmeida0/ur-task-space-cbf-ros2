@@ -167,7 +167,7 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "manipulation_lift_height",
-                default_value="0.22",
+                default_value="0.05",
                 description="Altura acima do centro do cubo apos a pega.",
             ),
             DeclareLaunchArgument(
