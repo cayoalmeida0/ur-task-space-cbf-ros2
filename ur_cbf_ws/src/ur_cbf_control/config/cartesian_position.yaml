@@ -26,7 +26,7 @@ cartesian_position_test:
     orientation_gains: [0.5, 0.5, 0.5]
     orientation_target_mode: initial
     target_orientation_rpy: [0.0, 0.0, 0.0]
-    cube_position: [0.0, 0.0, 0.32]
+    cube_position: [-0.25, 0.0, 0.32]
     drop_position: [0.20, 0.0]
     manipulation_approach_height: 0.10
     manipulation_lift_height: 0.12
