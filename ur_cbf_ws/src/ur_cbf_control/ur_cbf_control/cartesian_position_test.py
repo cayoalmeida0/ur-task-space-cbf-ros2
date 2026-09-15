@@ -92,8 +92,8 @@ class CartesianPositionTest(Node):
         # Objetos da cena Gazebo sao descritos em base_link por padrao. O
         # controlador/UAIbot trabalha no frame DH base, rotacionado pi em Z.
         self.declare_parameter("manipulation_object_frame", "base_link")
-        self.declare_parameter("cube_position", [-0.25, 0.0, 0.32])
-        self.declare_parameter("drop_position", [0.20, 0.0])
+        self.declare_parameter("cube_position", [-0.35, 0.0, 0.32])
+        self.declare_parameter("drop_position", [0.30, 0.0])
         self.declare_parameter("manipulation_approach_height", 0.10)
         self.declare_parameter("manipulation_lift_height", 0.12)
         self.declare_parameter("manipulation_drop_approach_height", 0.14)
@@ -494,7 +494,7 @@ class CartesianPositionTest(Node):
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.6.26; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.27; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
             if self.task_type == "manipulation":
                 self.get_logger().info(
@@ -1085,7 +1085,7 @@ class CartesianPositionTest(Node):
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.6.26",
+                "control_package": "ur_cbf_control:0.6.27",
                 "controller_mode": self.controller_mode,
                 "self_collision_cbf_mode": self.self_collision_cbf_mode,
                 "self_collision_witness_mode": self.self_collision_witness_mode,
