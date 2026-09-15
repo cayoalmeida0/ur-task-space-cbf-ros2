@@ -406,6 +406,8 @@ class CartesianPositionTest(Node):
         self._trace_samples: list[dict[str, object]] = []
         self._result_path: str | None = None
         self._last_self_collision_cbf: SelfCollisionCbfConstraints | None = None
+        self._last_self_collision_warning = 0.0
+        self._self_collision_monitor_invalid_count = 0
         self._last_workspace_cbf: WorkspaceBoundaryCbfConstraints | None = None
 
         command_qos = QoSProfile(
@@ -845,12 +847,26 @@ class CartesianPositionTest(Node):
         if self.self_collision_cbf_mode == "off":
             self._last_self_collision_cbf = None
             return None
-        distances = self.kinematics.evaluate_self_collision(
-            model_positions,
-            tolerance=self.self_collision_distance_tolerance,
-            max_iterations=self.self_collision_distance_max_iterations,
-            excluded_pair_labels=self.self_collision_excluded_pairs,
-        )
+        try:
+            distances = self.kinematics.evaluate_self_collision(
+                model_positions,
+                tolerance=self.self_collision_distance_tolerance,
+                max_iterations=self.self_collision_distance_max_iterations,
+                excluded_pair_labels=self.self_collision_excluded_pairs,
+            )
+        except KinematicsError as error:
+            if self.self_collision_cbf_mode != "monitor":
+                raise
+            self._last_self_collision_cbf = None
+            self._self_collision_monitor_invalid_count += 1
+            now = time.monotonic()
+            if now - self._last_self_collision_warning >= 1.0:
+                self.get_logger().warning(
+                    "Monitoramento de autocolisao indisponivel neste ciclo; "
+                    f"preservando o comando nominal: {error}"
+                )
+                self._last_self_collision_warning = now
+            return None
         constraints = formulate_self_collision_cbf(
             distances,
             safe_distance=self.self_collision_safe_distance,
