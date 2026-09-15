@@ -148,7 +148,7 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "cube_position",
-                default_value="[-0.35, 0.0, 0.32]",
+                default_value="[-0.35, 0.0, 0.17]",
                 description=(
                     "Posicao do centro do cubo no frame manipulation_object_frame."
                 ),
