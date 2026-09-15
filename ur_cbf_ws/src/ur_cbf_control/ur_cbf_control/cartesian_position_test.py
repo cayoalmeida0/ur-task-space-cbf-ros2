@@ -95,7 +95,7 @@ class CartesianPositionTest(Node):
         self.declare_parameter("cube_position", [-0.35, 0.0, 0.17])
         self.declare_parameter("drop_position", [0.30, 0.0])
         self.declare_parameter("manipulation_approach_height", 0.05)
-        self.declare_parameter("manipulation_lift_height", 0.22)
+        self.declare_parameter("manipulation_lift_height", 0.05)
         self.declare_parameter("manipulation_drop_approach_height", 0.14)
         self.declare_parameter("manipulation_release_height", 0.08)
         self.declare_parameter("manipulation_retract_height", 0.16)
@@ -494,7 +494,7 @@ class CartesianPositionTest(Node):
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.6.31; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.32; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
             if self.task_type == "manipulation":
                 self.get_logger().info(
@@ -1085,7 +1085,7 @@ class CartesianPositionTest(Node):
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.6.31",
+                "control_package": "ur_cbf_control:0.6.32",
                 "controller_mode": self.controller_mode,
                 "self_collision_cbf_mode": self.self_collision_cbf_mode,
                 "self_collision_witness_mode": self.self_collision_witness_mode,
