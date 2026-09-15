@@ -214,7 +214,7 @@ coordenadas ja expressas no frame DH, use `manipulation_object_frame:=base`.
 Os parametros tambem podem ser sobrescritos no proprio launch:
 
 ```bash
-cube_position:="[-0.35,0.0,0.32]" \
+cube_position:="[-0.35,0.0,0.17]" \
 drop_position:="[0.30,0.0]" \
 manipulation_object_frame:=base_link
 ```
