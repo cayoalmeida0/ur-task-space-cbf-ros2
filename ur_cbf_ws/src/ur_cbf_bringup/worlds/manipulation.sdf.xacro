@@ -1,14 +1,14 @@
 <?xml version="1.0"?>
 <!-- Cena parametrica de manipulacao para Gazebo Harmonic. -->
 <sdf version="1.9" xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <xacro:arg name="table_x" default="-0.25"/>
+  <xacro:arg name="table_x" default="-0.35"/>
   <xacro:arg name="table_y" default="0.0"/>
   <xacro:arg name="table_radius" default="0.08"/>
   <xacro:arg name="table_height" default="0.30"/>
-  <xacro:arg name="cube_x" default="-0.25"/>
+  <xacro:arg name="cube_x" default="-0.35"/>
   <xacro:arg name="cube_y" default="0.0"/>
   <xacro:arg name="cube_size" default="0.04"/>
-  <xacro:arg name="drop_x" default="0.20"/>
+  <xacro:arg name="drop_x" default="0.30"/>
   <xacro:arg name="drop_y" default="0.0"/>
   <xacro:arg name="box_size_x" default="0.08"/>
   <xacro:arg name="box_size_y" default="0.08"/>
