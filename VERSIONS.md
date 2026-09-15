@@ -1,4 +1,6 @@
-## Revisao experimental 0.6.30 / controle 0.6.30 / bringup 0.3.14 — 15 de setembro de 2026
+## Revisao experimental 0.6.31 / controle 0.6.31 / bringup 0.3.14 — 15 de setembro de 2026
+
+- Reduz a altura de aproximacao de 0,10 m para 0,05 m, mantendo a mesa em 0,15 m, o cubo em z=0,17 m e a elevacao pos-pega em 0,22 m.
 
 - Reduz a altura de aproximacao do cubo de 0,20 m para 0,10 m, mantendo a mesa em 0,15 m, o cubo em z=0,17 m e a elevacao pos-pega em 0,22 m.
 
