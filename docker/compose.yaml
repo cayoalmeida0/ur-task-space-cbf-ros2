@@ -11,7 +11,7 @@ x-ur-cbf-common: &ur-cbf-common
   stdin_open: true
   tty: true
   environment:
-    AUTO_BUILD: missing
+    AUTO_BUILD: ${AUTO_BUILD:-missing}
     DISPLAY: ${DISPLAY}
     QT_X11_NO_MITSHM: "1"
     LIBGL_ALWAYS_SOFTWARE: ${LIBGL_ALWAYS_SOFTWARE:-1}
