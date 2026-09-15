@@ -57,9 +57,12 @@ gui-auth:
 	@echo "Acesso grafico X11 autorizado para o usuario $$(id -un)."
 
 sim: init gui-auth
+	# A simulacao usa o workspace montado do host; reconstrua-o para que
+	# novos arquivos instalados (por exemplo, mundos Xacro) sejam visiveis.
+	AUTO_BUILD=always $(COMPOSE) --profile dev run --rm ur_cbf_dev colcon build --symlink-install
 	CBF_VOLUMES="$(CBF_VOLUMES)" \
 	CBF_VOLUMES_GAZEBO="$(CBF_VOLUMES_GAZEBO)" \
-	$(COMPOSE) --profile sim up ur_cbf_sim
+	AUTO_BUILD=never $(COMPOSE) --profile sim up ur_cbf_sim
 
 test-cbf-motion: init
 	@if [ -f /.dockerenv ]; then \
