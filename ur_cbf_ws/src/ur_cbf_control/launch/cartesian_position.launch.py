@@ -155,7 +155,7 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "drop_position",
-                default_value="[0.30, 0.0]",
+                default_value="[-0.15, 0.0]",
                 description=(
                     "Posicao x,y da caixa no frame manipulation_object_frame."
                 ),
