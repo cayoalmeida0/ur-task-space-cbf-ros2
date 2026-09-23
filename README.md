@@ -6,17 +6,16 @@ distância diferenciáveis. A mesma interface comanda a planta simulada e o rob�
 real: velocidades articulares em
 `/forward_velocity_controller/commands`.
 
-> **Estado atual — revisão experimental 0.6.14:** infraestrutura Docker `0.2.0`,
-> `ur_cbf_bringup` `0.3.14` e `ur_cbf_control` `0.6.14`. O QP já aceita a primeira
-> CBF cinemática de autocolisão nos modos `monitor` e `enforce`. As 15 primitivas
-> transparentes partem das 13 primitivas originais do braço UR3e no UAIbot; o
-> ensaio atual usa `z=0,115 m` em `c11`, `x=y=0; z=0,0415 m` em `c21`, mantém
-> `z=0,027 m` em `c22`, usa `x=-0,2121 m; z=0,025 m` em `c23` e
-> `x=y=0; z=-0,020 m` em `c31`. Em `c32`, usa `x=y=0`, `z=-0,0011 m` e
-> comprimento `0,0945 m`; em `c41`, `z=-0,027 m`; em `c42`, `x=y=z=0`;
-> preserva `c51`; e usa `x=0,0011 m; y=-0,026 m; z=-0,030 m` em `c52`.
-> A RG2 é representada por um cilindro e uma esfera terminal.
-> O padrão permanece `off` até validarmos poses e custo no container.
+> **Estado atual — revisão experimental 0.6.35:** infraestrutura Docker `0.2.0`,
+> `ur_cbf_bringup` `0.3.16` e `ur_cbf_control` `0.6.35`. A tarefa completa de
+> manipulação pick-and-place foi concluída em simulação com UR3e e RG2, incluindo
+> aproximação, pega, elevação, transferência, soltura e retração. As CBFs de
+> autocolisão e de fronteira do workspace foram validadas no modo `enforce`.
+> A cena usa mesa de altura `0,15 m`, cubo em `[-0,35, 0, 0,17]` e caixa em
+> `[-0,30, 0,18]`, no frame `base_link`. A aproximação e a elevação ocorrem a
+> `0,05 m` acima do cubo; a soltura ocorre em `z=0,08 m`. O workspace utiliza
+> `z_min=0,02 m` e margem de segurança de `0,05 m`. No perfil `challenging`, os
+> limites são `0,08 m/s` no espaço cartesiano e `0,60 rad/s` nas juntas.
 
 ## Visão geral
 
@@ -44,6 +43,9 @@ flowchart TD
 - interface comum da gripper em `/finger_width_controller/commands`;
 - controle cartesiano nominal por DLS ou QP com OSQP 1.1.3;
 - formulação de autocolisão `J_d qdot >= -gamma (d-d_safe)` integrada ao QP;
+- CBF de fronteira do workspace com seis restrições cartesianas axis-aligned;
+- tarefa física simulada de pick-and-place com comando da garra RG2;
+- witness points de autocolisão e marcadores da fronteira do workspace no RViz;
 - TCP controlado em `gripper_tcp`, no centro dos dedos fechados;
 - watchdogs, comando nulo em falhas e ensaios explicitamente armados;
 - 15 primitivas visuais idênticas ao modelo UAIbot corrigido do projeto;
@@ -56,7 +58,8 @@ flowchart TD
 | Bringup ROS/Gazebo | `ur_type` é parametrizado; UR3e é o padrão |
 | Gripper | RG2 consolidada; RG6 disponível para comparação |
 | Adaptador cinemático UAIbot | UR3e implementado e validado |
-| CBF de autocolisão | núcleo/QP implementado; backend UAIbot em validação |
+| CBF de autocolisão | validada em simulação nos modos `monitor` e `enforce` |
+| CBF de workspace | validada com limite inferior ajustado para a soltura |
 | Volumes visuais para CBF | 13 primitivas UR3e + RG2 simplificada em dois objetos |
 | Hardware real | UR via `ur_robot_driver`; RG2 via driver OnRobot |
 
@@ -146,8 +149,61 @@ ros2 launch ur_cbf_control cartesian_position.launch.py \
   onrobot_type:=rg2 \
   controller_mode:=qp \
   experiment_id:=cartesian_qp_ur3e_001 \
+execute_test:=true
+```
+
+### Ensaio de manipulação pick-and-place validado
+
+Com a simulação ativa e após entrar no container com `make shell`:
+
+```bash
+ros2 launch ur_cbf_control cartesian_position.launch.py \
+  ur_type:=ur3e \
+  onrobot_type:=rg2 \
+  task_type:=manipulation \
+  trajectory_profile:=challenging \
+  task_control_mode:=pose \
+  orientation_target_mode:=vertical \
+  controller_mode:=qp \
+  self_collision_cbf_mode:=enforce \
+  workspace_cbf_mode:=enforce \
+  self_collision_witness_mode:=closest \
+  manipulation_object_frame:=base_link \
+  cube_position:="[-0.35, 0.0, 0.17]" \
+  drop_position:="[-0.30, 0.18]" \
+  manipulation_approach_height:=0.05 \
+  manipulation_lift_height:=0.05 \
+  max_control_duration:=120.0 \
+  max_wall_control_duration:=600.0 \
+  experiment_id:=pick_place_equal_radius_fast_boundary02_001 \
   execute_test:=true
 ```
+
+Para manter os volumes de colisão visíveis no RViz, mas ocultos no Gazebo:
+
+```bash
+CBF_VOLUMES=true CBF_VOLUMES_GAZEBO=false make sim
+```
+
+O ensaio validado conclui os seis waypoints e registra o resultado experimental
+em JSON no diretório `/workspace/results`.
+
+### Diagnóstico do RobotModel no RViz
+
+O display `RobotModel` utiliza o tópico `/robot_description` publicado pelo
+`robot_state_publisher` e o frame fixo `base_link`. As configurações do RViz
+usam durabilidade `Transient Local`, necessária para que a descrição seja
+recebida mesmo quando o RViz inicia após o publicador.
+
+Para verificar a publicação dentro do container:
+
+```bash
+ros2 topic info /robot_description -v
+```
+
+Deve existir um publicador associado ao `robot_state_publisher`. Após atualizar
+o projeto, é necessário reconstruir o workspace e reiniciar a simulação para
+carregar a configuração corrigida do RViz.
 
 Os procedimentos completos, critérios de aprovação e convenções de frames estão
 no [guia da simulação](docs/SIMULATION.md) e na
