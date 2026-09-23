@@ -95,10 +95,12 @@ e `enforce` têm o mesmo significado da CBF de autocolisao.
 
 ## Orientação livre, manipulabilidade e cilindro da cena
 
-No modo `task_control_mode:=position`, o QP usa apenas `J_v`; portanto a
-orientação não é imposta durante os waypoints. Isso é diferente do modo
-`pose`, que usa `[J_v; J_omega]` e tenta manter uma orientação alvo fixa. A
-orientação livre não significa ausência de segurança: os limites articulares,
+No modo `task_control_mode:=position`, o QP usa apenas `J_v` e a orientação é
+livre. No modo `task_control_mode:=position_vertical`, o QP usa posição e as
+duas componentes angulares que alteram o eixo `z` do TCP; a rotação em torno
+desse eixo permanece livre. Isso é diferente do modo `pose`, que usa
+`[J_v; J_omega]` e tenta manter uma orientação alvo fixa. A liberdade de yaw
+não significa ausência de segurança: os limites articulares,
 workspace, autocolisão e, quando ativada, a CBF do cilindro continuam no QP.
 
 O controlador não usa atualmente um índice de manipulabilidade como objetivo ou
@@ -136,6 +138,10 @@ diretamente para os mesmos pares nao adjacentes. Os modos `monitor` e `enforce`
 sao recusados para combinacoes diferentes de `ur3e + rg2`. Consulte
 [`docs/SELF_COLLISION_CBF.md`](../../../docs/SELF_COLLISION_CBF.md) antes de
 ativar a restricao.
+
+Os três launchers de cenário usam `position_vertical` e
+`orientation_target_mode:=vertical`, condição adequada para pegar um cubo
+apoiado em uma superfície horizontal sem impor uma orientação 6D completa.
 
 Os witness points podem ser exibidos no RViz pelo topico
 `/self_collision/witness_markers`. Use `self_collision_witness_mode:=closest`

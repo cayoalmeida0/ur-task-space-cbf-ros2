@@ -1,3 +1,10 @@
+## Revisao experimental 0.6.37 / controle 0.6.37 / bringup 0.3.17 — 23 de setembro de 2026
+
+- Adiciona `task_control_mode:=position_vertical`, que controla a posição e a
+  inclinação do TCP mantendo a rotação em torno do eixo vertical livre.
+- Atualiza os três cenários de manipulação para manter a RG2 vertical durante
+  aproximação, pega, transporte e soltura, preservando a CBF do cilindro.
+
 ## Revisao experimental 0.6.36 / controle 0.6.36 / bringup 0.3.16 — 23 de setembro de 2026
 
 - Adiciona o modo `task_control_mode:=position`, que deixa a orientação livre

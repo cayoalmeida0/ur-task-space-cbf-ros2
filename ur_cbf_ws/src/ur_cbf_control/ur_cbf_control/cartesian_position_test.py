@@ -545,7 +545,7 @@ class CartesianPositionTest(Node):
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.6.36; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.37; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
             if self.task_type == "manipulation":
                 self.get_logger().info(
@@ -610,8 +610,14 @@ class CartesianPositionTest(Node):
                 raise ValueError(f"{name} deve ser finito e positivo.")
         if self.controller_mode not in {"dls", "qp"}:
             raise ValueError("controller_mode deve ser dls ou qp.")
-        if self.task_control_mode not in {"position", "pose"}:
-            raise ValueError("task_control_mode deve ser position ou pose.")
+        if self.task_control_mode not in {
+            "position",
+            "position_vertical",
+            "pose",
+        }:
+            raise ValueError(
+                "task_control_mode deve ser position, position_vertical ou pose."
+            )
         if self.orientation_target_mode not in {"initial", "rpy", "vertical"}:
             raise ValueError(
                 "orientation_target_mode deve ser initial, vertical ou rpy."
@@ -900,7 +906,7 @@ class CartesianPositionTest(Node):
         return state
 
     def _task_error(self, state: KinematicState) -> np.ndarray:
-        """Monta o erro cartesiano de posicao ou de pose completa."""
+        """Monta o erro da tarefa posicional, vertical ou de pose completa."""
 
         if self.target_position is None:
             raise NominalControlError("Alvo cartesiano ainda nao foi definido.")
@@ -909,6 +915,11 @@ class CartesianPositionTest(Node):
             return position_error
         if self.target_orientation is None:
             raise NominalControlError("Alvo de orientacao ainda nao foi definido.")
+        if self.task_control_mode == "position_vertical":
+            current_axis = np.asarray(state.orientation_matrix[:, 2], dtype=float)
+            target_axis = np.asarray(self.target_orientation[:, 2], dtype=float)
+            tilt_error = np.cross(current_axis, target_axis)
+            return np.concatenate((position_error, tilt_error[:2]))
         return np.concatenate(
             (position_error, rotation_error(state.orientation_matrix, self.target_orientation))
         )
@@ -953,11 +964,25 @@ class CartesianPositionTest(Node):
     def _task_jacobian(self, state: KinematicState) -> np.ndarray:
         if self.task_control_mode == "position":
             return state.translational_jacobian
+        if self.task_control_mode == "position_vertical":
+            # As duas componentes x/y da velocidade angular alteram o eixo z
+            # do TCP. A componente em torno de z é deliberadamente livre,
+            # preservando a redundância de yaw durante a manipulação.
+            return np.vstack(
+                (state.translational_jacobian, state.geometric_jacobian[3:5, :])
+            )
         return state.geometric_jacobian
 
     def _task_gains(self) -> tuple[float, ...]:
         if self.task_control_mode == "position":
             return self.position_gains
+        if self.task_control_mode == "position_vertical":
+            orientation_gains = self.orientation_gains
+            if len(orientation_gains) == 1:
+                orientation_gains = orientation_gains * 2
+            else:
+                orientation_gains = orientation_gains[:2]
+            return tuple(self.position_gains) + tuple(orientation_gains)
         position_gains = self.position_gains
         orientation_gains = self.orientation_gains
         if len(position_gains) == 1:
@@ -1240,7 +1265,7 @@ class CartesianPositionTest(Node):
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.6.36",
+                "control_package": "ur_cbf_control:0.6.37",
                 "controller_mode": self.controller_mode,
                 "self_collision_cbf_mode": self.self_collision_cbf_mode,
                 "self_collision_witness_mode": self.self_collision_witness_mode,

@@ -6,8 +6,8 @@ distância diferenciáveis. A mesma interface comanda a planta simulada e o rob�
 real: velocidades articulares em
 `/forward_velocity_controller/commands`.
 
-> **Estado atual — revisão experimental 0.6.36:** infraestrutura Docker `0.2.0`,
-> `ur_cbf_bringup` `0.3.16` e `ur_cbf_control` `0.6.36`. A tarefa completa de
+> **Estado atual — revisão experimental 0.6.37:** infraestrutura Docker `0.2.0`,
+> `ur_cbf_bringup` `0.3.17` e `ur_cbf_control` `0.6.37`. A tarefa completa de
 > manipulação pick-and-place foi concluída em simulação com UR3e e RG2, incluindo
 > aproximação, pega, elevação, transferência, soltura e retração. As CBFs de
 > autocolisão e de fronteira do workspace foram validadas no modo `enforce`.
@@ -46,7 +46,7 @@ flowchart TD
 - CBF de fronteira do workspace com seis restrições cartesianas axis-aligned;
 - CBF externa para o cilindro da mesa, aplicada aos volumes de colisão do robô;
 - tarefa física simulada de pick-and-place com comando da garra RG2;
-- modo posicional com orientação livre durante a aproximação;
+- modo posicional vertical, que mantém a inclinação da garra e libera o yaw;
 - métricas de manipulabilidade (`sigma_min`, condição e índice de Yoshikawa)
   registradas em cada amostra;
 - witness points de autocolisão e marcadores da fronteira do workspace no RViz;
@@ -195,8 +195,9 @@ em JSON no diretório `/workspace/results`.
 ### Três cenários de teste
 
 Os launchers abaixo iniciam a cena Gazebo e o controlador com os parâmetros
-coerentes entre si. Eles usam `task_control_mode:=position`, portanto a posição
-é regulada por `J_v` e a orientação da garra permanece livre. A mesa é tratada
+coerentes entre si. Eles usam `task_control_mode:=position_vertical`, portanto a
+posição e a inclinação da garra são reguladas, enquanto o yaw permanece livre.
+A mesa é tratada
 como um cilindro de colisão com margem de `0,01 m`; a altura do cubo é sempre
 `table_height + cube_size/2`.
 
@@ -219,8 +220,9 @@ condição observados. Nesta revisão a manipulabilidade é critério diagnósti
 não uma restrição adicional do QP; isso permite comparar a aproximação livre
 antes de escolher um limiar ou objetivo de postura.
 
-Para executar a configuração anterior com orientação vertical fixa, use o
-launcher genérico e `task_control_mode:=pose orientation_target_mode:=vertical`.
+Para comparar com orientação 6D completamente fixa, use o launcher genérico e
+`task_control_mode:=pose orientation_target_mode:=vertical`. Para a configuração
+posicional sem restrição angular, use `task_control_mode:=position`.
 
 ### Diagnóstico do RobotModel no RViz
 

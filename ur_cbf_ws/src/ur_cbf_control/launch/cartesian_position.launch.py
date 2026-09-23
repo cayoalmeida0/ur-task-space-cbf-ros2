@@ -150,9 +150,10 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "task_control_mode",
                 default_value="pose",
-                choices=["position", "pose"],
+                choices=["position", "position_vertical", "pose"],
                 description=(
-                    "position usa Jv; pose usa o Jacobiano geometrico completo [v; omega]."
+                    "position usa Jv; position_vertical controla posição e inclinação "
+                    "mantendo yaw livre; pose usa [v; omega]."
                 ),
             ),
             DeclareLaunchArgument(

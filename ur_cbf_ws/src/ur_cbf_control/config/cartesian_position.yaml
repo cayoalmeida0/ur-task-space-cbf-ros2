@@ -20,8 +20,8 @@ cartesian_position_test:
     trajectory_profile: simple
     target_offset: [0.0, 0.0, 0.01]
     position_gains: [1.0, 1.0, 1.0]
-    # pose usa o Jacobiano geometrico completo [v; omega] e mantem a
-    # orientacao inicial durante a trajetoria.
+    # position_vertical controla posicao e inclinacao, mantendo yaw livre.
+    # pose usa o Jacobiano geometrico completo [v; omega].
     task_control_mode: pose
     orientation_gains: [0.5, 0.5, 0.5]
     orientation_target_mode: initial
