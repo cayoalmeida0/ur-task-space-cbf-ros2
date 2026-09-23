@@ -1,4 +1,12 @@
-## Revisao experimental 0.6.33 / controle 0.6.33 / bringup 0.3.14 — 23 de setembro de 2026
+## Revisao experimental 0.6.34 / controle 0.6.34 / bringup 0.3.16 — 23 de setembro de 2026
+
+- Reposiciona a caixa de deposito para `[-0,30, 0,18]` no frame `base_link`,
+  mantendo raio radial aproximadamente igual a `0,35 m`, como o cubo em
+  `[-0,35, 0]`, e separacao inicial aproximada de `0,187 m` entre os centros.
+- Aumenta moderadamente os limites do perfil `challenging` de `0,04 m/s` para
+  `0,06 m/s` e de `0,30 rad/s` para `0,45 rad/s`.
+
+## Revisao experimental 0.6.33 / controle 0.6.33 / bringup 0.3.15 — 23 de setembro de 2026
 
 - Move a caixa de deposito para x=-0,15 m e y=0 no frame base_link da cena, mantendo-a no mesmo lado do cubo para evitar a transferencia por tras da base.
 
