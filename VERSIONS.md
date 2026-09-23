@@ -1,3 +1,11 @@
+## Revisao experimental 0.6.35 / controle 0.6.35 / bringup 0.3.16 — 23 de setembro de 2026
+
+- Reduz o limite inferior nominal do workspace de `z=0,05 m` para `z=0,02 m`,
+  mantendo margem de seguranca CBF de `0,05 m`; a barreira efetiva inferior
+  passa a ser `z=0,07 m`, permitindo o alvo de soltura em `z=0,08 m`.
+- Aumenta os limites do perfil `challenging` de `0,06 m/s` para `0,08 m/s` e
+  de `0,45 rad/s` para `0,60 rad/s`.
+
 ## Revisao experimental 0.6.34 / controle 0.6.34 / bringup 0.3.16 — 23 de setembro de 2026
 
 - Reposiciona a caixa de deposito para `[-0,30, 0,18]` no frame `base_link`,
