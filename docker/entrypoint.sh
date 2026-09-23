@@ -12,13 +12,28 @@ build_workspace() {
   colcon build --symlink-install
 }
 
+workspace_needs_build() {
+  local setup_file="${workspace}/install/setup.bash"
+  [[ ! -f "${setup_file}" ]] && return 0
+
+  # O compose monta o workspace do host sobre a imagem. Portanto, a existência
+  # de install/setup.bash não garante que novos launchers, parâmetros ou nós
+  # tenham sido instalados. O timestamp mais recente do código-fonte é um
+  # critério simples e robusto para invalidar essa instalação incremental.
+  find "${workspace}/src" -type f \
+    ! -path '*/__pycache__/*' \
+    ! -name '*.pyc' \
+    -newer "${setup_file}" -print -quit | grep -q .
+}
+
 if [[ -d "${workspace}/src" ]]; then
   case "${auto_build}" in
     always)
       build_workspace
       ;;
     missing)
-      if [[ ! -f "${workspace}/install/setup.bash" ]]; then
+      if workspace_needs_build; then
+        echo "Instalacao ROS 2 desatualizada; reconstruindo o workspace."
         build_workspace
       fi
       ;;
