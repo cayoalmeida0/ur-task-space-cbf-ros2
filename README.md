@@ -6,8 +6,8 @@ distância diferenciáveis. A mesma interface comanda a planta simulada e o rob�
 real: velocidades articulares em
 `/forward_velocity_controller/commands`.
 
-> **Estado atual — revisão experimental 0.6.35:** infraestrutura Docker `0.2.0`,
-> `ur_cbf_bringup` `0.3.16` e `ur_cbf_control` `0.6.35`. A tarefa completa de
+> **Estado atual — revisão experimental 0.6.36:** infraestrutura Docker `0.2.0`,
+> `ur_cbf_bringup` `0.3.16` e `ur_cbf_control` `0.6.36`. A tarefa completa de
 > manipulação pick-and-place foi concluída em simulação com UR3e e RG2, incluindo
 > aproximação, pega, elevação, transferência, soltura e retração. As CBFs de
 > autocolisão e de fronteira do workspace foram validadas no modo `enforce`.
@@ -44,7 +44,11 @@ flowchart TD
 - controle cartesiano nominal por DLS ou QP com OSQP 1.1.3;
 - formulação de autocolisão `J_d qdot >= -gamma (d-d_safe)` integrada ao QP;
 - CBF de fronteira do workspace com seis restrições cartesianas axis-aligned;
+- CBF externa para o cilindro da mesa, aplicada aos volumes de colisão do robô;
 - tarefa física simulada de pick-and-place com comando da garra RG2;
+- modo posicional com orientação livre durante a aproximação;
+- métricas de manipulabilidade (`sigma_min`, condição e índice de Yoshikawa)
+  registradas em cada amostra;
 - witness points de autocolisão e marcadores da fronteira do workspace no RViz;
 - TCP controlado em `gripper_tcp`, no centro dos dedos fechados;
 - watchdogs, comando nulo em falhas e ensaios explicitamente armados;
@@ -187,6 +191,36 @@ CBF_VOLUMES=true CBF_VOLUMES_GAZEBO=false make sim
 
 O ensaio validado conclui os seis waypoints e registra o resultado experimental
 em JSON no diretório `/workspace/results`.
+
+### Três cenários de teste
+
+Os launchers abaixo iniciam a cena Gazebo e o controlador com os parâmetros
+coerentes entre si. Eles usam `task_control_mode:=position`, portanto a posição
+é regulada por `J_v` e a orientação da garra permanece livre. A mesa é tratada
+como um cilindro de colisão com margem de `0,01 m`; a altura do cubo é sempre
+`table_height + cube_size/2`.
+
+| Launcher | Mesa/cubo no `base_link` | Altura | Caixa no `base_link` |
+|---|---:|---:|---:|
+| `manipulation_scenario_01` | `[-0,35, 0,00]` | `0,15 m` | `[-0,30, 0,18]` |
+| `manipulation_scenario_02` | `[-0,28, -0,20]` | `0,20 m` | `[-0,10, 0,33]` |
+| `manipulation_scenario_03` | `[-0,18, 0,26]` | `0,25 m` | `[0,16, -0,27]` |
+
+Com a imagem em execução, use um único cenário por vez:
+
+```bash
+ros2 launch ur_cbf_bringup manipulation_scenario_01.launch.py
+ros2 launch ur_cbf_bringup manipulation_scenario_02.launch.py
+ros2 launch ur_cbf_bringup manipulation_scenario_03.launch.py
+```
+
+Os resultados registram a menor singularidade `sigma_min` e o maior número de
+condição observados. Nesta revisão a manipulabilidade é critério diagnóstico,
+não uma restrição adicional do QP; isso permite comparar a aproximação livre
+antes de escolher um limiar ou objetivo de postura.
+
+Para executar a configuração anterior com orientação vertical fixa, use o
+launcher genérico e `task_control_mode:=pose orientation_target_mode:=vertical`.
 
 ### Diagnóstico do RobotModel no RViz
 

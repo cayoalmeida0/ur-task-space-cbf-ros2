@@ -1,3 +1,16 @@
+## Revisao experimental 0.6.36 / controle 0.6.36 / bringup 0.3.16 — 23 de setembro de 2026
+
+- Adiciona o modo `task_control_mode:=position`, que deixa a orientação livre
+  durante a regulação posicional dos waypoints.
+- Registra `sigma_min`, número de condição e índice de Yoshikawa do Jacobiano
+  efetivamente controlado, sem impor ainda um limiar de manipulabilidade.
+- Modela a mesa como cilindro estático e adiciona CBF externa conservadora para
+  os volumes de colisão do UR3e/RG2.
+- Cria três launchers integrados com posições laterais/diagonais e alturas de
+  mesa de `0,15`, `0,20` e `0,25 m`; em cada caso o cubo é derivado da altura
+  da mesa e do tamanho do cubo. Os cenários usam margem cilíndrica de `0,01 m`
+  para manter a aproximação ao centro do cubo factível.
+
 ## Revisao experimental 0.6.35 / controle 0.6.35 / bringup 0.3.16 — 23 de setembro de 2026
 
 - Reduz o limite inferior nominal do workspace de `z=0,05 m` para `z=0,02 m`,

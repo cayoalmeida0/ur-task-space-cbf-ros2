@@ -27,6 +27,7 @@ from ur_cbf_control.kinematics import KinematicState
 from ur_cbf_control.kinematics import KinematicsError
 from ur_cbf_control.kinematics import UaibotKinematics
 from ur_cbf_control.kinematics import homogeneous_transform_from_xyz_rpy
+from ur_cbf_control.manipulability import evaluate_manipulability
 from ur_cbf_control.nominal_control import compute_position_control
 from ur_cbf_control.nominal_control import NominalControlError
 from ur_cbf_control.nominal_control import reorder_vector
@@ -51,6 +52,11 @@ from ur_cbf_control.workspace_boundary import build_workspace_boundary_marker_ar
 from ur_cbf_control.workspace_boundary import formulate_workspace_boundary_cbf
 from ur_cbf_control.witness_visualization import build_witness_marker_array
 from ur_cbf_control.witness_visualization import WITNESS_VISUALIZATION_MODES
+from ur_cbf_control.cylinder_obstacle_cbf import (
+    CylinderObstacleCbfConstraints,
+    CylinderObstacleCbfError,
+    formulate_cylinder_obstacle_cbf,
+)
 
 
 class Phase(Enum):
@@ -94,6 +100,9 @@ class CartesianPositionTest(Node):
         self.declare_parameter("manipulation_object_frame", "base_link")
         self.declare_parameter("cube_position", [-0.35, 0.0, 0.17])
         self.declare_parameter("drop_position", [-0.15, 0.0])
+        self.declare_parameter("cylinder_position", [-0.35, 0.0])
+        self.declare_parameter("cylinder_radius", 0.08)
+        self.declare_parameter("cylinder_height", 0.15)
         self.declare_parameter("manipulation_approach_height", 0.05)
         self.declare_parameter("manipulation_lift_height", 0.05)
         self.declare_parameter("manipulation_drop_approach_height", 0.14)
@@ -138,6 +147,13 @@ class CartesianPositionTest(Node):
         )
         self.declare_parameter("workspace_boundary_frame", "base")
         self.declare_parameter("workspace_boundary_line_width", 0.005)
+        self.declare_parameter("cylinder_cbf_mode", "off")
+        self.declare_parameter("cylinder_safe_distance", 0.03)
+        self.declare_parameter("cylinder_cbf_gain", 5.0)
+        self.declare_parameter("cylinder_witness_mode", "closest")
+        self.declare_parameter(
+            "cylinder_witness_topic", "/cylinder_collision/witness_markers"
+        )
         self.declare_parameter("max_cartesian_speed", 0.01)
         self.declare_parameter("max_abs_joint_velocity", 0.10)
         self.declare_parameter("complex_max_cartesian_speed", 0.04)
@@ -210,11 +226,23 @@ class CartesianPositionTest(Node):
         self.drop_position_scene = np.asarray(
             self.get_parameter("drop_position").value, dtype=float
         ).reshape(-1)
+        self.cylinder_position_scene = np.asarray(
+            self.get_parameter("cylinder_position").value, dtype=float
+        ).reshape(-1)
         self.cube_position = self._scene_position_to_base(
             self.cube_position_scene
         )
         self.drop_position = self._scene_position_to_base(
             self.drop_position_scene
+        )
+        self.cylinder_position = self._scene_position_to_base(
+            self.cylinder_position_scene
+        )
+        self.cylinder_radius = float(
+            self.get_parameter("cylinder_radius").value
+        )
+        self.cylinder_height = float(
+            self.get_parameter("cylinder_height").value
         )
         self.manipulation_approach_height = float(
             self.get_parameter("manipulation_approach_height").value
@@ -306,6 +334,21 @@ class CartesianPositionTest(Node):
         )
         self.workspace_boundary_line_width = float(
             self.get_parameter("workspace_boundary_line_width").value
+        )
+        self.cylinder_cbf_mode = str(
+            self.get_parameter("cylinder_cbf_mode").value
+        ).lower()
+        self.cylinder_safe_distance = float(
+            self.get_parameter("cylinder_safe_distance").value
+        )
+        self.cylinder_cbf_gain = float(
+            self.get_parameter("cylinder_cbf_gain").value
+        )
+        self.cylinder_witness_mode = str(
+            self.get_parameter("cylinder_witness_mode").value
+        ).lower()
+        self.cylinder_witness_topic = str(
+            self.get_parameter("cylinder_witness_topic").value
         )
         self.max_cartesian_speed = float(
             self.get_parameter("max_cartesian_speed").value
@@ -421,6 +464,8 @@ class CartesianPositionTest(Node):
         self._last_self_collision_warning = 0.0
         self._self_collision_monitor_invalid_count = 0
         self._last_workspace_cbf: WorkspaceBoundaryCbfConstraints | None = None
+        self._last_cylinder_cbf: CylinderObstacleCbfConstraints | None = None
+        self._last_manipulability: dict[str, float] | None = None
 
         command_qos = QoSProfile(
             depth=1,
@@ -445,6 +490,11 @@ class CartesianPositionTest(Node):
         self.workspace_boundary_publisher = self.create_publisher(
             MarkerArray,
             self.workspace_boundary_topic,
+            10,
+        )
+        self.cylinder_witness_publisher = self.create_publisher(
+            MarkerArray,
+            self.cylinder_witness_topic,
             10,
         )
         if self.workspace_cbf_mode != "off":
@@ -491,10 +541,11 @@ class CartesianPositionTest(Node):
                 f"modo={self.controller_mode}; "
                 f"self_collision_cbf={self.self_collision_cbf_mode}; "
                 f"workspace_cbf={self.workspace_cbf_mode}; "
+                f"cylinder_cbf={self.cylinder_cbf_mode}; "
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.6.33; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.36; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
             if self.task_type == "manipulation":
                 self.get_logger().info(
@@ -549,6 +600,10 @@ class CartesianPositionTest(Node):
             ),
             "workspace_cbf_gain": self.workspace_cbf_gain,
             "workspace_boundary_line_width": self.workspace_boundary_line_width,
+            "cylinder_radius": self.cylinder_radius,
+            "cylinder_height": self.cylinder_height,
+            "cylinder_safe_distance": self.cylinder_safe_distance,
+            "cylinder_cbf_gain": self.cylinder_cbf_gain,
         }
         for name, value in positive_values.items():
             if not math.isfinite(value) or value <= 0.0:
@@ -626,6 +681,36 @@ class CartesianPositionTest(Node):
         if self.workspace_cbf_mode not in {"off", "monitor", "enforce"}:
             raise ValueError(
                 "workspace_cbf_mode deve ser off, monitor ou enforce."
+            )
+        if self.cylinder_cbf_mode not in {"off", "monitor", "enforce"}:
+            raise ValueError(
+                "cylinder_cbf_mode deve ser off, monitor ou enforce."
+            )
+        if self.cylinder_witness_mode not in WITNESS_VISUALIZATION_MODES:
+            raise ValueError(
+                "cylinder_witness_mode deve ser off, closest ou all."
+            )
+        if not self.cylinder_witness_topic.strip():
+            raise ValueError("cylinder_witness_topic nao pode ser vazio.")
+        if self.cylinder_position_scene.size != 2 or not np.all(
+            np.isfinite(self.cylinder_position_scene)
+        ):
+            raise ValueError(
+                "cylinder_position deve conter dois valores finitos."
+            )
+        if self.cylinder_cbf_mode != "off" and (
+            self.ur_type,
+            self.onrobot_type,
+        ) != ("ur3e", "rg2"):
+            raise ValueError(
+                "A geometria do obstáculo suporta apenas ur3e + rg2."
+            )
+        if (
+            self.cylinder_cbf_mode == "enforce"
+            and self.controller_mode != "qp"
+        ):
+            raise ValueError(
+                "cylinder_cbf_mode=enforce requer controller_mode=qp."
             )
         if len(self.workspace_bounds) != 6:
             raise ValueError(
@@ -809,6 +894,9 @@ class CartesianPositionTest(Node):
         )
         state = self.kinematics.evaluate(positions)
         self._last_position = np.asarray(state.position, dtype=float)
+        self._last_manipulability = evaluate_manipulability(
+            self._task_jacobian(state)
+        )
         return state
 
     def _task_error(self, state: KinematicState) -> np.ndarray:
@@ -946,6 +1034,41 @@ class CartesianPositionTest(Node):
         self._last_workspace_cbf = constraints
         return constraints
 
+    def _evaluate_cylinder_cbf(
+        self,
+        model_positions: tuple[float, ...],
+    ) -> CylinderObstacleCbfConstraints | None:
+        if self.cylinder_cbf_mode == "off":
+            self._last_cylinder_cbf = None
+            return None
+        try:
+            distances = self.kinematics.evaluate_cylinder_obstacle(
+                model_positions,
+                center_xy=self.cylinder_position,
+                radius=self.cylinder_radius,
+                height=self.cylinder_height,
+            )
+            constraints = formulate_cylinder_obstacle_cbf(
+                distances,
+                safe_distance=self.cylinder_safe_distance,
+                gain=self.cylinder_cbf_gain,
+            )
+        except (KinematicsError, CylinderObstacleCbfError) as error:
+            if self.cylinder_cbf_mode != "monitor":
+                raise
+            self._last_cylinder_cbf = None
+            return None
+        self.cylinder_witness_publisher.publish(
+            build_witness_marker_array(
+                constraints,
+                mode=self.cylinder_witness_mode,
+                frame_id=self.workspace_boundary_frame,
+                stamp=self.get_clock().now().to_msg(),
+            )
+        )
+        self._last_cylinder_cbf = constraints
+        return constraints
+
     def _simulation_seconds(self) -> float:
         seconds = self.get_clock().now().nanoseconds * 1e-9
         if not math.isfinite(seconds):
@@ -988,9 +1111,11 @@ class CartesianPositionTest(Node):
         joint_constraint_active: bool = False,
         self_collision_constraint_active: bool = False,
         workspace_constraint_active: bool = False,
+        cylinder_constraint_active: bool = False,
         qp_diagnostics: QpDiagnostics | None = None,
         self_collision_cbf: SelfCollisionCbfConstraints | None = None,
         workspace_cbf: WorkspaceBoundaryCbfConstraints | None = None,
+        cylinder_cbf: CylinderObstacleCbfConstraints | None = None,
     ) -> None:
         self._trace_samples.append(
             {
@@ -1001,6 +1126,11 @@ class CartesianPositionTest(Node):
                 "wall_seconds": timing.wall_seconds,
                 "error": [float(value) for value in error],
                 "error_norm": float(np.linalg.norm(error)),
+                "manipulability": (
+                    None
+                    if self._last_manipulability is None
+                    else dict(self._last_manipulability)
+                ),
                 "controller_velocity": [float(value) for value in command],
                 "cartesian_saturated": bool(cartesian_saturated),
                 "joint_saturated": bool(joint_saturated),
@@ -1009,6 +1139,7 @@ class CartesianPositionTest(Node):
                     self_collision_constraint_active
                 ),
                 "workspace_constraint_active": bool(workspace_constraint_active),
+                "cylinder_constraint_active": bool(cylinder_constraint_active),
                 "self_collision_cbf": (
                     None
                     if self_collision_cbf is None
@@ -1016,6 +1147,9 @@ class CartesianPositionTest(Node):
                 ),
                 "workspace_cbf": (
                     None if workspace_cbf is None else workspace_cbf.to_record()
+                ),
+                "cylinder_cbf": (
+                    None if cylinder_cbf is None else cylinder_cbf.to_record()
                 ),
                 "qp": (
                     None
@@ -1078,6 +1212,27 @@ class CartesianPositionTest(Node):
         if self._trace_samples:
             simulated_seconds = self._trace_samples[-1]["simulated_seconds"]
             wall_seconds = self._trace_samples[-1]["wall_seconds"]
+        manipulability_samples = [
+            sample["manipulability"]
+            for sample in self._trace_samples
+            if sample.get("manipulability") is not None
+        ]
+        manipulability_summary = None
+        if manipulability_samples:
+            manipulability_summary = {
+                "minimum_sigma_min": min(
+                    float(sample["sigma_min"])
+                    for sample in manipulability_samples
+                ),
+                "maximum_condition_number": max(
+                    float(sample["condition_number"])
+                    for sample in manipulability_samples
+                ),
+                "minimum_yoshikawa_index": min(
+                    float(sample["yoshikawa_index"])
+                    for sample in manipulability_samples
+                ),
+            }
         return {
             "schema_version": "1.6",
             "experiment_id": self.experiment_id,
@@ -1085,11 +1240,12 @@ class CartesianPositionTest(Node):
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.6.33",
+                "control_package": "ur_cbf_control:0.6.36",
                 "controller_mode": self.controller_mode,
                 "self_collision_cbf_mode": self.self_collision_cbf_mode,
                 "self_collision_witness_mode": self.self_collision_witness_mode,
                 "workspace_cbf_mode": self.workspace_cbf_mode,
+                "cylinder_cbf_mode": self.cylinder_cbf_mode,
                 "osqp": self.qp_solver.solver_version,
                 "ros_distro": os.environ.get("ROS_DISTRO", "unknown"),
                 "ur_type": self.ur_type,
@@ -1166,6 +1322,12 @@ class CartesianPositionTest(Node):
                     if self._last_workspace_cbf is None
                     else self._last_workspace_cbf.to_record()
                 ),
+                "cylinder_cbf": (
+                    None
+                    if self._last_cylinder_cbf is None
+                    else self._last_cylinder_cbf.to_record()
+                ),
+                "manipulability": manipulability_summary,
             },
             "parameters": {
                 "trajectory_profile": self.trajectory_profile,
@@ -1179,8 +1341,15 @@ class CartesianPositionTest(Node):
                 "manipulation_object_frame": self.manipulation_object_frame,
                 "cube_position_scene": self.cube_position_scene.tolist(),
                 "drop_position_scene": self.drop_position_scene.tolist(),
+                "cylinder_position_scene": self.cylinder_position_scene.tolist(),
                 "cube_position": self.cube_position.tolist(),
                 "drop_position": self.drop_position.tolist(),
+                "cylinder_position": self.cylinder_position.tolist(),
+                "cylinder_radius": self.cylinder_radius,
+                "cylinder_height": self.cylinder_height,
+                "cylinder_cbf_mode": self.cylinder_cbf_mode,
+                "cylinder_safe_distance": self.cylinder_safe_distance,
+                "cylinder_cbf_gain": self.cylinder_cbf_gain,
                 "manipulation_approach_height": self.manipulation_approach_height,
                 "manipulation_lift_height": self.manipulation_lift_height,
                 "manipulation_drop_approach_height": self.manipulation_drop_approach_height,
@@ -1442,6 +1611,7 @@ class CartesianPositionTest(Node):
                 model_positions
             )
             workspace_cbf = self._evaluate_workspace_cbf(state)
+            cylinder_cbf = self._evaluate_cylinder_cbf(model_positions)
             error = self._task_error(state)
             error_norm = float(np.linalg.norm(error))
             if error_norm <= self.position_tolerance:
@@ -1460,6 +1630,7 @@ class CartesianPositionTest(Node):
                     joint_saturated=False,
                     self_collision_cbf=self_collision_cbf,
                     workspace_cbf=workspace_cbf,
+                    cylinder_cbf=cylinder_cbf,
                 )
                 self.get_logger().info(
                     f"Tolerancia atingida: erro_tarefa={error_norm:.6f}; "
@@ -1501,6 +1672,7 @@ class CartesianPositionTest(Node):
             joint_constraint_active = False
             self_collision_constraint_active = False
             workspace_constraint_active = False
+            cylinder_constraint_active = False
             joint_saturated = False
             common_arguments = {
                 "error": error,
@@ -1527,6 +1699,12 @@ class CartesianPositionTest(Node):
                 ):
                     cbf_matrices.append(workspace_cbf.matrix)
                     cbf_lower_bounds.append(workspace_cbf.lower_bound)
+                if (
+                    self.cylinder_cbf_mode == "enforce"
+                    and cylinder_cbf is not None
+                ):
+                    cbf_matrices.append(cylinder_cbf.matrix)
+                    cbf_lower_bounds.append(cylinder_cbf.lower_bound)
                 if cbf_matrices:
                     common_arguments["cbf_matrix"] = np.vstack(cbf_matrices)
                     common_arguments["cbf_lower_bound"] = np.concatenate(
@@ -1549,9 +1727,18 @@ class CartesianPositionTest(Node):
                     for index in result.diagnostics.active_cbf
                 )
                 workspace_constraint_active = any(
-                    index >= self_cbf_count
+                    self_cbf_count <= index < self_cbf_count + workspace_cbf.count
                     for index in result.diagnostics.active_cbf
                 ) and self.workspace_cbf_mode == "enforce"
+                cylinder_constraint_active = any(
+                    index >= self_cbf_count + (
+                        workspace_cbf.count
+                        if self.workspace_cbf_mode == "enforce"
+                        and workspace_cbf is not None
+                        else 0
+                    )
+                    for index in result.diagnostics.active_cbf
+                ) and self.cylinder_cbf_mode == "enforce"
             else:
                 result = compute_position_control(**common_arguments)
                 joint_saturated = result.joint_saturated
@@ -1575,6 +1762,8 @@ class CartesianPositionTest(Node):
                 qp_diagnostics=qp_diagnostics,
                 self_collision_cbf=self_collision_cbf,
                 workspace_cbf=workspace_cbf,
+                cylinder_cbf=cylinder_cbf,
+                cylinder_constraint_active=cylinder_constraint_active,
             )
             if now - self._last_progress_log >= 1.0:
                 real_time_factor = (

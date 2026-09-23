@@ -9,6 +9,11 @@ import numpy as np
 from ur_cbf_control.self_collision_cbf import evaluate_uaibot_nonadjacent_distances
 from ur_cbf_control.self_collision_cbf import SelfCollisionCbfError
 from ur_cbf_control.self_collision_cbf import SelfCollisionDistances
+from ur_cbf_control.cylinder_obstacle_cbf import (
+    CylinderObstacleDistances,
+    CylinderObstacleCbfError,
+    evaluate_cylinder_obstacle_distances,
+)
 from ur_cbf_control.uaibot_collision_model import (
     configure_ur3e_rg2_project_collision_model,
 )
@@ -356,4 +361,36 @@ class UaibotKinematics:
         except Exception as error:
             raise KinematicsError(
                 f"Falha ao calcular distancias de autocolisao UAIbot: {error}"
+            ) from error
+
+    def evaluate_cylinder_obstacle(
+        self,
+        model_positions: Sequence[float],
+        *,
+        center_xy: Sequence[float],
+        radius: float,
+        height: float,
+    ) -> CylinderObstacleDistances:
+        """Avalia a distância dos volumes do robô a um cilindro estático."""
+
+        positions = np.asarray(model_positions, dtype=float).reshape(-1)
+        if positions.size != len(self.model_joint_names):
+            raise KinematicsError(
+                "Dimensão da configuração difere da ordem do modelo."
+            )
+        try:
+            return evaluate_cylinder_obstacle_distances(
+                self.robot,
+                positions,
+                center_xy=center_xy,
+                radius=radius,
+                height=height,
+                geometry_source=(
+                    "ur-task-space-cbf-ros2@0.6.36:"
+                    "ur_cbf_control/cylinder_obstacle_cbf.py"
+                ),
+            )
+        except CylinderObstacleCbfError as error:
+            raise KinematicsError(
+                f"Falha ao calcular distância ao obstáculo cilíndrico: {error}"
             ) from error

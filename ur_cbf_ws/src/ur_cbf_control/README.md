@@ -93,6 +93,27 @@ fica próximo ao piso para permitir a futura tarefa mesa--cubo, enquanto as
 direcoes laterais deixam uma margem menor para o manipulador. Os modos `monitor`
 e `enforce` têm o mesmo significado da CBF de autocolisao.
 
+## Orientação livre, manipulabilidade e cilindro da cena
+
+No modo `task_control_mode:=position`, o QP usa apenas `J_v`; portanto a
+orientação não é imposta durante os waypoints. Isso é diferente do modo
+`pose`, que usa `[J_v; J_omega]` e tenta manter uma orientação alvo fixa. A
+orientação livre não significa ausência de segurança: os limites articulares,
+workspace, autocolisão e, quando ativada, a CBF do cilindro continuam no QP.
+
+O controlador não usa atualmente um índice de manipulabilidade como objetivo ou
+restrição. Ele registra, porém, `sigma_min(J)`, o número de condição e o índice
+de Yoshikawa do Jacobiano da tarefa efetivamente controlada. O resumo fica em
+`metrics.manipulability` e cada amostra contém o campo `manipulability`.
+
+O cilindro da mesa é modelado como obstáculo vertical finito. Cada primitiva de
+colisão do UR3e/RG2 é envolvida por uma esfera conservadora e a CBF impõe
+`J_d qdot >= -gamma (d-d_safe)`. Use `cylinder_cbf_mode:=monitor` para observar
+as distâncias e `enforce` para incluir as restrições no OSQP. Os parâmetros
+`cylinder_position`, `cylinder_radius` e `cylinder_height` usam o mesmo frame
+de `manipulation_object_frame` da cena; os witness points são publicados em
+`/cylinder_collision/witness_markers`.
+
 ## CBF de autocolisao
 
 Para cada par nao adjacente, a barreira e `h(q) = d(q) - d_safe`. Como o
@@ -226,7 +247,8 @@ quando a geometria causa uma restricao artificial durante a aproximacao.
 Na tarefa de manipulacao, `manipulation_approach_height` e
 `manipulation_lift_height` controlam, respectivamente, a folga acima do cubo
 antes da descida e a altura de elevacao depois da pega. Os valores padrao desta
-revisao sao `0,20 m` e `0,22 m`.
+revisao são `0,05 m` e `0,05 m`; cenários específicos podem sobrescrevê-los sem
+alterar a geometria da cena.
 
 Esta revisao suporta o UR3e no adaptador UAIbot. Modelos adicionais devem declarar
 sua fabrica e a ordem de juntas correspondente; a execucao e recusada se o modelo

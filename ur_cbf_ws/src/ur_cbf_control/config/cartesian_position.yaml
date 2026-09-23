@@ -30,6 +30,9 @@ cartesian_position_test:
     manipulation_object_frame: base_link
     cube_position: [-0.35, 0.0, 0.17]
     drop_position: [-0.30, 0.18]
+    cylinder_position: [-0.35, 0.0]
+    cylinder_radius: 0.08
+    cylinder_height: 0.15
     # Folga vertical adicional para passar sobre a mesa antes da descida.
     manipulation_approach_height: 0.05
     manipulation_lift_height: 0.05
@@ -82,6 +85,11 @@ cartesian_position_test:
     workspace_boundary_topic: /workspace/boundary_markers
     workspace_boundary_frame: base
     workspace_boundary_line_width: 0.005
+    cylinder_cbf_mode: off
+    cylinder_safe_distance: 0.03
+    cylinder_cbf_gain: 5.0
+    cylinder_witness_mode: closest
+    cylinder_witness_topic: /cylinder_collision/witness_markers
     max_cartesian_speed: 0.01
     max_abs_joint_velocity: 0.10
     # Limites efetivos usados pelos perfis complex e challenging.

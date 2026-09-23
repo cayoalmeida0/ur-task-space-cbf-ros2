@@ -47,6 +47,15 @@ def launch_setup(context):
                     # listas YAML como arrays de parametros ROS.
                     "cube_position": LaunchConfiguration("cube_position"),
                     "drop_position": LaunchConfiguration("drop_position"),
+                    "cylinder_position": LaunchConfiguration(
+                        "cylinder_position"
+                    ),
+                    "cylinder_radius": ParameterValue(
+                        LaunchConfiguration("cylinder_radius"), value_type=float
+                    ),
+                    "cylinder_height": ParameterValue(
+                        LaunchConfiguration("cylinder_height"), value_type=float
+                    ),
                     "manipulation_approach_height": ParameterValue(
                         LaunchConfiguration("manipulation_approach_height"),
                         value_type=float,
@@ -66,6 +75,20 @@ def launch_setup(context):
                     ),
                     "workspace_cbf_mode": LaunchConfiguration(
                         "workspace_cbf_mode"
+                    ),
+                    "cylinder_cbf_mode": LaunchConfiguration(
+                        "cylinder_cbf_mode"
+                    ),
+                    "cylinder_safe_distance": ParameterValue(
+                        LaunchConfiguration("cylinder_safe_distance"),
+                        value_type=float,
+                    ),
+                    "cylinder_cbf_gain": ParameterValue(
+                        LaunchConfiguration("cylinder_cbf_gain"),
+                        value_type=float,
+                    ),
+                    "cylinder_witness_mode": LaunchConfiguration(
+                        "cylinder_witness_mode"
                     ),
                     "max_control_duration": ParameterValue(
                         LaunchConfiguration("max_control_duration"),
@@ -161,6 +184,21 @@ def generate_launch_description():
                 ),
             ),
             DeclareLaunchArgument(
+                "cylinder_position",
+                default_value="[-0.35, 0.0]",
+                description="Centro x,y do cilindro no frame da cena.",
+            ),
+            DeclareLaunchArgument(
+                "cylinder_radius",
+                default_value="0.08",
+                description="Raio do cilindro usado pela CBF externa.",
+            ),
+            DeclareLaunchArgument(
+                "cylinder_height",
+                default_value="0.15",
+                description="Altura do cilindro usada pela CBF externa.",
+            ),
+            DeclareLaunchArgument(
                 "manipulation_approach_height",
                 default_value="0.05",
                 description="Altura acima do centro do cubo antes da aproximacao.",
@@ -191,6 +229,28 @@ def generate_launch_description():
                 description=(
                     "Desliga, monitora ou impoe a CBF do envelope cartesiano."
                 ),
+            ),
+            DeclareLaunchArgument(
+                "cylinder_cbf_mode",
+                default_value="off",
+                choices=["off", "monitor", "enforce"],
+                description="CBF para o cilindro da cena.",
+            ),
+            DeclareLaunchArgument(
+                "cylinder_safe_distance",
+                default_value="0.03",
+                description="Margem geométrica para o cilindro.",
+            ),
+            DeclareLaunchArgument(
+                "cylinder_cbf_gain",
+                default_value="5.0",
+                description="Ganho da CBF do cilindro.",
+            ),
+            DeclareLaunchArgument(
+                "cylinder_witness_mode",
+                default_value="closest",
+                choices=["off", "closest", "all"],
+                description="Witness points do cilindro.",
             ),
             DeclareLaunchArgument(
                 "max_control_duration",
