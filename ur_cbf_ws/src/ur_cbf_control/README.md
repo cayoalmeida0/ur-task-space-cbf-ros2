@@ -215,7 +215,7 @@ Os parametros tambem podem ser sobrescritos no proprio launch:
 
 ```bash
 cube_position:="[-0.35,0.0,0.17]" \
-drop_position:="[0.30,0.0]" \
+drop_position:="[-0.15,0.0]" \
 manipulation_object_frame:=base_link
 ```
 
