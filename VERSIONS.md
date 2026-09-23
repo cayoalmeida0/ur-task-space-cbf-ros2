@@ -1,4 +1,6 @@
-## Revisao experimental 0.6.32 / controle 0.6.32 / bringup 0.3.14 — 15 de setembro de 2026
+## Revisao experimental 0.6.33 / controle 0.6.33 / bringup 0.3.14 — 23 de setembro de 2026
+
+- Move a caixa de deposito para x=-0,15 m e y=0 no frame base_link da cena, mantendo-a no mesmo lado do cubo para evitar a transferencia por tras da base.
 
 - Faz a elevacao pos-pega retornar ao mesmo ponto de aproximacao, ambos a 0,05 m acima do centro do cubo.
 
