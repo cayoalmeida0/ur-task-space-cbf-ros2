@@ -80,7 +80,11 @@ representacao vetorial de rotacao, sem singularidade de Euler no controlador.
 
 Com `task_type:=manipulation`, o mesmo QP executa a sequencia física de
 pick-and-place e publica a largura desejada em
-`/finger_width_controller/commands`. O modo `orientation_target_mode:=vertical`
+`/finger_width_controller/commands`. A sequência possui exatamente três alvos:
+`cubo`, `caixa` e `HOME`. O cubo é atingido diretamente, a garra fecha nesse
+alvo, abre na caixa e retorna à pose inicial capturada como HOME. Não há
+waypoints explícitos de aproximação, elevação ou retração; as CBFs continuam
+atuando durante todo o caminho. O modo `orientation_target_mode:=vertical`
 constrói uma orientação cujo eixo `z` do `gripper_tcp` aponta para o piso. A
 posição do cubo é convertida diretamente em alvos cartesianos; não existe uma
 rotina de pré-validação contra o workspace.
@@ -88,7 +92,7 @@ rotina de pré-validação contra o workspace.
 ## CBF de workspace
 
 O envelope axis-aligned visivel em `/workspace/boundary_markers` foi reduzido para
-`x=[-0.45,0.45] m`, `y=[-0.55,0.55] m` e `z=[0.05,0.90] m`. O limite inferior
+`x=[-0.45,0.45] m`, `y=[-0.55,0.55] m` e `z=[0.02,0.90] m`. O limite inferior
 fica próximo ao piso para permitir a futura tarefa mesa--cubo, enquanto as
 direcoes laterais deixam uma margem menor para o manipulador. Os modos `monitor`
 e `enforce` têm o mesmo significado da CBF de autocolisao.
@@ -129,8 +133,8 @@ Use `self_collision_cbf_mode:=monitor` para calcular e registrar a distancia
 minima sem alterar o comando. `enforce` acrescenta todas as linhas ao OSQP e so
 e aceito com `controller_mode:=qp`; `off` e o padrao. O projeto preserva a
 estrutura das 13 primitivas do braco da fabrica UAIbot, aplica os ajustes
-geometricos validados no RViz e substitui a garra generica por dois volumes RG2:
-um cilindro e uma esfera terminal.
+geometricos validados no RViz e preserva os oito objetos originais do elo final
+da RG2: C51/C52, esfera, tres caixas e dois cilindros.
 A mesma lista corrigida e aplicada a `link.col_objects` e exibida pelo Xacro.
 Como o `compute_dist_auto` Python do UAIbot 1.2.7 possui uma incompatibilidade
 de desempacotamento, o avaliador do projeto chama `Utils.compute_dist`
@@ -250,11 +254,13 @@ O cilindro fino `C52` do ultimo elo (`link_5_obj_1`) permanece disponivel para
 visualizacao, mas suas combinacoes de distancia sao excluidas por configuracao
 quando a geometria causa uma restricao artificial durante a aproximacao.
 
-Na tarefa de manipulacao, `manipulation_approach_height` e
-`manipulation_lift_height` controlam, respectivamente, a folga acima do cubo
-antes da descida e a altura de elevacao depois da pega. Os valores padrao desta
-revisao são `0,05 m` e `0,05 m`; cenários específicos podem sobrescrevê-los sem
-alterar a geometria da cena.
+Na tarefa de manipulacao, `manipulation_home_mode:=initial` usa como terceiro
+alvo a pose capturada após a estabilização. Para uma HOME cartesiana explícita,
+use `manipulation_home_mode:=fixed` e forneça
+`manipulation_home_position:=[x,y,z]` no frame `base`. Os parâmetros
+`manipulation_approach_height`, `manipulation_lift_height`,
+`manipulation_drop_approach_height` e `manipulation_retract_height` permanecem
+aceitos por compatibilidade, mas não criam mais waypoints.
 
 Esta revisao suporta o UR3e no adaptador UAIbot. Modelos adicionais devem declarar
 sua fabrica e a ordem de juntas correspondente; a execucao e recusada se o modelo

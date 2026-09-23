@@ -123,11 +123,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        rg2_cbf_volume:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         right_finger_tip:
           Alpha: 1
           Show Axes: false
@@ -217,6 +212,36 @@ Visualization Manager:
           Show Trail: false
           Value: true
         uaibot_c52_cbf_volume:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        uaibot_c53_cbf_volume:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        uaibot_c54_cbf_volume:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        uaibot_c55_cbf_volume:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        uaibot_c56_cbf_volume:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        uaibot_c57_cbf_volume:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        uaibot_c58_cbf_volume:
           Alpha: 1
           Show Axes: false
           Show Trail: false

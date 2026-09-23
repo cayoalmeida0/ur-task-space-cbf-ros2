@@ -103,11 +103,16 @@ class CartesianPositionTest(Node):
         self.declare_parameter("cylinder_position", [-0.35, 0.0])
         self.declare_parameter("cylinder_radius", 0.08)
         self.declare_parameter("cylinder_height", 0.15)
+        # Mantidos para compatibilidade com ensaios antigos. A tarefa de
+        # manipulacao atual usa somente cubo, caixa e HOME, sem aproximacao,
+        # elevacao ou retracao explicitas.
         self.declare_parameter("manipulation_approach_height", 0.05)
         self.declare_parameter("manipulation_lift_height", 0.05)
         self.declare_parameter("manipulation_drop_approach_height", 0.14)
         self.declare_parameter("manipulation_release_height", 0.08)
         self.declare_parameter("manipulation_retract_height", 0.16)
+        self.declare_parameter("manipulation_home_mode", "initial")
+        self.declare_parameter("manipulation_home_position", [0.0, 0.0, 0.40])
         self.declare_parameter("gripper_open_width", 0.08)
         self.declare_parameter("gripper_grasp_width", 0.035)
         self.declare_parameter(
@@ -238,6 +243,13 @@ class CartesianPositionTest(Node):
         self.cylinder_position = self._scene_position_to_base(
             self.cylinder_position_scene
         )
+        self.manipulation_home_mode = str(
+            self.get_parameter("manipulation_home_mode").value
+        ).lower()
+        self.manipulation_home_position = np.asarray(
+            self.get_parameter("manipulation_home_position").value,
+            dtype=float,
+        ).reshape(-1)
         self.cylinder_radius = float(
             self.get_parameter("cylinder_radius").value
         )
@@ -537,7 +549,7 @@ class CartesianPositionTest(Node):
                 f"onrobot_type={self.onrobot_type}; "
                 f"frame={self.controlled_frame}; "
                 f"tarefa={self.task_type}; trajetoria={self.trajectory_profile}; "
-                f"waypoints={len(self.waypoint_offsets)}; "
+                f"waypoints={3 if self.task_type == 'manipulation' else len(self.waypoint_offsets)}; "
                 f"modo={self.controller_mode}; "
                 f"self_collision_cbf={self.self_collision_cbf_mode}; "
                 f"workspace_cbf={self.workspace_cbf_mode}; "
@@ -545,7 +557,7 @@ class CartesianPositionTest(Node):
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.6.37; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.38; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
             if self.task_type == "manipulation":
                 self.get_logger().info(
@@ -628,6 +640,10 @@ class CartesianPositionTest(Node):
             raise ValueError(
                 "manipulation_object_frame deve ser base ou base_link."
             )
+        if self.manipulation_home_mode not in {"initial", "fixed"}:
+            raise ValueError(
+                "manipulation_home_mode deve ser initial ou fixed."
+            )
         if len(self.position_gains) not in {1, 3} or not all(
             math.isfinite(value) and value > 0.0
             for value in self.position_gains
@@ -655,6 +671,12 @@ class CartesianPositionTest(Node):
                 np.isfinite(self.drop_position)
             ):
                 raise ValueError("drop_position deve conter x e y finitos.")
+            if self.manipulation_home_position.size != 3 or not np.all(
+                np.isfinite(self.manipulation_home_position)
+            ):
+                raise ValueError(
+                    "manipulation_home_position deve conter tres valores finitos."
+                )
             for name, value in {
                 "manipulation_approach_height": self.manipulation_approach_height,
                 "manipulation_lift_height": self.manipulation_lift_height,
@@ -941,17 +963,28 @@ class CartesianPositionTest(Node):
         return np.column_stack((x_axis, y_axis, z_axis))
 
     def _manipulation_waypoints(self) -> tuple[np.ndarray, ...]:
-        """Retorna a sequencia fixa de pick-and-place sem teste de factibilidade."""
+        """Retorna somente os alvos semanticos cubo, caixa e HOME.
+
+        O deslocamento entre os alvos e deliberadamente direto. A CBF do
+        cilindro da mesa continua impondo a distancia segura durante esse
+        deslocamento, sem uma pose de aproximacao ou afastamento inserida pelo
+        controlador.
+        """
 
         cube = self.cube_position.copy()
         drop = np.array((self.drop_position[0], self.drop_position[1]), dtype=float)
+        if self.manipulation_home_mode == "initial":
+            if self.initial_position is None:
+                raise NominalControlError(
+                    "A pose inicial deve ser capturada antes de construir HOME."
+                )
+            home = self.initial_position.copy()
+        else:
+            home = self.manipulation_home_position.copy()
         return (
-            cube + np.array((0.0, 0.0, self.manipulation_approach_height)),
             cube.copy(),
-            cube + np.array((0.0, 0.0, self.manipulation_lift_height)),
-            np.array((drop[0], drop[1], self.manipulation_drop_approach_height)),
             np.array((drop[0], drop[1], self.manipulation_release_height)),
-            np.array((drop[0], drop[1], self.manipulation_retract_height)),
+            home,
         )
 
     def _set_gripper_width(self, width: float) -> None:
@@ -1265,7 +1298,7 @@ class CartesianPositionTest(Node):
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.6.37",
+                "control_package": "ur_cbf_control:0.6.38",
                 "controller_mode": self.controller_mode,
                 "self_collision_cbf_mode": self.self_collision_cbf_mode,
                 "self_collision_witness_mode": self.self_collision_witness_mode,
@@ -1375,6 +1408,10 @@ class CartesianPositionTest(Node):
                 "cylinder_cbf_mode": self.cylinder_cbf_mode,
                 "cylinder_safe_distance": self.cylinder_safe_distance,
                 "cylinder_cbf_gain": self.cylinder_cbf_gain,
+                "manipulation_home_mode": self.manipulation_home_mode,
+                "manipulation_home_position": (
+                    self.manipulation_home_position.tolist()
+                ),
                 "manipulation_approach_height": self.manipulation_approach_height,
                 "manipulation_lift_height": self.manipulation_lift_height,
                 "manipulation_drop_approach_height": self.manipulation_drop_approach_height,
@@ -1877,9 +1914,9 @@ class CartesianPositionTest(Node):
             )
             if hold_timing.simulated_limit_reached:
                 if self.task_type == "manipulation":
-                    if self.waypoint_index == 1:
+                    if self.waypoint_index == 0:
                         self._set_gripper_width(self.gripper_grasp_width)
-                    elif self.waypoint_index == 4:
+                    elif self.waypoint_index == 1:
                         self._set_gripper_width(self.gripper_open_width)
                 self._waypoint_arrivals.append(
                     {

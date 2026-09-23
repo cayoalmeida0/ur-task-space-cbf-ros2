@@ -6,16 +6,16 @@ distância diferenciáveis. A mesma interface comanda a planta simulada e o rob�
 real: velocidades articulares em
 `/forward_velocity_controller/commands`.
 
-> **Estado atual — revisão experimental 0.6.37:** infraestrutura Docker `0.2.0`,
-> `ur_cbf_bringup` `0.3.17` e `ur_cbf_control` `0.6.37`. A tarefa completa de
-> manipulação pick-and-place foi concluída em simulação com UR3e e RG2, incluindo
-> aproximação, pega, elevação, transferência, soltura e retração. As CBFs de
-> autocolisão e de fronteira do workspace foram validadas no modo `enforce`.
-> A cena usa mesa de altura `0,15 m`, cubo em `[-0,35, 0, 0,17]` e caixa em
-> `[-0,30, 0,18]`, no frame `base_link`. A aproximação e a elevação ocorrem a
-> `0,05 m` acima do cubo; a soltura ocorre em `z=0,08 m`. O workspace utiliza
-> `z_min=0,02 m` e margem de segurança de `0,05 m`. No perfil `challenging`, os
-> limites são `0,08 m/s` no espaço cartesiano e `0,60 rad/s` nas juntas.
+> **Estado atual — revisão experimental 0.6.38:** infraestrutura Docker `0.2.0`,
+> `ur_cbf_bringup` `0.3.18` e `ur_cbf_control` `0.6.38`. A tarefa de
+> manipulação pick-and-place usa exatamente três alvos cartesianos: cubo,
+> caixa e HOME. Não são inseridos waypoints explícitos de aproximação,
+> elevação ou retração; a CBF do cilindro protege o deslocamento direto até o
+> cubo. As CBFs de autocolisão e de fronteira do workspace permanecem no modo
+> `enforce`. A cena usa mesa de altura `0,15 m`, cubo em `[-0,35, 0, 0,17]` e
+> caixa em `[-0,30, 0,18]`, no frame `base_link`. O HOME padrão é a pose inicial
+> capturada após a estabilização. No perfil `challenging`, os limites são
+> `0,08 m/s` no espaço cartesiano e `0,60 rad/s` nas juntas.
 
 ## Visão geral
 
@@ -52,7 +52,8 @@ flowchart TD
 - witness points de autocolisão e marcadores da fronteira do workspace no RViz;
 - TCP controlado em `gripper_tcp`, no centro dos dedos fechados;
 - watchdogs, comando nulo em falhas e ensaios explicitamente armados;
-- 15 primitivas visuais idênticas ao modelo UAIbot corrigido do projeto;
+- 19 primitivas visuais do modelo UAIbot corrigido, incluindo os oito volumes
+  originais da RG2 no elo final;
 - resultados experimentais em JSON com parâmetros, versões, seed e métricas.
 
 ### Escopo dos modelos
@@ -64,7 +65,7 @@ flowchart TD
 | Adaptador cinemático UAIbot | UR3e implementado e validado |
 | CBF de autocolisão | validada em simulação nos modos `monitor` e `enforce` |
 | CBF de workspace | validada com limite inferior ajustado para a soltura |
-| Volumes visuais para CBF | 13 primitivas UR3e + RG2 simplificada em dois objetos |
+| Volumes visuais para CBF | 13 primitivas UR3e + 8 primitivas UAIbot da RG2 |
 | Hardware real | UR via `ur_robot_driver`; RG2 via driver OnRobot |
 
 Modelos sem adaptador ou geometria explícita são recusados, em vez de receberem
@@ -138,7 +139,7 @@ Para inspecionar o movimento dos volumes visuais em três juntas, mantenha
 make test-cbf-motion
 ```
 
-Para manter os volumes no RViz e ocultá-los somente no Gazebo:
+Os volumes ficam visíveis no RViz e ocultos no Gazebo por padrão:
 
 ```bash
 make down
@@ -166,7 +167,7 @@ ros2 launch ur_cbf_control cartesian_position.launch.py \
   onrobot_type:=rg2 \
   task_type:=manipulation \
   trajectory_profile:=challenging \
-  task_control_mode:=pose \
+  task_control_mode:=position_vertical \
   orientation_target_mode:=vertical \
   controller_mode:=qp \
   self_collision_cbf_mode:=enforce \
@@ -175,8 +176,7 @@ ros2 launch ur_cbf_control cartesian_position.launch.py \
   manipulation_object_frame:=base_link \
   cube_position:="[-0.35, 0.0, 0.17]" \
   drop_position:="[-0.30, 0.18]" \
-  manipulation_approach_height:=0.05 \
-  manipulation_lift_height:=0.05 \
+  manipulation_home_mode:=initial \
   max_control_duration:=120.0 \
   max_wall_control_duration:=600.0 \
   experiment_id:=pick_place_equal_radius_fast_boundary02_001 \
@@ -189,13 +189,15 @@ Para manter os volumes de colisão visíveis no RViz, mas ocultos no Gazebo:
 CBF_VOLUMES=true CBF_VOLUMES_GAZEBO=false make sim
 ```
 
-O ensaio validado conclui os seis waypoints e registra o resultado experimental
-em JSON no diretório `/workspace/results`.
+O ensaio registra três chegadas — cubo, caixa e HOME — no resultado experimental
+em JSON no diretório `/workspace/results`. Ao chegar ao cubo a RG2 fecha; ao
+chegar à caixa ela abre; o terceiro alvo retorna à pose HOME.
 
 ### Três cenários de teste
 
 Os launchers abaixo iniciam a cena Gazebo e o controlador com os parâmetros
-coerentes entre si. Eles usam `task_control_mode:=position_vertical`, portanto a
+coerentes entre si. Cada execução tem somente `cubo -> caixa -> HOME`. Eles usam
+`task_control_mode:=position_vertical`, portanto a
 posição e a inclinação da garra são reguladas, enquanto o yaw permanece livre.
 A mesa é tratada
 como um cilindro de colisão com margem de `0,01 m`; a altura do cubo é sempre
@@ -217,8 +219,9 @@ ros2 launch ur_cbf_bringup manipulation_scenario_03.launch.py
 
 Os resultados registram a menor singularidade `sigma_min` e o maior número de
 condição observados. Nesta revisão a manipulabilidade é critério diagnóstico,
-não uma restrição adicional do QP; isso permite comparar a aproximação livre
-antes de escolher um limiar ou objetivo de postura.
+não uma restrição adicional do QP. A CBF do cilindro é a proteção geométrica
+durante o caminho direto; o cubo é o alvo intencional da pega, não um obstáculo
+proibido.
 
 Para comparar com orientação 6D completamente fixa, use o launcher genérico e
 `task_control_mode:=pose orientation_target_mode:=vertical`. Para a configuração

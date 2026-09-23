@@ -1,4 +1,4 @@
-"""Ensaio base pick-and-place com orientação livre e CBF do cilindro."""
+"""Ensaio base com três alvos diretos e CBF do cilindro."""
 
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
@@ -17,6 +17,7 @@ def generate_launch_description():
         "trajectory_profile": "challenging",
         "task_control_mode": "position_vertical",
         "orientation_target_mode": "vertical",
+        "manipulation_home_mode": "initial",
         "manipulation_object_frame": "base_link",
         "cube_position": "[-0.35, 0.0, 0.17]",
         "drop_position": "[-0.30, 0.18]",

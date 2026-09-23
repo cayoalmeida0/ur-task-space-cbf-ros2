@@ -182,26 +182,33 @@ class UaibotCollisionModelTest(unittest.TestCase):
                 rtol=0.0,
             )
 
-    def test_replaces_generic_gripper_with_two_rg2_volumes(self):
+    def test_replaces_generic_gripper_with_original_like_rg2_volumes(self):
         robot = make_factory_robot()
         configure_ur3e_rg2_project_collision_model(robot, FakeUaibot)
         validate_ur3e_rg2_project_collision_model(robot)
 
-        self.assertEqual(len(UR3E_RG2_PROJECT_PRIMITIVES), 15)
+        self.assertEqual(len(UR3E_RG2_PROJECT_PRIMITIVES), 19)
         self.assertEqual(
             tuple(len(link.col_objects) for link in robot.links),
-            (1, 3, 3, 2, 2, 4),
+            (1, 3, 3, 2, 2, 8),
         )
         distal = robot.links[5].col_objects
         self.assertEqual(
             tuple(type(item[0]).__name__ for item in distal),
-            ("Cylinder", "Cylinder", "Cylinder", "Ball"),
+            ("Cylinder", "Cylinder", "Ball", "Box", "Box", "Box", "Cylinder", "Cylinder"),
         )
-        self.assertAlmostEqual(distal[2][0].radius, 0.048)
-        self.assertAlmostEqual(distal[2][0].height, 0.110)
-        self.assertAlmostEqual(distal[3][0].radius, 0.090)
-        self.assertAlmostEqual(distal[2][1][2, 3], 0.050)
-        self.assertAlmostEqual(distal[3][1][2, 3], 0.165)
+        self.assertAlmostEqual(distal[2][0].radius, 0.05)
+        self.assertAlmostEqual(distal[3][0].width, 0.09)
+        self.assertAlmostEqual(distal[4][0].width, 0.075)
+        self.assertAlmostEqual(distal[5][0].width, 0.075)
+        self.assertAlmostEqual(distal[6][0].radius, 0.021)
+        self.assertAlmostEqual(distal[7][0].radius, 0.021)
+        np.testing.assert_allclose(
+            distal[2][1], np.asarray(UR3E_UAIBOT_PRIMITIVES[13].htm)
+        )
+        np.testing.assert_allclose(
+            distal[7][1], np.asarray(UR3E_UAIBOT_PRIMITIVES[18].htm)
+        )
 
     def test_rejects_changed_factory_primitive_count(self):
         robot = make_factory_robot()

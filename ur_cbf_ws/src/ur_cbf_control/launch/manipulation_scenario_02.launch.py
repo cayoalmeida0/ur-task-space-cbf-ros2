@@ -1,4 +1,4 @@
-"""Ensaio lateral com cilindro mais alto e caixa deslocada."""
+"""Ensaio lateral com três alvos diretos e cilindro mais alto."""
 
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
@@ -17,6 +17,7 @@ def generate_launch_description():
         "trajectory_profile": "challenging",
         "task_control_mode": "position_vertical",
         "orientation_target_mode": "vertical",
+        "manipulation_home_mode": "initial",
         "manipulation_object_frame": "base_link",
         "cube_position": "[-0.28, -0.20, 0.22]",
         "drop_position": "[-0.10, 0.33]",

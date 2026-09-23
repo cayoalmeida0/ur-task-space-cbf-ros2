@@ -47,6 +47,12 @@ def launch_setup(context):
                     # listas YAML como arrays de parametros ROS.
                     "cube_position": LaunchConfiguration("cube_position"),
                     "drop_position": LaunchConfiguration("drop_position"),
+                    "manipulation_home_mode": LaunchConfiguration(
+                        "manipulation_home_mode"
+                    ),
+                    "manipulation_home_position": LaunchConfiguration(
+                        "manipulation_home_position"
+                    ),
                     "cylinder_position": LaunchConfiguration(
                         "cylinder_position"
                     ),
@@ -185,6 +191,21 @@ def generate_launch_description():
                 ),
             ),
             DeclareLaunchArgument(
+                "manipulation_home_mode",
+                default_value="initial",
+                choices=["initial", "fixed"],
+                description=(
+                    "HOME da manipulacao: pose inicial capturada ou posicao fixa em base."
+                ),
+            ),
+            DeclareLaunchArgument(
+                "manipulation_home_position",
+                default_value="[0.0, 0.0, 0.40]",
+                description=(
+                    "Posicao HOME fixa em base quando manipulation_home_mode:=fixed."
+                ),
+            ),
+            DeclareLaunchArgument(
                 "cylinder_position",
                 default_value="[-0.35, 0.0]",
                 description="Centro x,y do cilindro no frame da cena.",
@@ -202,12 +223,16 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "manipulation_approach_height",
                 default_value="0.05",
-                description="Altura acima do centro do cubo antes da aproximacao.",
+                description=(
+                    "Legado: mantido por compatibilidade, nao cria waypoint."
+                ),
             ),
             DeclareLaunchArgument(
                 "manipulation_lift_height",
                 default_value="0.05",
-                description="Altura acima do centro do cubo apos a pega.",
+                description=(
+                    "Legado: mantido por compatibilidade, nao cria waypoint."
+                ),
             ),
             DeclareLaunchArgument(
                 "self_collision_cbf_mode",

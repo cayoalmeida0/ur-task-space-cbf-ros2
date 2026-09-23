@@ -33,12 +33,17 @@ cartesian_position_test:
     cylinder_position: [-0.35, 0.0]
     cylinder_radius: 0.08
     cylinder_height: 0.15
-    # Folga vertical adicional para passar sobre a mesa antes da descida.
+    # Compatibilidade com ensaios antigos; a manipulacao atual nao cria
+    # waypoints de aproximacao, elevacao ou retracao.
     manipulation_approach_height: 0.05
     manipulation_lift_height: 0.05
     manipulation_drop_approach_height: 0.14
     manipulation_release_height: 0.08
     manipulation_retract_height: 0.16
+    # HOME usa a pose inicial capturada apos a estabilizacao. O modo fixed
+    # permite sobrescrever com uma posicao expressa no frame base.
+    manipulation_home_mode: initial
+    manipulation_home_position: [0.0, 0.0, 0.40]
     gripper_open_width: 0.08
     gripper_grasp_width: 0.035
     gripper_width_topic: /finger_width_controller/commands

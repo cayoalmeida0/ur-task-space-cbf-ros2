@@ -1,4 +1,4 @@
-"""Ensaio diagonal com cilindro alto e maior deslocamento de transporte."""
+"""Ensaio diagonal com três alvos diretos e cilindro alto."""
 
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
@@ -17,6 +17,7 @@ def generate_launch_description():
         "trajectory_profile": "challenging",
         "task_control_mode": "position_vertical",
         "orientation_target_mode": "vertical",
+        "manipulation_home_mode": "initial",
         "manipulation_object_frame": "base_link",
         "cube_position": "[-0.18, 0.26, 0.27]",
         "drop_position": "[0.16, -0.27]",

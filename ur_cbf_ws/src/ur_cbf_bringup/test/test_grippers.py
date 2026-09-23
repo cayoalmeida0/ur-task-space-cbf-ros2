@@ -154,10 +154,10 @@ def test_cbf_visual_volumes_use_project_model_and_remain_visual_only():
     assert root.tag == "robot"
     assert "<collision" not in text
     assert "<inertial" not in text
-    assert text.count("<xacro:cbf_sphere_visual") == 1
-    assert text.count("<xacro:cbf_cylinder_visual") == 12
-    assert "cbf_box_visual" not in text
-    assert "cbf_cylinder_sphere_visual" in text
+    assert text.count("<xacro:cbf_sphere_visual") == 2
+    assert text.count("<xacro:cbf_cylinder_visual") == 14
+    assert text.count("<xacro:cbf_box_visual") == 3
+    assert "cbf_cylinder_sphere_visual" not in text
     assert "1acb5ed637738aca4ea05945e6c065c3757bc13d" in text
     assert "<visibility_flags>" not in text
     assert "gazebo_visible" not in text
@@ -173,7 +173,7 @@ def test_cbf_visual_volumes_use_project_model_and_remain_visual_only():
 
     for object_name in (
         "c0", "c11", "c12", "c13", "c21", "c22", "c23", "c31", "c32",
-        "c41", "c42", "c51", "c52",
+        "c41", "c42", "c51", "c52", "c53", "c54", "c55", "c56", "c57", "c58",
     ):
         assert f'name="${{prefix}}uaibot_{object_name}"' in text
 
@@ -193,6 +193,7 @@ def test_uaibot_visual_primitives_preserve_converted_origins_and_sizes():
         if element.tag in {
             f"{namespace}cbf_sphere_visual",
             f"{namespace}cbf_cylinder_visual",
+            f"{namespace}cbf_box_visual",
         }
     }
     expected = {
@@ -209,6 +210,12 @@ def test_uaibot_visual_primitives_preserve_converted_origins_and_sizes():
         "c42": ("cylinder", "wrist_2_link", "0 0 0", "1.570796326795 1.570796326795 0", "0.038", "0.098"),
         "c51": ("cylinder", "wrist_3_link", "0 0 -0.02", "3.14159265359 0 1.570796326795", "0.038", "0.046"),
         "c52": ("cylinder", "wrist_3_link", "0.0011 -0.026 -0.03", "1.570796326795 1.570796326795 0", "0.01", "0.028"),
+        "c53": ("sphere", "wrist_3_link", "0.0011 0.004 0.0279", None, "0.05", None),
+        "c54": ("box", "wrist_3_link", "0.0011 -0.006 0.1079", "0 1.570796326795 0", "0.09 0.07 0.06", None),
+        "c55": ("box", "wrist_3_link", "-0.0389 -0.001 0.1529", "1.570796326795 0.785398163397 0", "0.075 0.04 0.035", None),
+        "c56": ("box", "wrist_3_link", "0.0411 -0.001 0.1529", "-1.570796326795 0.785398163397 3.14159265359", "0.075 0.04 0.035", None),
+        "c57": ("cylinder", "wrist_3_link", "0.0511 -0.001 0.1979", "3.14159265359 0 1.570796326795", "0.021", "0.04"),
+        "c58": ("cylinder", "wrist_3_link", "-0.0489 -0.001 0.1979", "3.14159265359 0 1.570796326795", "0.021", "0.04"),
     }
 
     assert set(calls) == set(expected)
@@ -342,18 +349,18 @@ def test_rg2_uses_project_volumes_and_rg6_remains_without_unvalidated_tool_volum
     assert "rg2_cbf_visual_volume" not in rg6
 
 
-def test_rg2_two_volume_model_matches_project_dimensions():
+def test_rg2_original_like_model_matches_project_dimensions():
     volumes = (PACKAGE_ROOT / "urdf" / "cbf_visual_volumes.urdf.xacro").read_text(
         encoding="utf-8"
     )
 
-    assert 'parent="${prefix}onrobot_base_link"' in volumes
-    assert 'center="0 0 0.050"' in volumes
-    assert 'sphere_center="0 0 0.165"' in volumes
-    assert 'cylinder_radius="0.048" sphere_radius="0.090"' in volumes
-    assert 'length="0.110"' in volumes
-    assert "cbf_cap_a" not in volumes
-    assert "cbf_cap_b" not in volumes
+    assert volumes.count('parent="${prefix}wrist_3_link"') == 6
+    assert 'xyz="0.0011 0.004 0.0279" radius="0.05"' in volumes
+    assert 'size="0.09 0.07 0.06"' in volumes
+    assert 'size="0.075 0.04 0.035"' in volumes
+    assert 'radius="0.021" length="0.04"' in volumes
+    assert "rg2_cbf_visual_volume" in volumes
+    assert "onrobot_base_link" not in volumes.split('name="rg2_cbf_visual_volume"', 1)[-1]
 
 
 def test_cbf_visual_volumes_can_be_toggled_without_editing_env():
@@ -384,6 +391,15 @@ def test_cbf_visual_volumes_can_be_toggled_without_editing_env():
     assert '"-string",\n            gazebo_description_content,' in simulation_launch
     assert 'FindPackageShare("ur_cbf_bringup")' in simulation_launch
     assert '"ur_cbf.rviz"' in simulation_launch
+
+
+def test_manipulation_scenarios_keep_volumes_hidden_in_gazebo():
+    for scenario in ("01", "02", "03"):
+        launch = (
+            PACKAGE_ROOT / "launch" / f"manipulation_scenario_{scenario}.launch.py"
+        ).read_text(encoding="utf-8")
+        assert '"show_cbf_volumes": "true"' in launch
+        assert '"show_cbf_volumes_gazebo": "false"' in launch
 
 
 @pytest.mark.parametrize(

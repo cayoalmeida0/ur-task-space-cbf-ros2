@@ -23,6 +23,8 @@ def generate_launch_description():
                     "table_radius": "0.08", "table_height": "0.15",
                     "cube_x": "-0.35", "cube_y": "0.0",
                     "drop_x": "-0.30", "drop_y": "0.18",
+                    "show_cbf_volumes": "true",
+                    "show_cbf_volumes_gazebo": "false",
                 }.items(),
             ),
             IncludeLaunchDescription(PythonLaunchDescriptionSource(controller)),

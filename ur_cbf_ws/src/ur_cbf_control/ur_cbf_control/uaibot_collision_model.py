@@ -12,7 +12,7 @@ UAIBOT_FACTORY_GEOMETRY_SOURCE = (
     "uaibot/robot/_create_ur_ur3e.py"
 )
 PROJECT_GEOMETRY_SOURCE = (
-    "ur-task-space-cbf-ros2@0.6.14:"
+    "ur-task-space-cbf-ros2@0.6.38:"
     "ur_cbf_control/uaibot_collision_model.py#UR3E_RG2_PROJECT_PRIMITIVES"
 )
 
@@ -103,15 +103,6 @@ UR3E_UAIBOT_PRIMITIVES = (
 )
 
 
-def _translation(z: float):
-    return _matrix(
-        (1, 0, 0, 0),
-        (0, 1, 0, 0),
-        (0, 0, 1, z),
-        (0, 0, 0, 1),
-    )
-
-
 def _with_translation_component(
     spec: UaibotPrimitiveSpec,
     axis: int,
@@ -126,11 +117,11 @@ def _with_translation_component(
     return replace(spec, htm=tuple(tuple(row) for row in rows))
 
 
-# As 13 primitivas partem da fabrica UAIbot fixada. Os ajustes abaixo sao feitos
+# As primitivas do braco partem da fabrica UAIbot fixada. Os ajustes abaixo sao feitos
 # nas coordenadas DH; em c31/c32, z_DH controla -y_URDF e y_DH controla z_URDF
 # por causa de Rx(pi/2). Em c41/c42, y_DH controla -z_URDF por causa de
-# Rx(-pi/2). A tabela original permanece separada para validar o wheel antes da
-# troca da garra pelos dois volumes simplificados da RG2.
+# Rx(-pi/2). A RG2 reutiliza os oito objetos originais do elo 5 do UAIbot, sem
+# substituir a garra por uma capsula conservadora unica.
 UR3E_RG2_PROJECT_PRIMITIVES = (
     replace(UR3E_UAIBOT_PRIMITIVES[0]),
     _with_translation_component(UR3E_UAIBOT_PRIMITIVES[1], 2, 0.115),
@@ -183,9 +174,8 @@ UR3E_RG2_PROJECT_PRIMITIVES = (
         2,
         -0.03,
     ),
-    # Dois volumes RG2 substituem os seis objetos da garra generica UAIbot.
-    UaibotPrimitiveSpec(5, 2, "Cylinder", _translation(0.050), (0.048, 0.110)),
-    UaibotPrimitiveSpec(5, 3, "Ball", _translation(0.165), (0.090,)),
+    # Objetos 2..7: geometria original da garra UAIbot, preservada para a RG2.
+    *(replace(spec) for spec in UR3E_UAIBOT_PRIMITIVES[13:]),
 )
 
 
@@ -281,7 +271,7 @@ def validate_ur3e_rg2_project_collision_model(robot: Any) -> None:
     _validate_collision_model(
         robot,
         specs=UR3E_RG2_PROJECT_PRIMITIVES,
-        expected_counts=(1, 3, 3, 2, 2, 4),
+        expected_counts=(1, 3, 3, 2, 2, 8),
         label="UR3e/RG2 do projeto",
     )
 

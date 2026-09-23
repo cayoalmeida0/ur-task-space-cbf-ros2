@@ -1,3 +1,20 @@
+## Revisao experimental 0.6.38 / controle 0.6.38 / bringup 0.3.18 — 23 de setembro de 2026
+
+- Reduz a tarefa de manipulacao a tres waypoints semanticos: cubo, caixa e
+  HOME. O controlador vai diretamente ao cubo; a CBF do cilindro continua
+  protegendo os volumes do robo sem inserir aproximacao, elevacao ou retracao.
+- Define HOME como a pose inicial capturada apos a estabilizacao por padrao e
+  adiciona a opcao de uma posicao fixa no frame `base`.
+- Restaura para a RG2 os oito objetos do elo final da geometria original do
+  UAIbot (C51/C52, esfera, tres caixas e dois cilindros), mantendo as correcoes
+  geometricas ja validadas nos treze objetos do braco. O conjunto passa a ter
+  19 primitivas sincronizadas entre UAIbot, RViz e CBF.
+- Remove o link visual simplificado da RG2 do arquivo RViz e cadastra os seis
+  objetos adicionais da garra para evitar referências obsoletas no
+  `RobotModel`.
+- Fixa `show_cbf_volumes_gazebo=false` nos três launchers integrados; os volumes
+  continuam publicados no `robot_description` do RViz e ocultos no Gazebo.
+
 ## Revisao experimental 0.6.37 / controle 0.6.37 / bringup 0.3.17 — 23 de setembro de 2026
 
 - Adiciona `task_control_mode:=position_vertical`, que controla a posição e a

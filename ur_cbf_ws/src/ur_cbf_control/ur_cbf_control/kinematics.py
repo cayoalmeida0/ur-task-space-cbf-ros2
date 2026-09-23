@@ -386,7 +386,7 @@ class UaibotKinematics:
                 radius=radius,
                 height=height,
                 geometry_source=(
-                    "ur-task-space-cbf-ros2@0.6.37:"
+                    "ur-task-space-cbf-ros2@0.6.38:"
                     "ur_cbf_control/cylinder_obstacle_cbf.py"
                 ),
             )
