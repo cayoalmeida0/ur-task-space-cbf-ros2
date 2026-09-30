@@ -136,14 +136,19 @@ margem adicional `cube_safe_distance` aparecem no RViz em
 `/cube_collision/obstacle_marker`; os witness points são publicados em
 `/cube_collision/witness_markers`.
 
-Por padrão, `link_5_obj_6` e `link_5_obj_7` — os cilindros das pontas das
-falanges da RG2 — são os únicos pares que podem ser excluídos da CBF do cubo.
+O volume da mesa também é publicado no RViz em
+`/table_collision/obstacle_marker`; a caixa aberta de deposito aparece como
+volume visual em `/drop_box/obstacle_marker`. Esses dois marcadores são
+independentes do modo da CBF e usam o frame configurado para a cena.
+
+Por padrão, `link_5_obj_4` a `link_5_obj_7` — os quatro volumes móveis das
+falanges e pontas da RG2 — são os pares que podem ser excluídos da CBF do cubo.
 Essa exclusão fica desativada durante toda a aproximação e é liberada somente
 quando o erro de posição do TCP para o alvo fica abaixo de
 `cube_cbf_contact_activation_distance` (padrão `0,06 m`). A palma, os punhos e
-as caixas das falanges continuam sujeitos à restrição. A lista pode ser
-alterada por `cube_cbf_excluded_pairs` quando outra ferramenta ou estratégia de
-contato for avaliada.
+o braço continuam sujeitos à restrição. A lista pode ser alterada por
+`cube_cbf_excluded_pairs` quando outra ferramenta ou estratégia de contato for
+avaliada.
 
 ## CBF de autocolisao
 

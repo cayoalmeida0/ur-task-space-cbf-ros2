@@ -141,10 +141,11 @@ O controlador de manipulação executa somente três waypoints cartesianos:
 elevação ou retração. Nos três launchers integrados, a mesa e o cubo são CBFs
 externas em `enforce`; a CBF do cubo é avaliada por uma distância assinada à
 superfície axis-aligned, dilatada pelo raio conservador de cada primitiva do
-robô. As pontas cilíndricas da RG2 ficam excluídas apenas dessa CBF para
-permitir o contato final intencional da pega.
+robô. Os quatro volumes móveis da RG2 ficam protegidos durante a aproximação e
+são excluídos apenas na janela final de contato, quando o TCP já está a menos
+de `0,06 m` do alvo; palma, punho e braço continuam protegidos.
 
-### Volume do cubo e witness points
+### Volumes da cena e witness points
 
 Quando `cube_cbf_mode` está em `monitor` ou `enforce`, o controlador publica a
 caixa física e sua margem adicional no tópico
@@ -153,6 +154,13 @@ publicado em `/cube_collision/witness_markers`; ambos já estão configurados
 como `MarkerArray` no RViz. O marcador é expresso no frame DH `base`, enquanto
 `cube_position` continua sendo fornecido no frame da cena indicado por
 `manipulation_object_frame`.
+
+A geometria da mesa é publicada como cilindro em
+`/table_collision/obstacle_marker`, e a caixa aberta de deposito é mostrada
+como volume axis-aligned em `/drop_box/obstacle_marker`. Esses marcadores são
+publicados durante o waypoint de controle mesmo quando as respectivas CBFs
+estão em `off`; a caixa é visual nesta revisão, enquanto as restrições do QP
+continuam sendo as da mesa e do cubo.
 
 Para observar a CBF sem alterar o comando nominal, use `monitor`. Para ativá-la
 no QP, use `enforce` com `controller_mode:=qp`:

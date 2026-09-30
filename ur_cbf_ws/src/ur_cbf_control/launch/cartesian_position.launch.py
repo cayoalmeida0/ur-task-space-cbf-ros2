@@ -66,6 +66,15 @@ def launch_setup(context):
                     "cylinder_height": ParameterValue(
                         LaunchConfiguration("cylinder_height"), value_type=float
                     ),
+                    "drop_box_size": LaunchConfiguration("drop_box_size"),
+                    "drop_box_center_z": ParameterValue(
+                        LaunchConfiguration("drop_box_center_z"),
+                        value_type=float,
+                    ),
+                    "drop_box_safe_distance": ParameterValue(
+                        LaunchConfiguration("drop_box_safe_distance"),
+                        value_type=float,
+                    ),
                     "manipulation_approach_height": ParameterValue(
                         LaunchConfiguration("manipulation_approach_height"),
                         value_type=float,
@@ -100,6 +109,12 @@ def launch_setup(context):
                     "cylinder_witness_mode": LaunchConfiguration(
                         "cylinder_witness_mode"
                     ),
+                    "cylinder_obstacle_topic": LaunchConfiguration(
+                        "cylinder_obstacle_topic"
+                    ),
+                    "cylinder_obstacle_frame": LaunchConfiguration(
+                        "cylinder_obstacle_frame"
+                    ),
                     "cube_size": ParameterValue(
                         LaunchConfiguration("cube_size"), value_type=float
                     ),
@@ -132,6 +147,12 @@ def launch_setup(context):
                     ),
                     "cube_obstacle_frame": LaunchConfiguration(
                         "cube_obstacle_frame"
+                    ),
+                    "drop_box_obstacle_topic": LaunchConfiguration(
+                        "drop_box_obstacle_topic"
+                    ),
+                    "drop_box_obstacle_frame": LaunchConfiguration(
+                        "drop_box_obstacle_frame"
                     ),
                     "max_control_duration": ParameterValue(
                         LaunchConfiguration("max_control_duration"),
@@ -269,6 +290,21 @@ def generate_launch_description():
                 description="Altura do cilindro usada pela CBF externa.",
             ),
             DeclareLaunchArgument(
+                "drop_box_size",
+                default_value="[0.08, 0.08, 0.04]",
+                description="Dimensoes [x,y,z] da caixa mostrada no RViz.",
+            ),
+            DeclareLaunchArgument(
+                "drop_box_center_z",
+                default_value="0.02",
+                description="Altura do centro da caixa no frame base.",
+            ),
+            DeclareLaunchArgument(
+                "drop_box_safe_distance",
+                default_value="0.005",
+                description="Margem visual adicional da caixa no RViz.",
+            ),
+            DeclareLaunchArgument(
                 "manipulation_approach_height",
                 default_value="0.05",
                 description=(
@@ -327,6 +363,16 @@ def generate_launch_description():
                 description="Witness points do cilindro.",
             ),
             DeclareLaunchArgument(
+                "cylinder_obstacle_topic",
+                default_value="/table_collision/obstacle_marker",
+                description="Topico do volume da mesa no RViz.",
+            ),
+            DeclareLaunchArgument(
+                "cylinder_obstacle_frame",
+                default_value="base",
+                description="Frame do volume da mesa no RViz.",
+            ),
+            DeclareLaunchArgument(
                 "cube_size",
                 default_value="0.04",
                 description="Aresta do cubo usada pela CBF externa.",
@@ -357,9 +403,12 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "cube_cbf_excluded_pairs",
-                default_value="['link_5_obj_6', 'link_5_obj_7']",
+                default_value=(
+                    "['link_5_obj_4', 'link_5_obj_5', "
+                    "'link_5_obj_6', 'link_5_obj_7']"
+                ),
                 description=(
-                    "Primitivas permitidas para contato intencional com o cubo."
+                    "Volumes móveis da RG2 permitidos no contato final com o cubo."
                 ),
             ),
             DeclareLaunchArgument(
@@ -382,6 +431,16 @@ def generate_launch_description():
                 "cube_obstacle_frame",
                 default_value="base",
                 description="Frame do volume do cubo no RViz.",
+            ),
+            DeclareLaunchArgument(
+                "drop_box_obstacle_topic",
+                default_value="/drop_box/obstacle_marker",
+                description="Topico do volume da caixa no RViz.",
+            ),
+            DeclareLaunchArgument(
+                "drop_box_obstacle_frame",
+                default_value="base",
+                description="Frame do volume da caixa no RViz.",
             ),
             DeclareLaunchArgument(
                 "max_control_duration",

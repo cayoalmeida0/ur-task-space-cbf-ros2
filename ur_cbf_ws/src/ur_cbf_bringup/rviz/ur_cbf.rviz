@@ -316,6 +316,30 @@ Visualization Manager:
       Value: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
+      Name: TableCbfVolume
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /table_collision/obstacle_marker
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: DropBoxVolume
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /drop_box/obstacle_marker
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
       Name: CubeCbfVolume
       Namespaces:
         {}

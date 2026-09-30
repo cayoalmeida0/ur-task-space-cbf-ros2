@@ -37,6 +37,11 @@ cartesian_position_test:
     cylinder_radius: 0.08
     cylinder_height: 0.15
     cube_size: 0.04
+    # Geometria visual da caixa aberta no RViz; o volume e apenas marcador,
+    # pois a CBF diferencial da tarefa ainda protege mesa e cubo.
+    drop_box_size: [0.08, 0.08, 0.04]
+    drop_box_center_z: 0.02
+    drop_box_safe_distance: 0.005
     # Compatibilidade com ensaios antigos; a manipulacao atual nao cria
     # waypoints de aproximacao, elevacao ou retracao.
     manipulation_approach_height: 0.05
@@ -101,20 +106,26 @@ cartesian_position_test:
     cylinder_cbf_gain: 5.0
     cylinder_witness_mode: closest
     cylinder_witness_topic: /cylinder_collision/witness_markers
-    # A CBF do cubo protege a aproximacao direta. As pontas permanecem
-    # protegidas durante a aproximacao e so sao excluidas na janela final de
-    # contato, proxima do alvo do cubo.
+    cylinder_obstacle_topic: /table_collision/obstacle_marker
+    cylinder_obstacle_frame: base
+    # A CBF do cubo protege a aproximacao direta. Os quatro volumes moveis da
+    # RG2 permanecem protegidos durante a aproximacao e so sao excluidos na
+    # janela final de contato, proxima do alvo do cubo.
     cube_cbf_mode: off
     cube_safe_distance: 0.005
     cube_cbf_gain: 5.0
     cube_cbf_contact_activation_distance: 0.06
     cube_cbf_excluded_pairs:
+      - link_5_obj_4
+      - link_5_obj_5
       - link_5_obj_6
       - link_5_obj_7
     cube_witness_mode: closest
     cube_witness_topic: /cube_collision/witness_markers
     cube_obstacle_topic: /cube_collision/obstacle_marker
     cube_obstacle_frame: base
+    drop_box_obstacle_topic: /drop_box/obstacle_marker
+    drop_box_obstacle_frame: base
     max_cartesian_speed: 0.01
     max_abs_joint_velocity: 0.10
     # Limites efetivos usados pelos perfis complex e challenging.

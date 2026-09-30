@@ -7,9 +7,10 @@ distancia assinada entre o centro dessa esfera e a caixa, subtraindo o raio da
 esfera, fornece a restricao diferencial
 ``J_d qdot >= -gamma (d - d_safe)``.
 
-As duas primitivas cilindricas das pontas da RG2 podem ser excluidas por
-configuracao, pois o contato lateral dessas pontas com o cubo e intencional na
-pega. A palma, os punhos e as caixas das falanges continuam protegidos.
+Os quatro volumes móveis das falanges e pontas da RG2 podem ser excluidos por
+configuracao somente na janela final, pois o contato lateral dessas partes com
+o cubo e intencional na pega. A palma, os punhos e o braço continuam
+protegidos.
 """
 
 from dataclasses import dataclass

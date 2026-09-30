@@ -117,3 +117,88 @@ def build_box_obstacle_marker_array(
         )
         markers.markers.append(shell)
     return markers
+
+
+def build_cylinder_obstacle_marker_array(
+    center_xy: Sequence[float],
+    radius: float,
+    height: float,
+    *,
+    safe_distance: float,
+    frame_id: str,
+    stamp: Any,
+    namespace: str = "table_cbf_obstacle",
+) -> MarkerArray:
+    """Cria o cilindro fisico e a margem da CBF para o RViz.
+
+    O cilindro da cena tem a base em ``z=0``. A margem adicional e desenhada
+    como um segundo cilindro transparente, dilatado radialmente e nas tampas,
+    para que a geometria exibida corresponda ao ``safe_distance`` da CBF.
+    """
+
+    center_array = np.asarray(center_xy, dtype=float).reshape(-1)
+    if center_array.size != 2 or not np.all(np.isfinite(center_array)):
+        raise ValueError("center_xy deve conter dois valores finitos.")
+    if not np.isfinite(radius) or radius <= 0.0:
+        raise ValueError("radius deve ser finito e positivo.")
+    if not np.isfinite(height) or height <= 0.0:
+        raise ValueError("height deve ser finito e positivo.")
+    if not np.isfinite(safe_distance) or safe_distance < 0.0:
+        raise ValueError("safe_distance deve ser finita e nao negativa.")
+    if not str(frame_id).strip():
+        raise ValueError("frame_id nao pode ser vazio.")
+    if not str(namespace).strip():
+        raise ValueError("namespace nao pode ser vazio.")
+
+    markers = MarkerArray()
+    clear = Marker()
+    clear.action = Marker.DELETEALL
+    markers.markers.append(clear)
+
+    cylinder = Marker()
+    cylinder.header.frame_id = str(frame_id)
+    cylinder.header.stamp = stamp
+    cylinder.ns = str(namespace)
+    cylinder.id = 0
+    cylinder.type = Marker.CYLINDER
+    cylinder.action = Marker.ADD
+    cylinder.pose.position.x = float(center_array[0])
+    cylinder.pose.position.y = float(center_array[1])
+    cylinder.pose.position.z = 0.5 * float(height)
+    cylinder.pose.orientation.w = 1.0
+    cylinder.scale.x = 2.0 * float(radius)
+    cylinder.scale.y = 2.0 * float(radius)
+    cylinder.scale.z = float(height)
+    cylinder.color = ColorRGBA()
+    cylinder.color.r, cylinder.color.g, cylinder.color.b, cylinder.color.a = (
+        0.15,
+        0.45,
+        1.0,
+        0.24,
+    )
+    markers.markers.append(cylinder)
+
+    if safe_distance > 0.0:
+        shell = Marker()
+        shell.header.frame_id = str(frame_id)
+        shell.header.stamp = stamp
+        shell.ns = f"{namespace}_safe_margin"
+        shell.id = 1
+        shell.type = Marker.CYLINDER
+        shell.action = Marker.ADD
+        shell.pose.position.x = float(center_array[0])
+        shell.pose.position.y = float(center_array[1])
+        shell.pose.position.z = 0.5 * float(height)
+        shell.pose.orientation.w = 1.0
+        shell.scale.x = 2.0 * (float(radius) + float(safe_distance))
+        shell.scale.y = 2.0 * (float(radius) + float(safe_distance))
+        shell.scale.z = float(height) + 2.0 * float(safe_distance)
+        shell.color = ColorRGBA()
+        shell.color.r, shell.color.g, shell.color.b, shell.color.a = (
+            1.0,
+            0.85,
+            0.0,
+            0.13,
+        )
+        markers.markers.append(shell)
+    return markers

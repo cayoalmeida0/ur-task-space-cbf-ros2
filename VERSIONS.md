@@ -1,3 +1,15 @@
+## Revisao experimental 0.6.42 / controle 0.6.42 / bringup 0.3.22 — 30 de setembro de 2026
+
+- Ajusta a janela final da CBF do cubo para liberar C55--C58, os quatro
+  volumes móveis da RG2, permitindo que a garra alcance a pose de pega sem
+  remover a proteção da palma, dos punhos e do braço durante a aproximação.
+- Mantém a interrupção em caso de penetração antes da janela de contato e
+  registra a separação entre contato permitido e proteção do obstáculo.
+- Publica no RViz a mesa em `/table_collision/obstacle_marker` e a caixa de
+  deposito em `/drop_box/obstacle_marker`, além dos markers já existentes do
+  cubo e dos witness points.
+- Atualiza o resultado experimental para o esquema `2.0`.
+
 ## Revisao experimental 0.6.41 / controle 0.6.41 / bringup 0.3.21 — 30 de setembro de 2026
 
 - Substitui o deslocamento linear dos volumes C55--C58 pela cadeia cinemática
