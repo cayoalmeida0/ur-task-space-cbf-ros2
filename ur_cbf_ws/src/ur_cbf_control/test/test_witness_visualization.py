@@ -6,6 +6,7 @@ from visualization_msgs.msg import Marker
 
 from ur_cbf_control.self_collision_cbf import formulate_self_collision_cbf
 from ur_cbf_control.self_collision_cbf import SelfCollisionDistances
+from ur_cbf_control.witness_visualization import build_single_witness_marker_array
 from ur_cbf_control.witness_visualization import build_witness_marker_array
 
 
@@ -66,6 +67,20 @@ class WitnessVisualizationTest(unittest.TestCase):
 
         self.assertEqual(len(result.markers), 1)
         self.assertEqual(result.markers[0].action, Marker.DELETEALL)
+
+    def test_single_witness_has_a_dedicated_namespace(self):
+        result = build_single_witness_marker_array(
+            [0.0, 0.0, 0.0],
+            [0.2, 0.0, 0.0],
+            frame_id="base",
+            stamp=Time(),
+            namespace="workspace_boundary_distance",
+        )
+
+        self.assertEqual(len(result.markers), 3)
+        self.assertEqual(result.markers[1].ns, "workspace_boundary_distance_line")
+        self.assertEqual(result.markers[2].ns, "workspace_boundary_distance_points")
+        self.assertEqual(len(result.markers[1].points), 2)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-## Revisao experimental 0.6.42 / controle 0.6.42 / bringup 0.3.22 — 30 de setembro de 2026
+## Revisao experimental 0.6.43 / controle 0.6.43 / bringup 0.3.23 — 30 de setembro de 2026
 
 - Ajusta a janela final da CBF do cubo para liberar C55--C58, os quatro
   volumes móveis da RG2, permitindo que a garra alcance a pose de pega sem
@@ -8,6 +8,13 @@
 - Publica no RViz a mesa em `/table_collision/obstacle_marker` e a caixa de
   deposito em `/drop_box/obstacle_marker`, além dos markers já existentes do
   cubo e dos witness points.
+- Adiciona `PosePublisher` ao modelo dinamico `manipulation_cube` e faz a ponte
+  de `/model/manipulation_cube/pose` para o controlador, mantendo o marcador e
+  a CBF do cubo sincronizados depois da captura.
+- Separa os witness points por relacao: autocolisao, mesa, cubo, fronteira e
+  caixa. A caixa publica somente diagnostico monitor-only, sem bloquear o
+  waypoint de colocacao.
+- Atualiza as configuracoes RViz com os novos displays de fronteira e caixa.
 - Atualiza o resultado experimental para o esquema `2.0`.
 
 ## Revisao experimental 0.6.41 / controle 0.6.41 / bringup 0.3.21 — 30 de setembro de 2026

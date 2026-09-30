@@ -60,6 +60,34 @@ class WorkspaceBoundaryCbfConstraints:
         }
 
 
+def closest_workspace_boundary_witness(
+    constraints: WorkspaceBoundaryCbfConstraints,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Retorna o efetuador e a projecao no plano de barreira mais proximo.
+
+    As coordenadas laterais sao projetadas no envelope seguro. Assim a linha
+    exibida representa a mesma distancia cartesiana usada pela barreira
+    selecionada, e nao uma diagonal ate um vertice arbitrario.
+    """
+
+    position = np.asarray(constraints.position, dtype=float).reshape(-1)
+    bounds = np.asarray(constraints.bounds, dtype=float)
+    barriers = np.asarray(constraints.barrier_values, dtype=float).reshape(-1)
+    if position.size != 3 or bounds.shape != (3, 2) or barriers.size != 6:
+        raise WorkspaceBoundaryCbfError(
+            "constraints possui dimensoes invalidas para um witness de fronteira."
+        )
+    safe_lower = bounds[:, 0] + float(constraints.safety_margin)
+    safe_upper = bounds[:, 1] - float(constraints.safety_margin)
+    projected = np.clip(position, safe_lower, safe_upper)
+    candidates = np.tile(projected, (6, 1))
+    for axis in range(3):
+        candidates[2 * axis, axis] = safe_lower[axis]
+        candidates[2 * axis + 1, axis] = safe_upper[axis]
+    closest = int(np.argmin(barriers))
+    return position.copy(), candidates[closest].copy()
+
+
 def _validate_inputs(
     position: Sequence[float],
     translational_jacobian: Sequence[Sequence[float]],

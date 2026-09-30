@@ -280,6 +280,14 @@ def launch_setup(context):
         arguments=["/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"],
         output="screen",
     )
+    cube_pose_bridge = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        arguments=[
+            "/model/manipulation_cube/pose@geometry_msgs/msg/PoseStamped[gz.msgs.Pose"
+        ],
+        output="screen",
+    )
 
     gripper_controller_spawner = Node(
         package="controller_manager",
@@ -310,6 +318,7 @@ def launch_setup(context):
         gazebo,
         spawn_robot,
         clock_bridge,
+        cube_pose_bridge,
         gripper_controller_spawner,
         gripper_width_adapter,
     ]

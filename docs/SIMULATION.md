@@ -127,6 +127,8 @@ e `z=[0,02; 0,90] m`, com margem de segurança de `0,05 m`; os parâmetros podem
 ser alterados em `ur_cbf_control/config/cartesian_position.yaml`. Para impor as
 seis restrições no QP, acrescente `workspace_cbf_mode:=enforce` ao lançamento do
 ensaio; `monitor` apenas calcula e registra as barreiras.
+O witness do plano mais próximo é publicado em
+`/workspace/boundary_witness_markers`.
 
 ### Cena de manipulação
 
@@ -155,12 +157,25 @@ como `MarkerArray` no RViz. O marcador é expresso no frame DH `base`, enquanto
 `cube_position` continua sendo fornecido no frame da cena indicado por
 `manipulation_object_frame`.
 
+Na simulação, o modelo `manipulation_cube` possui um `PosePublisher` do Gazebo.
+A ponte publica `/model/manipulation_cube/pose` como `PoseStamped`; o controlador
+converte essa pose para o frame DH `base`. Assim, o volume visual e a posição
+usada pela CBF acompanham o cubo depois da captura. Se a pose ficar ausente por
+mais de `cube_pose_timeout`, o sistema usa temporariamente a pose estática
+configurada em `cube_position`.
+
 A geometria da mesa é publicada como cilindro em
 `/table_collision/obstacle_marker`, e a caixa aberta de deposito é mostrada
 como volume axis-aligned em `/drop_box/obstacle_marker`. Esses marcadores são
 publicados durante o waypoint de controle mesmo quando as respectivas CBFs
-estão em `off`; a caixa é visual nesta revisão, enquanto as restrições do QP
-continuam sendo as da mesa e do cubo.
+estão em `off`. A distância até a caixa também é publicada em
+`/drop_box/witness_markers`, mas permanece monitor-only porque a caixa é o
+destino da tarefa. O tópico não é inserido no QP.
+
+Com `closest`, as cinco relações visuais ficam separadas em displays RViz:
+autocolisão, mesa, cubo, fronteira e caixa. Use `all` nos parâmetros
+`self_collision_witness_mode`, `cylinder_witness_mode`, `cube_witness_mode` ou
+`drop_box_witness_mode` quando precisar de todos os pares de uma família.
 
 Para observar a CBF sem alterar o comando nominal, use `monitor`. Para ativá-la
 no QP, use `enforce` com `controller_mode:=qp`:

@@ -47,6 +47,11 @@ def launch_setup(context):
                     "manipulation_object_frame": LaunchConfiguration(
                         "manipulation_object_frame"
                     ),
+                    "cube_pose_topic": LaunchConfiguration("cube_pose_topic"),
+                    "cube_pose_timeout": ParameterValue(
+                        LaunchConfiguration("cube_pose_timeout"),
+                        value_type=float,
+                    ),
                     # Sem value_type explicito, o launch_ros interpreta as
                     # listas YAML como arrays de parametros ROS.
                     "cube_position": LaunchConfiguration("cube_position"),
@@ -94,6 +99,9 @@ def launch_setup(context):
                     ),
                     "workspace_cbf_mode": LaunchConfiguration(
                         "workspace_cbf_mode"
+                    ),
+                    "workspace_boundary_witness_topic": LaunchConfiguration(
+                        "workspace_boundary_witness_topic"
                     ),
                     "cylinder_cbf_mode": LaunchConfiguration(
                         "cylinder_cbf_mode"
@@ -153,6 +161,12 @@ def launch_setup(context):
                     ),
                     "drop_box_obstacle_frame": LaunchConfiguration(
                         "drop_box_obstacle_frame"
+                    ),
+                    "drop_box_witness_mode": LaunchConfiguration(
+                        "drop_box_witness_mode"
+                    ),
+                    "drop_box_witness_topic": LaunchConfiguration(
+                        "drop_box_witness_topic"
                     ),
                     "max_control_duration": ParameterValue(
                         LaunchConfiguration("max_control_duration"),
@@ -244,6 +258,16 @@ def generate_launch_description():
                 description=(
                     "Frame das posicoes do cubo e da caixa na cena de manipulacao."
                 ),
+            ),
+            DeclareLaunchArgument(
+                "cube_pose_topic",
+                default_value="/model/manipulation_cube/pose",
+                description="Pose Gazebo do cubo dinamico usada no RViz e na CBF.",
+            ),
+            DeclareLaunchArgument(
+                "cube_pose_timeout",
+                default_value="0.25",
+                description="Tempo de validade da ultima pose recebida do cubo.",
             ),
             DeclareLaunchArgument(
                 "cube_position",
@@ -339,6 +363,11 @@ def generate_launch_description():
                 description=(
                     "Desliga, monitora ou impoe a CBF do envelope cartesiano."
                 ),
+            ),
+            DeclareLaunchArgument(
+                "workspace_boundary_witness_topic",
+                default_value="/workspace/boundary_witness_markers",
+                description="Topico do witness do plano de workspace mais proximo.",
             ),
             DeclareLaunchArgument(
                 "cylinder_cbf_mode",
@@ -441,6 +470,17 @@ def generate_launch_description():
                 "drop_box_obstacle_frame",
                 default_value="base",
                 description="Frame do volume da caixa no RViz.",
+            ),
+            DeclareLaunchArgument(
+                "drop_box_witness_mode",
+                default_value="closest",
+                choices=["off", "closest", "all"],
+                description="Witness diagnostico da distancia ate a caixa.",
+            ),
+            DeclareLaunchArgument(
+                "drop_box_witness_topic",
+                default_value="/drop_box/witness_markers",
+                description="Topico do witness diagnostico da caixa.",
             ),
             DeclareLaunchArgument(
                 "max_control_duration",

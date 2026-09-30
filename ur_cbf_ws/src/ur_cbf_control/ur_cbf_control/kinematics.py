@@ -410,7 +410,7 @@ class UaibotKinematics:
                 radius=radius,
                 height=height,
                 geometry_source=(
-                    "ur-task-space-cbf-ros2@0.6.42:"
+                    "ur-task-space-cbf-ros2@0.6.43:"
                     "ur_cbf_control/cylinder_obstacle_cbf.py"
                 ),
             )
@@ -441,7 +441,7 @@ class UaibotKinematics:
                 center=center,
                 size=size,
                 geometry_source=(
-                    "ur-task-space-cbf-ros2@0.6.42:"
+                    "ur-task-space-cbf-ros2@0.6.43:"
                     "ur_cbf_control/box_obstacle_cbf.py"
                 ),
                 excluded_pair_labels=excluded_pair_labels,

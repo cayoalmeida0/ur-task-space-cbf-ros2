@@ -133,6 +133,9 @@ def test_simulation_declares_parametric_manipulation_scene():
     assert "manipulation_table" in world
     assert "manipulation_cube" in world
     assert "drop_box" in world
+    assert "gz::sim::systems::PosePublisher" in world
+    assert "/model/manipulation_cube/pose" in world
+    assert "/model/manipulation_cube/pose@geometry_msgs/msg/PoseStamped[gz.msgs.Pose" in launch_text
 
 
 @pytest.mark.parametrize("model", SUPPORTED_ONROBOT_TYPES)

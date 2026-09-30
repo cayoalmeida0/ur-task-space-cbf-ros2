@@ -139,7 +139,18 @@ margem adicional `cube_safe_distance` aparecem no RViz em
 O volume da mesa também é publicado no RViz em
 `/table_collision/obstacle_marker`; a caixa aberta de deposito aparece como
 volume visual em `/drop_box/obstacle_marker`. Esses dois marcadores são
-independentes do modo da CBF e usam o frame configurado para a cena.
+independentes do modo da CBF e usam o frame configurado para a cena. A pose
+dinamica do cubo chega em `/model/manipulation_cube/pose`; o marcador e a CBF
+usam essa pose depois da captura e voltam a `cube_position` se o topico ficar
+temporariamente sem dados.
+
+O controlador publica uma linha witness para cada relacao de seguranca ativa:
+autocolisao em `/self_collision/witness_markers`, mesa em
+`/cylinder_collision/witness_markers`, cubo em
+`/cube_collision/witness_markers` e plano de workspace mais proximo em
+`/workspace/boundary_witness_markers`. A distancia da caixa de deposito e
+publicada em `/drop_box/witness_markers` como diagnostico monitor-only; ela nao
+entra no QP porque a caixa e o destino intencional do terceiro waypoint.
 
 Por padrão, `link_5_obj_4` a `link_5_obj_7` — os quatro volumes móveis das
 falanges e pontas da RG2 — são os pares que podem ser excluídos da CBF do cubo.

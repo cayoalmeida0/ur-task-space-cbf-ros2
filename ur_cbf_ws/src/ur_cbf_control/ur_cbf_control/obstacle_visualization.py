@@ -15,7 +15,28 @@ def _point(values: Sequence[float]) -> Point:
     return point
 
 
-def _box_edge_points(center: np.ndarray, size: np.ndarray) -> list[Point]:
+def _quaternion_rotation_matrix(quaternion: np.ndarray) -> np.ndarray:
+    """Converte ``[x, y, z, w]`` em uma matriz de rotacao validada."""
+
+    norm = float(np.linalg.norm(quaternion))
+    if not np.isfinite(norm) or norm <= 1.0e-12:
+        raise ValueError("orientation deve ser um quaternion finito e nao nulo.")
+    x, y, z, w = quaternion / norm
+    return np.array(
+        (
+            (1.0 - 2.0 * (y * y + z * z), 2.0 * (x * y - z * w), 2.0 * (x * z + y * w)),
+            (2.0 * (x * y + z * w), 1.0 - 2.0 * (x * x + z * z), 2.0 * (y * z - x * w)),
+            (2.0 * (x * z - y * w), 2.0 * (y * z + x * w), 1.0 - 2.0 * (x * x + y * y)),
+        ),
+        dtype=float,
+    )
+
+
+def _box_edge_points(
+    center: np.ndarray,
+    size: np.ndarray,
+    orientation: np.ndarray,
+) -> list[Point]:
     half = 0.5 * size
     corners = np.array(
         [
@@ -29,7 +50,8 @@ def _box_edge_points(center: np.ndarray, size: np.ndarray) -> list[Point]:
             (-half[0], half[1], half[2]),
         ],
         dtype=float,
-    ) + center
+    )
+    corners = (corners @ _quaternion_rotation_matrix(orientation).T) + center
     edges = (
         (0, 1), (1, 2), (2, 3), (3, 0),
         (4, 5), (5, 6), (6, 7), (7, 4),
@@ -49,8 +71,13 @@ def build_box_obstacle_marker_array(
     frame_id: str,
     stamp: Any,
     namespace: str = "cube_cbf_obstacle",
+    orientation: Sequence[float] = (0.0, 0.0, 0.0, 1.0),
 ) -> MarkerArray:
-    """Cria a caixa fisica e a linha da margem CBF para o RViz."""
+    """Cria a caixa fisica e a linha da margem CBF para o RViz.
+
+    ``orientation`` permite que o marcador acompanhe a orientacao de um
+    modelo dinamico do Gazebo. O valor usa a convencao ROS ``[x, y, z, w]``.
+    """
 
     center_array = np.asarray(center, dtype=float).reshape(-1)
     size_array = np.asarray(size, dtype=float).reshape(-1)
@@ -68,6 +95,13 @@ def build_box_obstacle_marker_array(
         raise ValueError("frame_id nao pode ser vazio.")
     if not str(namespace).strip():
         raise ValueError("namespace nao pode ser vazio.")
+    orientation_array = np.asarray(orientation, dtype=float).reshape(-1)
+    if orientation_array.size != 4 or not np.all(np.isfinite(orientation_array)):
+        raise ValueError("orientation deve conter quatro valores finitos.")
+    orientation_norm = float(np.linalg.norm(orientation_array))
+    if not np.isfinite(orientation_norm) or orientation_norm <= 1.0e-12:
+        raise ValueError("orientation deve ser um quaternion nao nulo.")
+    orientation_array /= orientation_norm
 
     markers = MarkerArray()
     clear = Marker()
@@ -82,7 +116,10 @@ def build_box_obstacle_marker_array(
     cube.type = Marker.CUBE
     cube.action = Marker.ADD
     cube.pose.position = _point(center_array)
-    cube.pose.orientation.w = 1.0
+    cube.pose.orientation.x = float(orientation_array[0])
+    cube.pose.orientation.y = float(orientation_array[1])
+    cube.pose.orientation.z = float(orientation_array[2])
+    cube.pose.orientation.w = float(orientation_array[3])
     cube.scale.x, cube.scale.y, cube.scale.z = (
         float(value) for value in size_array
     )
@@ -114,6 +151,7 @@ def build_box_obstacle_marker_array(
         shell.points = _box_edge_points(
             center_array,
             size_array + 2.0 * float(safe_distance),
+            orientation_array,
         )
         markers.markers.append(shell)
     return markers

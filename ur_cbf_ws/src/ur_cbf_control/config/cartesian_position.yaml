@@ -30,6 +30,10 @@ cartesian_position_test:
     # Posicoes da cena Gazebo em base_link; o controlador converte para base.
     manipulation_object_frame: base_link
     cube_position: [-0.35, 0.0, 0.17]
+    # Pose dinamica publicada pelo modelo manipulation_cube; enquanto o topico
+    # ainda nao chega, o marcador e a CBF usam cube_position como fallback.
+    cube_pose_topic: /model/manipulation_cube/pose
+    cube_pose_timeout: 0.25
     drop_position: [-0.30, 0.18]
     # A geometria cilíndrica representa a mesa; os launchers de manipulação
     # a habilitam no modo enforce.
@@ -101,6 +105,7 @@ cartesian_position_test:
     workspace_boundary_topic: /workspace/boundary_markers
     workspace_boundary_frame: base
     workspace_boundary_line_width: 0.005
+    workspace_boundary_witness_topic: /workspace/boundary_witness_markers
     cylinder_cbf_mode: off
     cylinder_safe_distance: 0.03
     cylinder_cbf_gain: 5.0
@@ -126,6 +131,9 @@ cartesian_position_test:
     cube_obstacle_frame: base
     drop_box_obstacle_topic: /drop_box/obstacle_marker
     drop_box_obstacle_frame: base
+    # A caixa e destino da tarefa: a linha e diagnostica e nao entra no QP.
+    drop_box_witness_mode: closest
+    drop_box_witness_topic: /drop_box/witness_markers
     max_cartesian_speed: 0.01
     max_abs_joint_velocity: 0.10
     # Limites efetivos usados pelos perfis complex e challenging.

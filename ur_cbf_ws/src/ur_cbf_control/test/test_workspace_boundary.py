@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from ur_cbf_control.workspace_boundary import WorkspaceBoundaryCbfError
+from ur_cbf_control.workspace_boundary import closest_workspace_boundary_witness
 from ur_cbf_control.workspace_boundary import formulate_workspace_boundary_cbf
 from ur_cbf_control.workspace_boundary import workspace_boundary_vertices
 
@@ -38,6 +39,20 @@ def test_workspace_vertices_form_closed_box():
     assert vertices.shape == (8, 3)
     np.testing.assert_allclose(vertices[0], [-0.45, -0.55, 0.05])
     np.testing.assert_allclose(vertices[6], [0.45, 0.55, 0.90])
+
+
+def test_closest_boundary_witness_projects_to_the_active_safe_plane():
+    constraints = formulate_workspace_boundary_cbf(
+        [0.0, -0.44, 0.69],
+        np.eye(3, 6),
+        bounds=BOUNDS,
+        safety_margin=0.05,
+        gain=7.0,
+    )
+
+    first, second = closest_workspace_boundary_witness(constraints)
+    np.testing.assert_allclose(first, [0.0, -0.44, 0.69])
+    np.testing.assert_allclose(second, [0.0, -0.50, 0.69])
 
 
 @pytest.mark.parametrize(

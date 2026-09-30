@@ -6,8 +6,8 @@ distância diferenciáveis. A mesma interface comanda a planta simulada e o rob�
 real: velocidades articulares em
 `/forward_velocity_controller/commands`.
 
-> **Estado atual — revisão experimental 0.6.42:** infraestrutura Docker `0.2.0`,
-> `ur_cbf_bringup` `0.3.22` e `ur_cbf_control` `0.6.42`. A tarefa de
+> **Estado atual — revisão experimental 0.6.43:** infraestrutura Docker `0.2.0`,
+> `ur_cbf_bringup` `0.3.23` e `ur_cbf_control` `0.6.43`. A tarefa de
 > manipulação pick-and-place usa exatamente três alvos cartesianos: cubo,
 > caixa e HOME. Não são inseridos waypoints explícitos de aproximação,
 > elevação ou retração; as CBFs da mesa e do cubo protegem o deslocamento direto
@@ -62,6 +62,13 @@ flowchart TD
   em `/drop_box/obstacle_marker` no RViz;
 - volume do cubo em `/cube_collision/obstacle_marker` e witness points em
   `/cube_collision/witness_markers` no RViz;
+- pose real do modelo `manipulation_cube` publicada em
+  `/model/manipulation_cube/pose`; o volume do cubo no RViz e a avaliacao da
+  CBF acompanham o objeto capturado, com fallback para `cube_position` enquanto
+  a pose dinamica ainda nao chegou;
+- linhas de distancia separadas para autocolisao, mesa, cubo, fronteira mais
+  proxima e caixa de deposito; a linha da caixa e diagnostica e nao e inserida
+  no QP porque a caixa e o destino da tarefa;
 - TCP controlado em `gripper_tcp`, no centro dos dedos fechados;
 - watchdogs, comando nulo em falhas e ensaios explicitamente armados;
 - 19 primitivas visuais do modelo UAIbot corrigido, incluindo os oito volumes
@@ -247,6 +254,25 @@ não uma restrição adicional do QP. A CBF do cilindro e a CBF prismática do c
 protegem o caminho direto. O cubo continua sendo o alvo intencional da pega;
 somente os quatro volumes móveis da RG2 podem estabelecer o contato final
 permitido, depois da aproximação segura.
+
+### Organização das linhas de distância no RViz
+
+No modo padrão `closest`, o controlador publica uma linha para a relação mais
+crítica de cada família ativa:
+
+| Relação | Tópico | Semântica |
+|---|---|---|
+| Autocolisão | `/self_collision/witness_markers` | par de volumes do robô mais próximo |
+| Mesa | `/cylinder_collision/witness_markers` | volume do robô até o cilindro da mesa |
+| Cubo | `/cube_collision/witness_markers` | volume do robô até o cubo real |
+| Fronteira | `/workspace/boundary_witness_markers` | TCP até o plano seguro mais próximo |
+| Caixa | `/drop_box/witness_markers` | distância monitorada até a região de destino |
+
+Os modos `all` continuam disponíveis para autocolisão, mesa, cubo e caixa. A
+caixa permanece `monitor-only`: ela é exibida e medida para diagnóstico, mas não
+entra nas restrições do QP, permitindo que o waypoint de colocação seja atingido.
+O marcador do cubo recebe a pose do Gazebo e também muda de orientação; por isso
+ele acompanha a pega depois que o cubo deixa a posição inicial.
 
 Para comparar com orientação 6D completamente fixa, use o launcher genérico e
 `task_control_mode:=pose orientation_target_mode:=vertical_yaw

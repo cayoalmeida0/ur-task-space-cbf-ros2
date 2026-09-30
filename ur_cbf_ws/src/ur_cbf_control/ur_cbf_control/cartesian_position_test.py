@@ -16,6 +16,7 @@ from rclpy.node import Node
 from rclpy.parameter import Parameter
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from rclpy.qos import qos_profile_sensor_data
+from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 from visualization_msgs.msg import MarkerArray
@@ -50,7 +51,9 @@ from ur_cbf_control.trajectory import resolve_trajectory_waypoints
 from ur_cbf_control.workspace_boundary import WorkspaceBoundaryCbfConstraints
 from ur_cbf_control.workspace_boundary import WorkspaceBoundaryCbfError
 from ur_cbf_control.workspace_boundary import build_workspace_boundary_marker_array
+from ur_cbf_control.workspace_boundary import closest_workspace_boundary_witness
 from ur_cbf_control.workspace_boundary import formulate_workspace_boundary_cbf
+from ur_cbf_control.witness_visualization import build_single_witness_marker_array
 from ur_cbf_control.witness_visualization import build_witness_marker_array
 from ur_cbf_control.witness_visualization import WITNESS_VISUALIZATION_MODES
 from ur_cbf_control.cylinder_obstacle_cbf import (
@@ -109,6 +112,10 @@ class CartesianPositionTest(Node):
         # controlador/UAIbot trabalha no frame DH base, rotacionado pi em Z.
         self.declare_parameter("manipulation_object_frame", "base_link")
         self.declare_parameter("cube_position", [-0.35, 0.0, 0.17])
+        self.declare_parameter(
+            "cube_pose_topic", "/model/manipulation_cube/pose"
+        )
+        self.declare_parameter("cube_pose_timeout", 0.25)
         self.declare_parameter("drop_position", [-0.15, 0.0])
         self.declare_parameter("cylinder_position", [-0.35, 0.0])
         self.declare_parameter("cylinder_radius", 0.08)
@@ -167,6 +174,10 @@ class CartesianPositionTest(Node):
         )
         self.declare_parameter("workspace_boundary_frame", "base")
         self.declare_parameter("workspace_boundary_line_width", 0.005)
+        self.declare_parameter(
+            "workspace_boundary_witness_topic",
+            "/workspace/boundary_witness_markers",
+        )
         self.declare_parameter("cylinder_cbf_mode", "off")
         self.declare_parameter("cylinder_safe_distance", 0.03)
         self.declare_parameter("cylinder_cbf_gain", 5.0)
@@ -203,6 +214,10 @@ class CartesianPositionTest(Node):
             "drop_box_obstacle_topic", "/drop_box/obstacle_marker"
         )
         self.declare_parameter("drop_box_obstacle_frame", "base")
+        self.declare_parameter("drop_box_witness_mode", "closest")
+        self.declare_parameter(
+            "drop_box_witness_topic", "/drop_box/witness_markers"
+        )
         self.declare_parameter("max_cartesian_speed", 0.01)
         self.declare_parameter("max_abs_joint_velocity", 0.10)
         self.declare_parameter("complex_max_cartesian_speed", 0.04)
@@ -269,6 +284,12 @@ class CartesianPositionTest(Node):
         self.manipulation_object_frame = str(
             self.get_parameter("manipulation_object_frame").value
         ).lower()
+        self.cube_pose_topic = str(
+            self.get_parameter("cube_pose_topic").value
+        )
+        self.cube_pose_timeout = float(
+            self.get_parameter("cube_pose_timeout").value
+        )
         self.cube_position_scene = np.asarray(
             self.get_parameter("cube_position").value, dtype=float
         ).reshape(-1)
@@ -404,6 +425,9 @@ class CartesianPositionTest(Node):
         self.workspace_boundary_line_width = float(
             self.get_parameter("workspace_boundary_line_width").value
         )
+        self.workspace_boundary_witness_topic = str(
+            self.get_parameter("workspace_boundary_witness_topic").value
+        )
         self.cylinder_cbf_mode = str(
             self.get_parameter("cylinder_cbf_mode").value
         ).lower()
@@ -469,6 +493,12 @@ class CartesianPositionTest(Node):
         )
         self.drop_box_obstacle_frame = str(
             self.get_parameter("drop_box_obstacle_frame").value
+        )
+        self.drop_box_witness_mode = str(
+            self.get_parameter("drop_box_witness_mode").value
+        ).lower()
+        self.drop_box_witness_topic = str(
+            self.get_parameter("drop_box_witness_topic").value
         )
         self.max_cartesian_speed = float(
             self.get_parameter("max_cartesian_speed").value
@@ -586,9 +616,14 @@ class CartesianPositionTest(Node):
         self._last_workspace_cbf: WorkspaceBoundaryCbfConstraints | None = None
         self._last_cylinder_cbf: CylinderObstacleCbfConstraints | None = None
         self._last_cube_cbf: BoxObstacleCbfConstraints | None = None
+        self._last_drop_box_cbf: BoxObstacleCbfConstraints | None = None
         self._last_cube_contact_allowed = False
         self._last_cube_warning = 0.0
+        self._last_drop_box_warning = 0.0
         self._last_manipulability: dict[str, float] | None = None
+        self._latest_cube_pose_scene: np.ndarray | None = None
+        self._latest_cube_orientation_scene: np.ndarray | None = None
+        self._latest_cube_pose_receipt: float | None = None
 
         command_qos = QoSProfile(
             depth=1,
@@ -613,6 +648,11 @@ class CartesianPositionTest(Node):
         self.workspace_boundary_publisher = self.create_publisher(
             MarkerArray,
             self.workspace_boundary_topic,
+            10,
+        )
+        self.workspace_boundary_witness_publisher = self.create_publisher(
+            MarkerArray,
+            self.workspace_boundary_witness_topic,
             10,
         )
         self.cylinder_witness_publisher = self.create_publisher(
@@ -640,6 +680,11 @@ class CartesianPositionTest(Node):
             self.drop_box_obstacle_topic,
             10,
         )
+        self.drop_box_witness_publisher = self.create_publisher(
+            MarkerArray,
+            self.drop_box_witness_topic,
+            10,
+        )
         if self.workspace_cbf_mode != "off":
             self.workspace_boundary_publisher.publish(
                 build_workspace_boundary_marker_array(
@@ -653,6 +698,12 @@ class CartesianPositionTest(Node):
             JointState,
             self.joint_states_topic,
             self._joint_state_callback,
+            qos_profile_sensor_data,
+        )
+        self.create_subscription(
+            PoseStamped,
+            self.cube_pose_topic,
+            self._cube_pose_callback,
             qos_profile_sensor_data,
         )
         controller_name = "/" + self.controller_node.strip("/")
@@ -691,7 +742,7 @@ class CartesianPositionTest(Node):
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.6.42; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.43; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
             if self.task_type == "manipulation":
                 self.get_logger().info(
@@ -777,6 +828,23 @@ class CartesianPositionTest(Node):
         ):
             raise ValueError(
                 "drop_box_safe_distance deve ser finita e nao negativa."
+            )
+        if not self.cube_pose_topic.strip():
+            raise ValueError("cube_pose_topic nao pode ser vazio.")
+        if not math.isfinite(self.cube_pose_timeout) or self.cube_pose_timeout <= 0.0:
+            raise ValueError("cube_pose_timeout deve ser finito e positivo.")
+        if self.drop_box_witness_mode not in WITNESS_VISUALIZATION_MODES:
+            raise ValueError(
+                "drop_box_witness_mode deve ser off, closest ou all."
+            )
+        if not self.drop_box_witness_topic.strip():
+            raise ValueError("drop_box_witness_topic nao pode ser vazio.")
+        if (
+            self.drop_box_witness_mode != "off"
+            and self.drop_box_safe_distance <= 0.0
+        ):
+            raise ValueError(
+                "drop_box_safe_distance deve ser positivo quando o witness da caixa estiver ativo."
             )
         if self.controller_mode not in {"dls", "qp"}:
             raise ValueError("controller_mode deve ser dls ou qp.")
@@ -964,6 +1032,8 @@ class CartesianPositionTest(Node):
             raise ValueError("workspace_boundary_topic nao pode ser vazio.")
         if not self.workspace_boundary_frame.strip():
             raise ValueError("workspace_boundary_frame nao pode ser vazio.")
+        if not self.workspace_boundary_witness_topic.strip():
+            raise ValueError("workspace_boundary_witness_topic nao pode ser vazio.")
         try:
             formulate_workspace_boundary_cbf(
                 (0.0, 0.0, 0.0),
@@ -1087,6 +1157,85 @@ class CartesianPositionTest(Node):
         self._last_state_error = None
         self.latest_state = ordered
         self.latest_state_receipt = time.monotonic()
+
+    def _cube_pose_callback(self, message: PoseStamped) -> None:
+        """Armazena a pose publicada pelo modelo dinamico do Gazebo."""
+
+        position = np.array(
+            (
+                message.pose.position.x,
+                message.pose.position.y,
+                message.pose.position.z,
+            ),
+            dtype=float,
+        )
+        orientation = np.array(
+            (
+                message.pose.orientation.x,
+                message.pose.orientation.y,
+                message.pose.orientation.z,
+                message.pose.orientation.w,
+            ),
+            dtype=float,
+        )
+        norm = float(np.linalg.norm(orientation))
+        if (
+            not np.all(np.isfinite(position))
+            or not np.all(np.isfinite(orientation))
+            or not math.isfinite(norm)
+            or norm <= 1.0e-12
+        ):
+            return
+        self._latest_cube_pose_scene = position
+        self._latest_cube_orientation_scene = orientation / norm
+        self._latest_cube_pose_receipt = time.monotonic()
+
+    @staticmethod
+    def _quaternion_multiply(
+        first: np.ndarray,
+        second: np.ndarray,
+    ) -> np.ndarray:
+        """Multiplica quaternions ROS na ordem ``first * second``."""
+
+        x1, y1, z1, w1 = first
+        x2, y2, z2, w2 = second
+        return np.array(
+            (
+                w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
+                w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
+                w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
+                w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
+            ),
+            dtype=float,
+        )
+
+    def _current_cube_pose(self) -> tuple[np.ndarray, np.ndarray, str]:
+        """Retorna a pose do cubo no frame da CBF e sua origem de dados."""
+
+        fresh = (
+            self._latest_cube_pose_scene is not None
+            and self._latest_cube_orientation_scene is not None
+            and self._latest_cube_pose_receipt is not None
+            and time.monotonic() - self._latest_cube_pose_receipt
+            <= self.cube_pose_timeout
+        )
+        if not fresh:
+            return (
+                self.cube_position.copy(),
+                np.array((0.0, 0.0, 0.0, 1.0), dtype=float),
+                "static_fallback",
+            )
+
+        position = self._scene_position_to_base(self._latest_cube_pose_scene)
+        orientation = self._latest_cube_orientation_scene.copy()
+        if self.manipulation_object_frame == "base_link":
+            # base_link e base compartilham a origem e diferem por Rz(pi).
+            orientation = self._quaternion_multiply(
+                np.array((0.0, 0.0, 1.0, 0.0), dtype=float),
+                orientation,
+            )
+            orientation /= np.linalg.norm(orientation)
+        return position, orientation, "gazebo_pose"
 
     def _state_is_stale(self, now: float) -> bool:
         if self.latest_state_receipt is None:
@@ -1282,6 +1431,7 @@ class CartesianPositionTest(Node):
                 mode=self.self_collision_witness_mode,
                 frame_id=self.self_collision_witness_frame,
                 stamp=self.get_clock().now().to_msg(),
+                namespace="self_collision",
             )
         )
         self._last_self_collision_cbf = constraints
@@ -1301,16 +1451,38 @@ class CartesianPositionTest(Node):
             safety_margin=self.workspace_safe_margin,
             gain=self.workspace_cbf_gain,
         )
+        stamp = self.get_clock().now().to_msg()
         self.workspace_boundary_publisher.publish(
             build_workspace_boundary_marker_array(
                 self.workspace_bounds,
                 frame_id=self.workspace_boundary_frame,
-                stamp=self.get_clock().now().to_msg(),
+                stamp=stamp,
                 line_width=self.workspace_boundary_line_width,
+            )
+        )
+        first, second = closest_workspace_boundary_witness(constraints)
+        self.workspace_boundary_witness_publisher.publish(
+            build_single_witness_marker_array(
+                first,
+                second,
+                frame_id=self.workspace_boundary_frame,
+                stamp=stamp,
+                namespace="workspace_boundary_distance",
+                color=(0.15, 0.95, 0.85),
             )
         )
         self._last_workspace_cbf = constraints
         return constraints
+
+    def _drop_box_center(self) -> np.ndarray:
+        return np.array(
+            (
+                self.drop_position[0],
+                self.drop_position[1],
+                self.drop_box_center_z,
+            ),
+            dtype=float,
+        )
 
     def _publish_scene_obstacles(self) -> None:
         """Publica mesa, cubo e caixa nos mesmos frames da CBF.
@@ -1324,6 +1496,7 @@ class CartesianPositionTest(Node):
         if self.task_type != "manipulation":
             return
         stamp = self.get_clock().now().to_msg()
+        cube_position, cube_orientation, _ = self._current_cube_pose()
         self.cylinder_obstacle_publisher.publish(
             build_cylinder_obstacle_marker_array(
                 self.cylinder_position,
@@ -1337,22 +1510,16 @@ class CartesianPositionTest(Node):
         )
         self.cube_obstacle_publisher.publish(
             build_box_obstacle_marker_array(
-                self.cube_position,
+                cube_position,
                 (self.cube_size, self.cube_size, self.cube_size),
                 safe_distance=self.cube_safe_distance,
                 frame_id=self.cube_obstacle_frame,
                 stamp=stamp,
                 namespace="cube_cbf_obstacle",
+                orientation=cube_orientation,
             )
         )
-        drop_box_center = np.array(
-            (
-                self.drop_position[0],
-                self.drop_position[1],
-                self.drop_box_center_z,
-            ),
-            dtype=float,
-        )
+        drop_box_center = self._drop_box_center()
         self.drop_box_obstacle_publisher.publish(
             build_box_obstacle_marker_array(
                 drop_box_center,
@@ -1363,6 +1530,53 @@ class CartesianPositionTest(Node):
                 namespace="drop_box_obstacle",
             )
         )
+
+    def _evaluate_drop_box_distance(
+        self,
+        model_positions: tuple[float, ...],
+    ) -> BoxObstacleCbfConstraints | None:
+        """Publica a distancia da caixa como diagnostico, sem impor o QP.
+
+        A caixa e o destino da tarefa. Por isso sua barreira serve para
+        interpretar a aproximacao no RViz, mas nunca e adicionada a
+        ``cbf_blocks``; a colocacao deliberada continuaria impossivel se ela
+        fosse tratada como obstaculo rigido.
+        """
+
+        if self.task_type != "manipulation" or self.drop_box_witness_mode == "off":
+            self._last_drop_box_cbf = None
+            return None
+        try:
+            distances = self.kinematics.evaluate_box_obstacle(
+                model_positions,
+                center=self._drop_box_center(),
+                size=self.drop_box_size,
+            )
+            constraints = formulate_box_obstacle_cbf(
+                distances,
+                safe_distance=self.drop_box_safe_distance,
+                gain=1.0,
+            )
+        except (KinematicsError, BoxObstacleCbfError) as error:
+            self._last_drop_box_cbf = None
+            now = time.monotonic()
+            if now - self._last_drop_box_warning >= 1.0:
+                self.get_logger().warning(
+                    f"Diagnostico da distancia da caixa indisponivel: {error}"
+                )
+                self._last_drop_box_warning = now
+            return None
+        self.drop_box_witness_publisher.publish(
+            build_witness_marker_array(
+                constraints,
+                mode=self.drop_box_witness_mode,
+                frame_id=self.drop_box_obstacle_frame,
+                stamp=self.get_clock().now().to_msg(),
+                namespace="drop_box_distance",
+            )
+        )
+        self._last_drop_box_cbf = constraints
+        return constraints
 
     def _evaluate_cylinder_cbf(
         self,
@@ -1392,8 +1606,9 @@ class CartesianPositionTest(Node):
             build_witness_marker_array(
                 constraints,
                 mode=self.cylinder_witness_mode,
-                frame_id=self.workspace_boundary_frame,
+                frame_id=self.cylinder_obstacle_frame,
                 stamp=self.get_clock().now().to_msg(),
+                namespace="table_cbf",
             )
         )
         self._last_cylinder_cbf = constraints
@@ -1435,7 +1650,7 @@ class CartesianPositionTest(Node):
         try:
             distances = self.kinematics.evaluate_box_obstacle(
                 model_positions,
-                center=self.cube_position,
+                center=self._current_cube_pose()[0],
                 size=(self.cube_size, self.cube_size, self.cube_size),
                 excluded_pair_labels=excluded_pairs,
             )
@@ -1472,6 +1687,7 @@ class CartesianPositionTest(Node):
                 mode=self.cube_witness_mode,
                 frame_id=self.cube_obstacle_frame,
                 stamp=stamp,
+                namespace="cube_cbf",
             )
         )
         self._last_cube_cbf = constraints
@@ -1526,6 +1742,7 @@ class CartesianPositionTest(Node):
         workspace_cbf: WorkspaceBoundaryCbfConstraints | None = None,
         cylinder_cbf: CylinderObstacleCbfConstraints | None = None,
         cube_cbf: BoxObstacleCbfConstraints | None = None,
+        drop_box_cbf: BoxObstacleCbfConstraints | None = None,
     ) -> None:
         self._trace_samples.append(
             {
@@ -1564,6 +1781,11 @@ class CartesianPositionTest(Node):
                 ),
                 "cube_cbf": (
                     None if cube_cbf is None else cube_cbf.to_record()
+                ),
+                "drop_box_distance": (
+                    None
+                    if drop_box_cbf is None
+                    else drop_box_cbf.to_record()
                 ),
                 "qp": (
                     None
@@ -1654,7 +1876,7 @@ class CartesianPositionTest(Node):
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.6.42",
+                "control_package": "ur_cbf_control:0.6.43",
                 "controller_mode": self.controller_mode,
                 "self_collision_cbf_mode": self.self_collision_cbf_mode,
                 "self_collision_witness_mode": self.self_collision_witness_mode,
@@ -1747,6 +1969,11 @@ class CartesianPositionTest(Node):
                     if self._last_cube_cbf is None
                     else self._last_cube_cbf.to_record()
                 ),
+                "drop_box_distance": (
+                    None
+                    if self._last_drop_box_cbf is None
+                    else self._last_drop_box_cbf.to_record()
+                ),
                 "manipulability": manipulability_summary,
             },
             "parameters": {
@@ -1760,6 +1987,8 @@ class CartesianPositionTest(Node):
                 "target_orientation_rpy": list(self.target_orientation_rpy),
                 "manipulation_grasp_yaw": self.manipulation_grasp_yaw,
                 "manipulation_object_frame": self.manipulation_object_frame,
+                "cube_pose_topic": self.cube_pose_topic,
+                "cube_pose_timeout": self.cube_pose_timeout,
                 "cube_position_scene": self.cube_position_scene.tolist(),
                 "drop_position_scene": self.drop_position_scene.tolist(),
                 "cylinder_position_scene": self.cylinder_position_scene.tolist(),
@@ -1793,6 +2022,8 @@ class CartesianPositionTest(Node):
                 "drop_box_safe_distance": self.drop_box_safe_distance,
                 "drop_box_obstacle_topic": self.drop_box_obstacle_topic,
                 "drop_box_obstacle_frame": self.drop_box_obstacle_frame,
+                "drop_box_witness_mode": self.drop_box_witness_mode,
+                "drop_box_witness_topic": self.drop_box_witness_topic,
                 "manipulation_home_mode": self.manipulation_home_mode,
                 "manipulation_home_position": (
                     self.manipulation_home_position.tolist()
@@ -1832,6 +2063,7 @@ class CartesianPositionTest(Node):
                 "workspace_boundary_topic": self.workspace_boundary_topic,
                 "workspace_boundary_frame": self.workspace_boundary_frame,
                 "workspace_boundary_line_width": self.workspace_boundary_line_width,
+                "workspace_boundary_witness_topic": self.workspace_boundary_witness_topic,
                 "max_cartesian_speed": self.max_cartesian_speed,
                 "max_abs_joint_velocity": self.max_abs_joint_velocity,
                 "position_tolerance": self.position_tolerance,
@@ -2067,6 +2299,7 @@ class CartesianPositionTest(Node):
             workspace_cbf = self._evaluate_workspace_cbf(state)
             cylinder_cbf = self._evaluate_cylinder_cbf(model_positions)
             cube_cbf = self._evaluate_cube_cbf(model_positions, state)
+            drop_box_cbf = self._evaluate_drop_box_distance(model_positions)
             error = self._task_error(state)
             error_norm = float(np.linalg.norm(error))
             if error_norm <= self.position_tolerance:
@@ -2087,6 +2320,7 @@ class CartesianPositionTest(Node):
                     workspace_cbf=workspace_cbf,
                     cylinder_cbf=cylinder_cbf,
                     cube_cbf=cube_cbf,
+                    drop_box_cbf=drop_box_cbf,
                 )
                 self.get_logger().info(
                     f"Tolerancia atingida: erro_tarefa={error_norm:.6f}; "
@@ -2216,6 +2450,7 @@ class CartesianPositionTest(Node):
                 cylinder_constraint_active=cylinder_constraint_active,
                 cube_cbf=cube_cbf,
                 cube_constraint_active=cube_constraint_active,
+                drop_box_cbf=drop_box_cbf,
             )
             if now - self._last_progress_log >= 1.0:
                 real_time_factor = (
@@ -2268,6 +2503,16 @@ class CartesianPositionTest(Node):
                         f"cube_contact={'allowed' if self._last_cube_contact_allowed else 'protected'}; "
                     )
                 )
+                box_progress = (
+                    ""
+                    if drop_box_cbf is None
+                    else (
+                        f"d_box_min={drop_box_cbf.minimum_distance:.4f} m; "
+                        f"h_box_min={drop_box_cbf.minimum_barrier:.4f} m; "
+                        f"box_par={drop_box_cbf.pair_labels[int(np.argmin(drop_box_cbf.distances))]}; "
+                        "box_cbf=monitor_only; "
+                    )
+                )
                 self.get_logger().info(
                     f"waypoint={self.waypoint_index + 1}/"
                     f"{len(self.waypoint_offsets)}; "
@@ -2284,6 +2529,7 @@ class CartesianPositionTest(Node):
                     f"{workspace_progress}"
                     f"{table_progress}"
                     f"{cube_progress}"
+                    f"{box_progress}"
                     f"t_sim={timing.simulated_seconds:.3f} s; "
                     f"t_real={timing.wall_seconds:.3f} s; "
                     f"RTF={real_time_factor:.3f}."
