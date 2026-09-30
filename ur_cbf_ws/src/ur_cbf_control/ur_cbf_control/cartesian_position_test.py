@@ -48,7 +48,9 @@ from ur_cbf_control.self_collision_cbf import SelfCollisionCbfConstraints
 from ur_cbf_control.self_collision_cbf import SelfCollisionCbfError
 from ur_cbf_control.task_frames import get_task_frame_spec
 from ur_cbf_control.trajectory import resolve_trajectory_waypoints
+from ur_cbf_control.collision_spheres import evaluate_robot_collision_spheres
 from ur_cbf_control.workspace_boundary import WorkspaceBoundaryCbfConstraints
+from ur_cbf_control.workspace_boundary import WorkspaceBoundaryWitness
 from ur_cbf_control.workspace_boundary import WorkspaceBoundaryCbfError
 from ur_cbf_control.workspace_boundary import build_workspace_boundary_marker_array
 from ur_cbf_control.workspace_boundary import closest_workspace_boundary_witness
@@ -619,6 +621,7 @@ class CartesianPositionTest(Node):
         self._last_self_collision_warning = 0.0
         self._self_collision_monitor_invalid_count = 0
         self._last_workspace_cbf: WorkspaceBoundaryCbfConstraints | None = None
+        self._last_workspace_witness: WorkspaceBoundaryWitness | None = None
         self._last_cylinder_cbf: CylinderObstacleCbfConstraints | None = None
         self._last_cube_cbf: BoxObstacleCbfConstraints | None = None
         self._last_drop_box_cbf: BoxObstacleCbfConstraints | None = None
@@ -748,7 +751,7 @@ class CartesianPositionTest(Node):
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.6.44; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.45; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
             if self.task_type == "manipulation":
                 self.get_logger().info(
@@ -1451,9 +1454,11 @@ class CartesianPositionTest(Node):
     def _evaluate_workspace_cbf(
         self,
         state: KinematicState,
+        model_positions: np.ndarray,
     ) -> WorkspaceBoundaryCbfConstraints | None:
         if self.workspace_cbf_mode == "off":
             self._last_workspace_cbf = None
+            self._last_workspace_witness = None
             return None
         constraints = formulate_workspace_boundary_cbf(
             state.position,
@@ -1461,6 +1466,16 @@ class CartesianPositionTest(Node):
             bounds=self.workspace_bounds,
             safety_margin=self.workspace_safe_margin,
             gain=self.workspace_cbf_gain,
+        )
+        spheres = evaluate_robot_collision_spheres(
+            self.kinematics.robot,
+            model_positions,
+        )
+        witness = closest_workspace_boundary_witness(
+            constraints,
+            sphere_centers=spheres.centers,
+            sphere_radii=spheres.radii,
+            sphere_labels=spheres.labels,
         )
         stamp = self.get_clock().now().to_msg()
         self.workspace_boundary_publisher.publish(
@@ -1471,11 +1486,10 @@ class CartesianPositionTest(Node):
                 line_width=self.workspace_boundary_line_width,
             )
         )
-        first, second = closest_workspace_boundary_witness(constraints)
         self.workspace_boundary_witness_publisher.publish(
             build_single_witness_marker_array(
-                first,
-                second,
+                witness.robot_point,
+                witness.boundary_point,
                 frame_id=self.workspace_boundary_frame,
                 stamp=stamp,
                 namespace="workspace_boundary_distance",
@@ -1483,6 +1497,7 @@ class CartesianPositionTest(Node):
             )
         )
         self._last_workspace_cbf = constraints
+        self._last_workspace_witness = witness
         return constraints
 
     def _drop_box_center(self) -> np.ndarray:
@@ -1797,6 +1812,11 @@ class CartesianPositionTest(Node):
                 "workspace_cbf": (
                     None if workspace_cbf is None else workspace_cbf.to_record()
                 ),
+                "workspace_witness": (
+                    None
+                    if workspace_cbf is None or self._last_workspace_witness is None
+                    else self._last_workspace_witness.to_record()
+                ),
                 "cylinder_cbf": (
                     None if cylinder_cbf is None else cylinder_cbf.to_record()
                 ),
@@ -1897,7 +1917,7 @@ class CartesianPositionTest(Node):
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.6.44",
+                "control_package": "ur_cbf_control:0.6.45",
                 "controller_mode": self.controller_mode,
                 "self_collision_cbf_mode": self.self_collision_cbf_mode,
                 "self_collision_witness_mode": self.self_collision_witness_mode,
@@ -2318,7 +2338,7 @@ class CartesianPositionTest(Node):
             self_collision_cbf = self._evaluate_self_collision_cbf(
                 model_positions
             )
-            workspace_cbf = self._evaluate_workspace_cbf(state)
+            workspace_cbf = self._evaluate_workspace_cbf(state, model_positions)
             cylinder_cbf = self._evaluate_cylinder_cbf(model_positions)
             cube_cbf = self._evaluate_cube_cbf(model_positions, state)
             drop_box_cbf = self._evaluate_drop_box_distance(model_positions)
@@ -2505,6 +2525,8 @@ class CartesianPositionTest(Node):
                         f"d_workspace_min={workspace_cbf.minimum_physical_distance:.4f} m; "
                         f"h_workspace_min={workspace_cbf.minimum_barrier:.4f} m; "
                         f"boundary={workspace_cbf.closest_boundary}; "
+                        f"d_workspace_volume={self._last_workspace_witness.signed_distance:.4f} m; "
+                        f"workspace_volume={self._last_workspace_witness.primitive_label}; "
                     )
                 )
                 table_progress = (

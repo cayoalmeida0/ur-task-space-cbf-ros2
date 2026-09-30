@@ -1,3 +1,14 @@
+## Revisao experimental 0.6.45 / controle 0.6.45 / bringup 0.3.24 — 30 de setembro de 2026
+
+- Corrige os endpoints visuais da mesa, cubo e caixa para partir da superfície
+  das esferas envolventes de cada volume do robô e terminar na superfície física
+  do obstáculo; CBFs e limites do QP permanecem iguais.
+- Faz a linha de workspace partir do proxy de colisão mais próximo da face
+  ativa e registra no log/JSON o volume e a distância volume-face. As seis CBFs
+  de workspace continuam atuando sobre a posição do TCP.
+- Adiciona testes de superfície dos witnesses e da transformação dos proxies
+  pelo modelo cinemático; corrige a documentação de contagem UR3e/RG2.
+
 ## Revisao experimental 0.6.44 / controle 0.6.44 / bringup 0.3.24 — 30 de setembro de 2026
 
 - Corrige o witness da boundary: a linha azul termina na superficie fisica do

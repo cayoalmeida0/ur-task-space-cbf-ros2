@@ -38,6 +38,14 @@ class RobotNearTableTop(Robot):
         return jacobians, transforms
 
 
+class RobotAboveTableCenter(Robot):
+    def jac_geo(self, _q, _axis, mode="python"):
+        jacobians, transforms = super().jac_geo(_q, _axis, mode)
+        transforms[0][0, 3] = 0.0
+        transforms[0][2, 3] = 0.20
+        return jacobians, transforms
+
+
 def test_cylinder_obstacle_distance_has_a_differential_constraint():
     distances = evaluate_cylinder_obstacle_distances(
         Robot(),
@@ -58,6 +66,31 @@ def test_cylinder_obstacle_distance_has_a_differential_constraint():
     assert constraints.matrix.shape == (1, 1)
     assert constraints.lower_bound[0] < 0.0
     assert constraints.matrix[0, 0] > 0.0
+
+
+def test_table_witness_runs_from_robot_volume_surface_to_physical_top():
+    distances = evaluate_cylinder_obstacle_distances(
+        RobotAboveTableCenter(),
+        [0.0],
+        center_xy=[0.0, 0.0],
+        radius=0.08,
+        height=0.15,
+        geometry_source="test",
+    )
+
+    primitive_radius = np.sqrt(0.02**2 + (0.10 / 2.0) ** 2)
+    np.testing.assert_allclose(
+        distances.first_witness_points[0],
+        [0.0, 0.0, 0.20 - primitive_radius],
+    )
+    np.testing.assert_allclose(
+        distances.second_witness_points[0],
+        [0.0, 0.0, 0.15],
+    )
+    assert np.linalg.norm(
+        distances.first_witness_points[0] - distances.second_witness_points[0]
+    ) == pytest.approx(abs(distances.distances[0]))
+    assert distances.distances[0] == pytest.approx(0.05 - primitive_radius)
 
 
 def test_cylinder_signed_distance_uses_the_closest_cap_inside_the_table():

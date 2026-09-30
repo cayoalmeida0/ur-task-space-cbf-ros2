@@ -45,6 +45,11 @@ def test_box_obstacle_distance_has_a_differential_constraint():
 
     assert distances.count == 1
     assert distances.distances[0] == pytest.approx(0.07)
+    np.testing.assert_allclose(distances.first_witness_points[0], [0.09, 0.0, 0.0])
+    np.testing.assert_allclose(distances.second_witness_points[0], [0.02, 0.0, 0.0])
+    assert np.linalg.norm(
+        distances.first_witness_points[0] - distances.second_witness_points[0]
+    ) == pytest.approx(distances.distances[0])
     assert constraints.matrix.shape == (1, 1)
     assert constraints.matrix[0, 0] > 0.0
     assert constraints.lower_bound[0] < 0.0

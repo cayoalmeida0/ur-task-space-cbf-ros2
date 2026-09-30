@@ -228,7 +228,9 @@ def evaluate_box_obstacle_distances(
             distance_jacobian = gradient.reshape(1, 3) @ point_jacobian
             distances.append(float(signed_distance - primitive_radius))
             jacobian_rows.append(distance_jacobian.reshape(-1))
-            robot_witnesses.append(point.copy())
+            # A CBF permanece baseada na distancia assinada; o witness comeca
+            # na superficie da esfera proxy mais proxima da caixa.
+            robot_witnesses.append((point - primitive_radius * gradient).copy())
             obstacle_witnesses.append(obstacle_point.copy())
             labels.append(label)
 

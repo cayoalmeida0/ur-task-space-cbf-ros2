@@ -6,8 +6,8 @@ distância diferenciáveis. A mesma interface comanda a planta simulada e o rob�
 real: velocidades articulares em
 `/forward_velocity_controller/commands`.
 
-> **Estado atual — revisão experimental 0.6.44:** infraestrutura Docker `0.2.0`,
-> `ur_cbf_bringup` `0.3.24` e `ur_cbf_control` `0.6.44`. A tarefa de
+> **Estado atual — revisão experimental 0.6.45:** infraestrutura Docker `0.2.0`,
+> `ur_cbf_bringup` `0.3.24` e `ur_cbf_control` `0.6.45`. A tarefa de
 > manipulação pick-and-place usa exatamente três alvos cartesianos: cubo,
 > caixa e HOME. Não são inseridos waypoints explícitos de aproximação,
 > elevação ou retração; as CBFs da mesa e do cubo protegem o deslocamento direto
@@ -85,7 +85,7 @@ flowchart TD
 | Adaptador cinemático UAIbot | UR3e implementado e validado |
 | CBF de autocolisão | validada em simulação nos modos `monitor` e `enforce` |
 | CBF de workspace | validada com limite inferior ajustado para a soltura |
-| Volumes visuais para CBF | 13 primitivas UR3e + 8 primitivas UAIbot da RG2 |
+| Volumes visuais para CBF | 11 primitivas do braço UR3e + 8 primitivas da RG2 |
 | Hardware real | UR via `ur_robot_driver`; RG2 via driver OnRobot |
 
 Modelos sem adaptador ou geometria explícita são recusados, em vez de receberem
@@ -265,7 +265,7 @@ crítica de cada família ativa:
 | Autocolisão | `/self_collision/witness_markers` | par de volumes do robô mais próximo |
 | Mesa | `/cylinder_collision/witness_markers` | volume do robô até o cilindro da mesa |
 | Cubo | `/cube_collision/witness_markers` | volume do robô até o cubo real |
-| Fronteira | `/workspace/boundary_witness_markers` | TCP até a superfície física mais próxima |
+| Fronteira | `/workspace/boundary_witness_markers` | superfície do proxy mais próximo até a face física ativa |
 | Caixa | `/drop_box/witness_markers` | distância monitorada somente no waypoint da caixa |
 
 Os modos `all` continuam disponíveis para autocolisão, mesa, cubo e caixa. A

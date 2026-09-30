@@ -67,34 +67,108 @@ class WorkspaceBoundaryCbfConstraints:
         }
 
 
+@dataclass(frozen=True)
+class WorkspaceBoundaryWitness:
+    """Witness visual da face ativa até a esfera proxy mais próxima."""
+
+    robot_point: np.ndarray
+    boundary_point: np.ndarray
+    primitive_label: str
+    boundary_label: str
+    signed_distance: float
+
+    def __iter__(self):
+        """Mantém a possibilidade de desempacotar os dois endpoints."""
+
+        yield self.robot_point
+        yield self.boundary_point
+
+    def to_record(self) -> dict[str, object]:
+        return {
+            "primitive": self.primitive_label,
+            "boundary": self.boundary_label,
+            "signed_distance_m": self.signed_distance,
+            "robot_point_m": self.robot_point.tolist(),
+            "boundary_point_m": self.boundary_point.tolist(),
+        }
+
+
 def closest_workspace_boundary_witness(
     constraints: WorkspaceBoundaryCbfConstraints,
-) -> tuple[np.ndarray, np.ndarray]:
-    """Retorna o efetuador e a projecao na superficie fisica mais proxima.
+    *,
+    sphere_centers: Sequence[Sequence[float]],
+    sphere_radii: Sequence[float],
+    sphere_labels: Sequence[str],
+) -> WorkspaceBoundaryWitness:
+    """Liga a face CBF ativa à superfície do proxy robótico mais próximo.
 
-    A margem de seguranca permanece somente na barreira ``h = d - margin``.
-    O witness visual, entretanto, deve terminar na boundary geometrica real,
-    para que o comprimento da linha represente a distancia fisica ao envelope
-    mostrado no RViz. As coordenadas laterais sao projetadas na face real,
-    evitando uma diagonal ate um vertice arbitrario.
+    A CBF de workspace continua sendo formulada no TCP. A linha visual parte,
+    porém, da superfície da esfera envolvente de colisão mais próxima da face
+    ativa e termina na face física do envelope. O valor assinado descreve a
+    separação entre essa esfera e a face finita.
     """
 
-    position = np.asarray(constraints.position, dtype=float).reshape(-1)
     bounds = np.asarray(constraints.bounds, dtype=float)
     barriers = np.asarray(constraints.barrier_values, dtype=float).reshape(-1)
-    if position.size != 3 or bounds.shape != (3, 2) or barriers.size != 6:
+    centers = np.asarray(sphere_centers, dtype=float)
+    radii = np.asarray(sphere_radii, dtype=float).reshape(-1)
+    labels = tuple(str(label) for label in sphere_labels)
+    if (
+        bounds.shape != (3, 2)
+        or not np.all(np.isfinite(bounds))
+        or barriers.shape != (6,)
+        or not np.all(np.isfinite(barriers))
+        or len(constraints.labels) != 6
+    ):
         raise WorkspaceBoundaryCbfError(
             "constraints possui dimensoes invalidas para um witness de fronteira."
         )
-    lower = bounds[:, 0]
-    upper = bounds[:, 1]
-    projected = np.clip(position, lower, upper)
-    candidates = np.tile(projected, (6, 1))
-    for axis in range(3):
-        candidates[2 * axis, axis] = lower[axis]
-        candidates[2 * axis + 1, axis] = upper[axis]
-    closest = int(np.argmin(barriers))
-    return position.copy(), candidates[closest].copy()
+    if (
+        centers.ndim != 2
+        or centers.shape[1:] != (3,)
+        or centers.shape[0] == 0
+        or not np.all(np.isfinite(centers))
+    ):
+        raise WorkspaceBoundaryCbfError(
+            "Centros dos volumes devem ter forma n x 3 e valores finitos."
+        )
+    if (
+        radii.shape != (centers.shape[0],)
+        or not np.all(np.isfinite(radii))
+        or np.any(radii <= 0.0)
+        or len(labels) != centers.shape[0]
+        or any(not label for label in labels)
+    ):
+        raise WorkspaceBoundaryCbfError(
+            "Raios e nomes devem corresponder a cada volume de colisao."
+        )
+
+    active_face = int(np.argmin(barriers))
+    axis = active_face // 2
+    is_upper_face = bool(active_face % 2)
+    face_coordinate = bounds[axis, 1 if is_upper_face else 0]
+
+    face_points = np.clip(centers, bounds[:, 0], bounds[:, 1])
+    face_points[:, axis] = face_coordinate
+    toward_face = face_points - centers
+    center_to_face = np.linalg.norm(toward_face, axis=1)
+    directions = np.zeros_like(toward_face)
+    nonzero = center_to_face > 1e-12
+    directions[nonzero] = toward_face[nonzero] / center_to_face[nonzero, None]
+    directions[~nonzero, axis] = 1.0 if is_upper_face else -1.0
+
+    signed_distances = center_to_face - radii
+    closest_sphere = int(np.argmin(signed_distances))
+    return WorkspaceBoundaryWitness(
+        robot_point=(
+            centers[closest_sphere]
+            + radii[closest_sphere] * directions[closest_sphere]
+        ).copy(),
+        boundary_point=face_points[closest_sphere].copy(),
+        primitive_label=labels[closest_sphere],
+        boundary_label=str(constraints.labels[active_face]),
+        signed_distance=float(signed_distances[closest_sphere]),
+    )
 
 
 def _validate_inputs(

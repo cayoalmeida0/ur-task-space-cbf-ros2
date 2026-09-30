@@ -98,8 +98,13 @@ pré-validação contra o workspace.
 O envelope axis-aligned visivel em `/workspace/boundary_markers` foi reduzido para
 `x=[-0.45,0.45] m`, `y=[-0.55,0.55] m` e `z=[0.02,0.90] m`. O limite inferior
 fica próximo ao piso para permitir a futura tarefa mesa--cubo, enquanto as
-direcoes laterais deixam uma margem menor para o manipulador. Os modos `monitor`
-e `enforce` têm o mesmo significado da CBF de autocolisao.
+direcoes laterais deixam uma margem menor para o manipulador. As seis barreiras
+do QP continuam formuladas na posição do TCP. Para a visualização, a linha em
+`/workspace/boundary_witness_markers` parte da superfície do volume de colisão
+mais próximo da face ativa e termina na face física do envelope; o log separa
+`d_workspace_min` da distância volume-face `d_workspace_volume` e identifica
+`workspace_volume`. Os modos `monitor` e `enforce` mantêm o mesmo significado
+da CBF de autocolisao.
 
 ## Orientação, manipulabilidade e cilindro da cena
 
@@ -148,12 +153,15 @@ temporariamente sem dados.
 O controlador publica uma linha witness para cada relacao de seguranca ativa:
 autocolisao em `/self_collision/witness_markers`, mesa em
 `/cylinder_collision/witness_markers`, cubo em
-`/cube_collision/witness_markers` e plano de workspace mais proximo em
-`/workspace/boundary_witness_markers`. A linha da boundary termina na superficie
-fisica do envelope; a margem de seguranca permanece somente na barreira CBF.
-A distancia da caixa de deposito e publicada em `/drop_box/witness_markers`
-como diagnostico monitor-only somente no waypoint da caixa; ela nao entra no
-QP porque a caixa e o destino intencional do segundo waypoint.
+`/cube_collision/witness_markers`, caixa em
+`/drop_box/witness_markers` e boundary em
+`/workspace/boundary_witness_markers`. Para obstáculos, cada linha liga a
+superficie da esfera que envolve a primitiva robótica à superfície física da
+mesa, do cubo ou da caixa. A boundary liga o proxy mais próximo à face física
+ativa do envelope. A margem de segurança permanece somente nas barreiras CBF;
+para workspace, o QP ainda atua sobre a posição do TCP. O log inclui o nome do
+proxy da boundary e sua distância assinada. A distância da caixa é
+monitor-only, publicada somente no waypoint de colocação, e não entra no QP.
 
 Por padrão, `link_5_obj_4` a `link_5_obj_7` — os quatro volumes móveis das
 falanges e pontas da RG2 — são os pares que podem ser excluídos da CBF do cubo.

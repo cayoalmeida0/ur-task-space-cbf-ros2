@@ -220,15 +220,25 @@ def evaluate_cylinder_obstacle_distances(
                 z_min=-primitive_radius,
                 z_max=float(height) + primitive_radius,
             )
+            # A CBF usa a geometria expandida acima; os endpoints visuais
+            # usam a superficie cilindrica real e a esfera proxy do robo.
+            physical_distance, physical_gradient = _signed_distance_and_gradient(
+                point,
+                center_xy=center,
+                radius=float(radius),
+                z_min=0.0,
+                z_max=float(height),
+            )
+            obstacle_point = point - physical_gradient * physical_distance
+            robot_point = point - primitive_radius * physical_gradient
             point_jacobian = (
                 link_jacobian[:3, :]
                 - _skew(point - dh[:3, 3]) @ link_jacobian[3:6, :]
             )
             distance_jacobian = gradient.reshape(1, 3) @ point_jacobian
-            obstacle_point = point - gradient * distance
             distances.append(float(distance))
             jacobian_rows.append(distance_jacobian.reshape(-1))
-            robot_witnesses.append(point.copy())
+            robot_witnesses.append(robot_point.copy())
             obstacle_witnesses.append(obstacle_point)
             labels.append(f"link_{link_index}_obj_{object_index}__cylinder")
 

@@ -26,7 +26,7 @@ def test_workspace_cbf_has_six_plane_constraints_in_axis_order():
     np.testing.assert_allclose(constraints.matrix, expected_matrix)
     np.testing.assert_allclose(
         constraints.barrier_values,
-        [0.40, 0.40, 0.06, 1.04, 0.59, 0.16],
+        [0.40, 0.40, 0.06, 0.94, 0.59, 0.16],
     )
     np.testing.assert_allclose(
         constraints.lower_bound,
@@ -51,16 +51,24 @@ def test_closest_boundary_witness_projects_to_the_active_physical_surface():
         gain=7.0,
     )
 
-    first, second = closest_workspace_boundary_witness(constraints)
-    np.testing.assert_allclose(first, [0.0, -0.44, 0.69])
-    np.testing.assert_allclose(second, [0.0, -0.55, 0.69])
+    witness = closest_workspace_boundary_witness(
+        constraints,
+        sphere_centers=[[0.0, -0.52, 0.69], [0.0, -0.50, 0.69]],
+        sphere_radii=[0.005, 0.03],
+        sphere_labels=["near_center_small", "near_surface_large"],
+    )
+    np.testing.assert_allclose(witness.robot_point, [0.0, -0.53, 0.69])
+    np.testing.assert_allclose(witness.boundary_point, [0.0, -0.55, 0.69])
+    assert witness.primitive_label == "near_surface_large"
+    assert witness.boundary_label == "y_min"
+    assert witness.signed_distance == pytest.approx(0.02)
 
 
 @pytest.mark.parametrize(
     "bounds",
     [
         [-0.1, -0.1, -0.7, 0.7, 0.2, 0.9],
-        [-0.1, 0.1, -0.7, 0.7, 0.2, 0.9],
+        [-0.1, 0.1, -0.7, 0.7, 0.2, 0.25],
     ],
 )
 def test_workspace_cbf_rejects_invalid_or_too_large_margin(bounds):

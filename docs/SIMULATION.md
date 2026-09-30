@@ -65,35 +65,18 @@ plugin Gazebo Classic do driver OnRobot.
 
 ## Volumes geométricos para as CBFs
 
-O conjunto UR3e/RG2 apresenta 15 primitivas sem colisão física:
+O modelo UR3e/RG2 do projeto usa 19 primitivas matemáticas: 11 distribuídas
+pelos elos do braço e os oito objetos originais da RG2 no elo final. A geometria
+é validada contra o modelo UAIbot fixado e também publicada no RViz; os volumes
+visuais adicionados pelo projeto não alteram massa, dinâmica ou contato físico.
+As posições dos proxies acompanham a cadeia cinemática e os quatro objetos
+móveis da RG2 acompanham a largura comandada.
 
-- 13 objetos do braço derivados da fábrica UAIbot fixada; o ensaio `0.6.14`
-  `z=0,115 m` em `c11`, `x=y=0; z=0,0415 m` em `c21`, `z=0,027 m`
-  em `c22`, `x=-0,2121 m; z=0,025 m` em `c23` e
-  `x=y=0; z=-0,020 m` em `c31`. Em `c32`, usa `x=y=0`,
-  `z=-0,0011 m` e comprimento `0,0945 m`; em `c41`, `z=-0,027 m`;
-  em `c42`, `x=y=z=0`; preserva `c51`; e usa
-  `x=0,0011 m; y=-0,026 m; z=-0,030 m` em `c52`;
-- um cilindro e uma esfera terminal que representam a RG2.
-
-As matrizes `htm_obj` do UAIbot são relativas aos frames DH posteriores às
-juntas. Antes da transcrição para `<origin>`, elas foram convertidas aos frames
-`shoulder_link`, `upper_arm_link`, `forearm_link` e `wrist_1/2/3_link` da
-descrição oficial Jazzy. A fonte está fixada no commit
+As matrizes dos objetos são relativas aos frames DH posteriores às juntas. A
+geometria do UR3e é corrigida para coincidir com a descrição oficial Jazzy, e a
+RG2 preserva seus oito proxies, em vez de ser substituída por um único cilindro
+e uma esfera. A fonte UAIbot está fixada no commit
 [`1acb5ed`](https://github.com/UAIbot/UAIbotPy/blob/1acb5ed637738aca4ea05945e6c065c3757bc13d/uaibot/robot/_create_ur_ur3e.py).
-
-Esses elementos possuem apenas `<visual>`: não têm `<collision>`, massa, inércia
-ou interfaces de controle. Portanto, não alteram contato ou dinâmica. Ao criar o
-modelo matemático, o projeto substitui os objetos de colisão da fábrica pelas
-mesmas 15 primitivas usadas na visualização. O avaliador do projeto percorre
-essa lista e chama `UAIbot.Utils.compute_dist` para cada par não adjacente.
-
-O modelo simplificado da RG2 possui um cilindro de raio `0,048 m`, comprimento
-`0,110 m` e centro em `z=0,050 m`, além de uma esfera terminal de raio
-`0,090 m` centrada em `z=0,165 m`, todos no `onrobot_base_link`. Ele aproxima o
-corpo e os dedos, não sendo uma cópia do mesh. A RG6 permanece disponível na
-simulação, mas os modos `monitor` e
-`enforce` da CBF recusam essa combinação enquanto não houver geometria própria.
 
 As dimensões físicas foram confrontadas com os arquivos oficiais:
 
@@ -128,7 +111,11 @@ ser alterados em `ur_cbf_control/config/cartesian_position.yaml`. Para impor as
 seis restrições no QP, acrescente `workspace_cbf_mode:=enforce` ao lançamento do
 ensaio; `monitor` apenas calcula e registra as barreiras.
 O witness do plano mais próximo é publicado em
-`/workspace/boundary_witness_markers`.
+`/workspace/boundary_witness_markers`. A linha começa na superfície do proxy
+de colisão mais próximo da face ativa e termina na face física. A CBF de
+workspace no QP permanece baseada na posição do TCP; o log também mostra
+`d_workspace_volume` e `workspace_volume` para identificar a geometria usada
+pela visualização.
 
 ### Cena de manipulação
 
@@ -175,8 +162,10 @@ QP e é limpo nos demais waypoints.
 
 Com `closest`, as relações visuais ficam separadas em displays RViz:
 autocolisão, mesa, cubo, fronteira e caixa (esta última somente no waypoint de
-colocação). A linha da fronteira termina na superfície física do envelope; a
-margem de segurança continua somente no valor da barreira. Use `all` nos parâmetros
+colocação). As linhas de mesa, cubo e caixa começam na superfície do proxy
+esférico do robô e terminam na superfície física do obstáculo; a linha da
+fronteira termina na face física ativa do envelope. A margem de segurança
+continua somente no valor da barreira. Use `all` nos parâmetros
 `self_collision_witness_mode`, `cylinder_witness_mode`, `cube_witness_mode` ou
 `drop_box_witness_mode` quando precisar de todos os pares de uma família.
 
