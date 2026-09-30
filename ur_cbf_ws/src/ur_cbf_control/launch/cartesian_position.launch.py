@@ -112,6 +112,12 @@ def launch_setup(context):
                         LaunchConfiguration("cube_cbf_gain"),
                         value_type=float,
                     ),
+                    "cube_cbf_contact_activation_distance": ParameterValue(
+                        LaunchConfiguration(
+                            "cube_cbf_contact_activation_distance"
+                        ),
+                        value_type=float,
+                    ),
                     "cube_cbf_excluded_pairs": LaunchConfiguration(
                         "cube_cbf_excluded_pairs"
                     ),
@@ -340,6 +346,14 @@ def generate_launch_description():
                 "cube_cbf_gain",
                 default_value="5.0",
                 description="Ganho da CBF do cubo.",
+            ),
+            DeclareLaunchArgument(
+                "cube_cbf_contact_activation_distance",
+                default_value="0.06",
+                description=(
+                    "Distancia do TCP ao alvo na qual o contato final das pontas "
+                    "pode ser liberado. Antes disso todos os volumes sao protegidos."
+                ),
             ),
             DeclareLaunchArgument(
                 "cube_cbf_excluded_pairs",

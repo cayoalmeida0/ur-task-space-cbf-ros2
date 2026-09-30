@@ -30,6 +30,7 @@ def generate_launch_description():
         "cube_cbf_mode": "enforce",
         "cube_safe_distance": "0.005",
         "cube_cbf_gain": "5.0",
+        "cube_cbf_contact_activation_distance": "0.06",
         "cube_cbf_excluded_pairs": "['link_5_obj_6', 'link_5_obj_7']",
         "cube_witness_mode": "closest",
         "self_collision_cbf_mode": "enforce",

@@ -6,8 +6,8 @@ distância diferenciáveis. A mesma interface comanda a planta simulada e o rob�
 real: velocidades articulares em
 `/forward_velocity_controller/commands`.
 
-> **Estado atual — revisão experimental 0.6.40:** infraestrutura Docker `0.2.0`,
-> `ur_cbf_bringup` `0.3.20` e `ur_cbf_control` `0.6.40`. A tarefa de
+> **Estado atual — revisão experimental 0.6.41:** infraestrutura Docker `0.2.0`,
+> `ur_cbf_bringup` `0.3.21` e `ur_cbf_control` `0.6.41`. A tarefa de
 > manipulação pick-and-place usa exatamente três alvos cartesianos: cubo,
 > caixa e HOME. Não são inseridos waypoints explícitos de aproximação,
 > elevação ou retração; as CBFs da mesa e do cubo protegem o deslocamento direto
@@ -49,8 +49,8 @@ flowchart TD
 - formulação de autocolisão `J_d qdot >= -gamma (d-d_safe)` integrada ao QP;
 - CBF de fronteira do workspace com seis restrições cartesianas axis-aligned;
 - CBF externa para o cilindro da mesa, aplicada aos volumes de colisão do robô;
-- CBF externa prismática para o cubo, com exclusão explícita das pontas da RG2
-  como pares de contato intencional da pega;
+- CBF externa prismática para o cubo, protegendo todos os volumes durante a
+  aproximação e liberando as pontas da RG2 somente na janela final de contato;
 - tarefa física simulada de pick-and-place com comando da garra RG2;
 - pose vertical com yaw fixo para alinhar os dedos às faces do cubo;
 - métricas de manipulabilidade (`sigma_min`, condição e índice de Yoshikawa)
@@ -62,7 +62,8 @@ flowchart TD
 - TCP controlado em `gripper_tcp`, no centro dos dedos fechados;
 - watchdogs, comando nulo em falhas e ensaios explicitamente armados;
 - 19 primitivas visuais do modelo UAIbot corrigido, incluindo os oito volumes
-  originais da RG2; as caixas e pontas laterais acompanham o fechamento;
+  originais da RG2; as caixas e pontas laterais acompanham a cadeia física e o
+  fechamento da garra;
 - resultados experimentais em JSON com parâmetros, versões, seed e métricas.
 
 ### Escopo dos modelos
@@ -218,8 +219,9 @@ garra mantém o eixo vertical e o yaw fixado em `0` rad, alinhado às faces do
 cubo axis-aligned. A mesa é tratada como um cilindro de colisão com margem de
 `0,01 m` e CBF em `enforce`; o cubo também é tratado como uma caixa axis-aligned
 de `0,04 m`, com margem adicional de `0,005 m` e CBF em `enforce`. As duas
-primitivas cilíndricas das pontas da RG2 são excluídas apenas da CBF do cubo,
-pois representam o contato intencional da pega. A altura do cubo é sempre
+primitivas cilíndricas das pontas da RG2 permanecem protegidas durante a
+aproximação e só são excluídas nos últimos `0,06 m` do alvo, para permitir o
+contato intencional da pega. A altura do cubo é sempre
 `table_height + cube_size/2`.
 
 | Launcher | Mesa/cubo no `base_link` | Altura | Caixa no `base_link` |
@@ -240,7 +242,8 @@ Os resultados registram a menor singularidade `sigma_min` e o maior número de
 condição observados. Nesta revisão a manipulabilidade é critério diagnóstico,
 não uma restrição adicional do QP. A CBF do cilindro e a CBF prismática do cubo
 protegem o caminho direto. O cubo continua sendo o alvo intencional da pega;
-somente as pontas da RG2 podem estabelecer o contato final permitido.
+somente as pontas da RG2 podem estabelecer o contato final permitido, depois
+da aproximação segura.
 
 Para comparar com orientação 6D completamente fixa, use o launcher genérico e
 `task_control_mode:=pose orientation_target_mode:=vertical_yaw

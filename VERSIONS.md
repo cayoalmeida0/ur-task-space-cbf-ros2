@@ -1,3 +1,15 @@
+## Revisao experimental 0.6.41 / controle 0.6.41 / bringup 0.3.21 — 30 de setembro de 2026
+
+- Substitui o deslocamento linear dos volumes C55--C58 pela cadeia cinemática
+  calibrada da RG2, incluindo rotação e a associação correta dos lados direito
+  e esquerdo no frame DH.
+- Corrige as poses visuais dos volumes intermediários e das pontas no RViz para
+  coincidir com a geometria interna usada pela CBF.
+- Mantém todos os volumes protegidos pela CBF do cubo durante a aproximação e
+  libera os cilindros das pontas somente na janela final de contato configurada
+  por `cube_cbf_contact_activation_distance`.
+- Atualiza o resultado experimental para o esquema `1.9`.
+
 ## Revisao experimental 0.6.40 / controle 0.6.40 / bringup 0.3.20 — 30 de setembro de 2026
 
 - Adiciona a CBF externa do cubo como obstaculo prismático axis-aligned durante

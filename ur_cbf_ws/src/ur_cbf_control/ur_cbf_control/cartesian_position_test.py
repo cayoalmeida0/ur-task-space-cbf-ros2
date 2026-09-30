@@ -173,6 +173,7 @@ class CartesianPositionTest(Node):
         self.declare_parameter("cube_cbf_mode", "off")
         self.declare_parameter("cube_safe_distance", 0.005)
         self.declare_parameter("cube_cbf_gain", 5.0)
+        self.declare_parameter("cube_cbf_contact_activation_distance", 0.06)
         self.declare_parameter(
             "cube_cbf_excluded_pairs",
             ["link_5_obj_6", "link_5_obj_7"],
@@ -401,6 +402,9 @@ class CartesianPositionTest(Node):
         self.cube_cbf_gain = float(
             self.get_parameter("cube_cbf_gain").value
         )
+        self.cube_cbf_contact_activation_distance = float(
+            self.get_parameter("cube_cbf_contact_activation_distance").value
+        )
         excluded_pairs_value = self.get_parameter(
             "cube_cbf_excluded_pairs"
         ).value or ()
@@ -544,6 +548,7 @@ class CartesianPositionTest(Node):
         self._last_workspace_cbf: WorkspaceBoundaryCbfConstraints | None = None
         self._last_cylinder_cbf: CylinderObstacleCbfConstraints | None = None
         self._last_cube_cbf: BoxObstacleCbfConstraints | None = None
+        self._last_cube_contact_allowed = False
         self._last_cube_warning = 0.0
         self._last_manipulability: dict[str, float] | None = None
 
@@ -633,11 +638,12 @@ class CartesianPositionTest(Node):
                 f"workspace_cbf={self.workspace_cbf_mode}; "
                 f"cylinder_cbf={self.cylinder_cbf_mode}; "
                 f"cube_cbf={self.cube_cbf_mode}; "
+                f"cube_contact_activation={self.cube_cbf_contact_activation_distance:.3f} m; "
                 f"grasp_yaw={self.manipulation_grasp_yaw:.3f} rad; "
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.6.40; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.41; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
             if self.task_type == "manipulation":
                 self.get_logger().info(
@@ -700,6 +706,9 @@ class CartesianPositionTest(Node):
             "cube_size": self.cube_size,
             "cube_safe_distance": self.cube_safe_distance,
             "cube_cbf_gain": self.cube_cbf_gain,
+            "cube_cbf_contact_activation_distance": (
+                self.cube_cbf_contact_activation_distance
+            ),
         }
         for name, value in positive_values.items():
             if not math.isfinite(value) or value <= 0.0:
@@ -1265,25 +1274,60 @@ class CartesianPositionTest(Node):
         self._last_cylinder_cbf = constraints
         return constraints
 
+    def _cube_contact_is_allowed(self, state: KinematicState) -> bool:
+        """Libera as pontas somente na fase final da aproximacao ao cubo."""
+
+        if not self.cube_cbf_excluded_pairs:
+            return False
+        if self.task_type != "manipulation":
+            return False
+        if self.waypoint_index > 0:
+            return True
+        if self.target_position is None:
+            return False
+        position_error = float(
+            np.linalg.norm(
+                np.asarray(self.target_position, dtype=float)
+                - np.asarray(state.position, dtype=float)
+            )
+        )
+        return position_error <= self.cube_cbf_contact_activation_distance
+
     def _evaluate_cube_cbf(
         self,
         model_positions: tuple[float, ...],
+        state: KinematicState,
     ) -> BoxObstacleCbfConstraints | None:
         if self.cube_cbf_mode == "off":
             self._last_cube_cbf = None
+            self._last_cube_contact_allowed = False
             return None
+        contact_allowed = self._cube_contact_is_allowed(state)
+        self._last_cube_contact_allowed = contact_allowed
+        excluded_pairs = (
+            self.cube_cbf_excluded_pairs if contact_allowed else ()
+        )
         try:
             distances = self.kinematics.evaluate_box_obstacle(
                 model_positions,
                 center=self.cube_position,
                 size=(self.cube_size, self.cube_size, self.cube_size),
-                excluded_pair_labels=self.cube_cbf_excluded_pairs,
+                excluded_pair_labels=excluded_pairs,
             )
             constraints = formulate_box_obstacle_cbf(
                 distances,
                 safe_distance=self.cube_safe_distance,
                 gain=self.cube_cbf_gain,
             )
+            if (
+                self.cube_cbf_mode == "enforce"
+                and not contact_allowed
+                and constraints.minimum_distance < 0.0
+            ):
+                raise BoxObstacleCbfError(
+                    "Penetracao detectada nos volumes protegidos do cubo "
+                    "durante a aproximacao; comando interrompido."
+                )
         except (KinematicsError, BoxObstacleCbfError) as error:
             if self.cube_cbf_mode != "monitor":
                 raise
@@ -1488,13 +1532,13 @@ class CartesianPositionTest(Node):
                 ),
             }
         return {
-            "schema_version": "1.8",
+            "schema_version": "1.9",
             "experiment_id": self.experiment_id,
             "result": result,
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.6.40",
+                "control_package": "ur_cbf_control:0.6.41",
                 "controller_mode": self.controller_mode,
                 "self_collision_cbf_mode": self.self_collision_cbf_mode,
                 "self_collision_witness_mode": self.self_collision_witness_mode,
@@ -1615,6 +1659,12 @@ class CartesianPositionTest(Node):
                 "cube_cbf_mode": self.cube_cbf_mode,
                 "cube_safe_distance": self.cube_safe_distance,
                 "cube_cbf_gain": self.cube_cbf_gain,
+                "cube_cbf_contact_activation_distance": (
+                    self.cube_cbf_contact_activation_distance
+                ),
+                "cube_cbf_contact_allowed_last_cycle": (
+                    self._last_cube_contact_allowed
+                ),
                 "cube_cbf_excluded_pairs": list(self.cube_cbf_excluded_pairs),
                 "cube_witness_mode": self.cube_witness_mode,
                 "cube_witness_topic": self.cube_witness_topic,
@@ -1892,7 +1942,7 @@ class CartesianPositionTest(Node):
             )
             workspace_cbf = self._evaluate_workspace_cbf(state)
             cylinder_cbf = self._evaluate_cylinder_cbf(model_positions)
-            cube_cbf = self._evaluate_cube_cbf(model_positions)
+            cube_cbf = self._evaluate_cube_cbf(model_positions, state)
             error = self._task_error(state)
             error_norm = float(np.linalg.norm(error))
             if error_norm <= self.position_tolerance:
@@ -2091,6 +2141,7 @@ class CartesianPositionTest(Node):
                         f"d_cube_min={cube_cbf.minimum_distance:.4f} m; "
                         f"h_cube_min={cube_cbf.minimum_barrier:.4f} m; "
                         f"cube_par={cube_cbf.pair_labels[int(np.argmin(cube_cbf.distances))]}; "
+                        f"cube_contact={'allowed' if self._last_cube_contact_allowed else 'protected'}; "
                     )
                 )
                 self.get_logger().info(

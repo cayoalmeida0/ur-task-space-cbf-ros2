@@ -220,16 +220,38 @@ class UaibotCollisionModelTest(unittest.TestCase):
             float(robot.links[5].col_objects[index][1][0, 3])
             for index in (4, 5, 6, 7)
         ]
+        open_heights = [
+            float(robot.links[5].col_objects[index][1][2, 3])
+            for index in (4, 5, 6, 7)
+        ]
 
         update_ur3e_rg2_gripper_width(robot, 0.035)
         closed_positions = [
             float(robot.links[5].col_objects[index][1][0, 3])
             for index in (4, 5, 6, 7)
         ]
+        closed_heights = [
+            float(robot.links[5].col_objects[index][1][2, 3])
+            for index in (4, 5, 6, 7)
+        ]
         self.assertGreater(closed_positions[0], open_positions[0])
         self.assertLess(closed_positions[1], open_positions[1])
         self.assertLess(closed_positions[2], open_positions[2])
         self.assertGreater(closed_positions[3], open_positions[3])
+        for closed_height, open_height in zip(closed_heights, open_heights):
+            self.assertGreater(closed_height, open_height)
+        np.testing.assert_allclose(
+            closed_positions,
+            (-0.0243614497, 0.0263255713, 0.0303022429, -0.0281022429),
+            atol=1e-9,
+            rtol=0.0,
+        )
+        self.assertFalse(
+            np.allclose(
+                robot.links[5].col_objects[4][1][:3, :3],
+                np.asarray(UR3E_RG2_PROJECT_PRIMITIVES[15].htm)[:3, :3],
+            )
+        )
 
         update_ur3e_rg2_gripper_width(robot, 0.080)
         for index, spec in zip((4, 5, 6, 7), UR3E_RG2_PROJECT_PRIMITIVES[15:19]):

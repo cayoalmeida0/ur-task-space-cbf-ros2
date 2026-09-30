@@ -13,18 +13,30 @@ UAIBOT_FACTORY_GEOMETRY_SOURCE = (
     "uaibot/robot/_create_ur_ur3e.py"
 )
 PROJECT_GEOMETRY_SOURCE = (
-    "ur-task-space-cbf-ros2@0.6.40:"
+    "ur-task-space-cbf-ros2@0.6.41:"
     "ur_cbf_control/uaibot_collision_model.py#UR3E_RG2_PROJECT_PRIMITIVES"
 )
 
-# A RG2 aceita uma abertura nominal de 0 a 110 mm. Os quatro objetos laterais
-# (duas caixas das falanges e dois cilindros das pontas) são deslocados
-# simetricamente a partir da geometria UAIbot em 80 mm, que é a abertura usada
-# como referência pelo cenário.
+# A RG2 aceita uma abertura nominal de 0 a 110 mm. A geometria UAIbot é
+# calibrada em 80 mm, a abertura usada como referência pelo cenário.
 RG2_MIN_WIDTH_M = 0.0
 RG2_MAX_WIDTH_M = 0.110
 RG2_REFERENCE_WIDTH_M = 0.080
 RG2_MOVING_OBJECT_INDICES = (4, 5, 6, 7)
+RG2_FINGER_ANGLE_OFFSET_RAD = 0.785398
+RG2_FINGER_ANGLE_PER_WIDTH_RAD_M = (
+    0.85 * ((-0.558505 - 0.785398) / 0.110)
+)
+
+# Os objetos 4/5 são as caixas intermediárias (C55/C56); os objetos 6/7 são
+# as pontas (C57/C58). A associação é feita pelo sinal de x no frame DH:
+# x positivo é o lado direito depois da junta fixa tool0 -> onrobot_base_link.
+RG2_MOVING_OBJECT_SIDES = {
+    4: ("outer", "left"),
+    5: ("outer", "right"),
+    6: ("tip", "right"),
+    7: ("tip", "left"),
+}
 
 
 class UaibotCollisionModelError(RuntimeError):
@@ -286,20 +298,111 @@ def validate_ur3e_rg2_project_collision_model(robot: Any) -> None:
     )
 
 
+def _rotation_x(angle: float) -> np.ndarray:
+    cosine = math.cos(angle)
+    sine = math.sin(angle)
+    return np.asarray(
+        (
+            (1.0, 0.0, 0.0),
+            (0.0, cosine, -sine),
+            (0.0, sine, cosine),
+        ),
+        dtype=float,
+    )
+
+
+def _rotation_z(angle: float) -> np.ndarray:
+    cosine = math.cos(angle)
+    sine = math.sin(angle)
+    return np.asarray(
+        (
+            (cosine, -sine, 0.0),
+            (sine, cosine, 0.0),
+            (0.0, 0.0, 1.0),
+        ),
+        dtype=float,
+    )
+
+
+def _homogeneous_transform(
+    rotation: np.ndarray | None = None,
+    translation: tuple[float, float, float] = (0.0, 0.0, 0.0),
+) -> np.ndarray:
+    result = np.eye(4, dtype=float)
+    if rotation is not None:
+        result[:3, :3] = np.asarray(rotation, dtype=float)
+    result[:3, 3] = np.asarray(translation, dtype=float)
+    return result
+
+
+def _rg2_outer_knuckle_transform(width: float, side: str) -> np.ndarray:
+    """Retorna ``wrist_3_link -> outer_knuckle`` do URDF da RG2."""
+
+    if side not in {"left", "right"}:
+        raise UaibotCollisionModelError(f"Lado RG2 invalido: {side!r}.")
+    finger_angle = (
+        RG2_FINGER_ANGLE_OFFSET_RAD
+        + RG2_FINGER_ANGLE_PER_WIDTH_RAD_M * float(width)
+    )
+    base_y = -0.017178 if side == "left" else 0.017178
+    origin_rotation = np.eye(3) if side == "left" else _rotation_z(math.pi)
+    # tool0 e wrist_3_link coincidem no modelo DH usado pelo projeto; a junta
+    # fixa tool0 -> onrobot_base_link gira -pi/2 em Z. Nos dois lados, a
+    # combinação do eixo da junta e do mimic produz Rx(-finger_angle).
+    return (
+        _homogeneous_transform(rotation=_rotation_z(-math.pi / 2.0))
+        @ _homogeneous_transform(
+            rotation=origin_rotation,
+            translation=(0.0, base_y, 0.125797),
+        )
+        @ _homogeneous_transform(rotation=_rotation_x(-finger_angle))
+    )
+
+
+def _rg2_finger_tip_transform(width: float, side: str) -> np.ndarray:
+    """Retorna ``wrist_3_link -> finger_tip`` do URDF da RG2."""
+
+    finger_angle = (
+        RG2_FINGER_ANGLE_OFFSET_RAD
+        + RG2_FINGER_ANGLE_PER_WIDTH_RAD_M * float(width)
+    )
+    outer = _rg2_outer_knuckle_transform(width, side)
+    return (
+        outer
+        @ _homogeneous_transform(
+            translation=(0.0, -(0.056770 - 0.017178), 0.163974 - 0.125797)
+        )
+        @ _homogeneous_transform(rotation=_rotation_x(finger_angle))
+        @ _homogeneous_transform(translation=(0.0, 0.019, 0.038))
+    )
+
+
+def _rg2_moving_parent_transform(width: float, object_index: int) -> np.ndarray:
+    try:
+        parent_kind, side = RG2_MOVING_OBJECT_SIDES[object_index]
+    except KeyError as error:
+        raise UaibotCollisionModelError(
+            f"Objeto movel da RG2 nao mapeado: {object_index}."
+        ) from error
+    if parent_kind == "outer":
+        return _rg2_outer_knuckle_transform(width, side)
+    return _rg2_finger_tip_transform(width, side)
+
+
 def update_ur3e_rg2_gripper_width(
     robot: Any,
     width: float,
     *,
     reference_width: float = RG2_REFERENCE_WIDTH_M,
 ) -> None:
-    """Atualiza as poses laterais da RG2 conforme a abertura comandada.
+    """Sincroniza C55--C58 com as juntas físicas da RG2.
 
-    A geometria UAIbot é anexada ao frame DH do último elo. Portanto, a
-    abertura física da garra não aparece automaticamente no modelo interno.
-    As primitivas centrais permanecem fixas e as quatro primitivas laterais
-    são recalculadas a partir da pose de referência, movendo cada lado pela
-    metade da variação da abertura. A operação mantém tipos e dimensões e é
-    compatível com o cálculo de distância do UAIbot e com a CBF da mesa.
+    O modelo UAIbot mantém as primitivas no elo 5, enquanto a RG2 do URDF
+    move as falanges em links próprios. Para não inverter o movimento nem
+    deixar a CBF deslocada em relação ao robô, cada pose local é calibrada na
+    abertura de referência e depois reaplicada sobre a transformação da junta
+    física correspondente. Isso também atualiza a rotação das caixas, algo
+    que a antiga aproximação por deslocamento em x não fazia.
     """
 
     width = float(width)
@@ -333,7 +436,6 @@ def update_ur3e_rg2_gripper_width(
         for spec in UR3E_RG2_PROJECT_PRIMITIVES
         if spec.link_index == 5
     }
-    width_delta = width - reference_width
     for object_index in RG2_MOVING_OBJECT_INDICES:
         spec = specs[object_index]
         try:
@@ -348,14 +450,22 @@ def update_ur3e_rg2_gripper_width(
                 f"Transformação inválida em link_5_obj_{object_index}."
             )
 
-        updated = attached.copy()
-        reference_x = float(spec.htm[0][3])
-        # x negativo é o lado esquerdo e x positivo o lado direito no frame
-        # final UAIbot. Ao fechar, ambos avançam na direção do centro.
-        updated[0, 3] = reference_x + math.copysign(
-            1.0,
-            reference_x,
-        ) * 0.5 * width_delta
+        if np.isclose(width, reference_width, rtol=0.0, atol=1e-12):
+            # Preserve the pinned UAIbot matrices bit-for-bit at the
+            # calibration opening; this also keeps the strict geometry
+            # validator useful immediately after initialization.
+            updated = np.asarray(spec.htm, dtype=float).copy()
+        else:
+            reference_parent = _rg2_moving_parent_transform(
+                reference_width,
+                object_index,
+            )
+            current_parent = _rg2_moving_parent_transform(width, object_index)
+            reference_local = np.linalg.inv(reference_parent) @ np.asarray(
+                spec.htm,
+                dtype=float,
+            )
+            updated = current_parent @ reference_local
         if isinstance(item, tuple):
             storage[object_index] = (item[0], updated)
         elif isinstance(item, list):

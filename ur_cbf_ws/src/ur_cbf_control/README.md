@@ -123,8 +123,9 @@ as distâncias e `enforce` para incluir as restrições no OSQP. Os parâmetros
 de `manipulation_object_frame` da cena; os witness points são publicados em
 `/cylinder_collision/witness_markers`. Nos três launchers de manipulação essa
 CBF já é `enforce`, com o cilindro coincidindo com a mesa. Os quatro volumes
-laterais da RG2 também são atualizados com a largura comandada, portanto o
-obstáculo considera o estado aberto antes da pega e fechado depois dela.
+laterais da RG2 também são atualizados com a largura comandada pela cadeia
+cinemática das juntas físicas, portanto o obstáculo considera corretamente o
+estado aberto antes da pega e fechado depois dela.
 
 O cubo da tarefa usa a mesma aproximação diferencial, mas com uma caixa
 axis-aligned de dimensões `cube_size` no frame DH `base`. A distância assinada é
@@ -136,11 +137,13 @@ margem adicional `cube_safe_distance` aparecem no RViz em
 `/cube_collision/witness_markers`.
 
 Por padrão, `link_5_obj_6` e `link_5_obj_7` — os cilindros das pontas das
-falanges da RG2 — são excluídos somente da CBF do cubo. Isso representa o
-contato lateral intencional durante a pega. A palma, os punhos e as caixas das
-falanges continuam sujeitos à restrição. A lista pode ser alterada por
-`cube_cbf_excluded_pairs` quando outra ferramenta ou estratégia de contato for
-avaliada.
+falanges da RG2 — são os únicos pares que podem ser excluídos da CBF do cubo.
+Essa exclusão fica desativada durante toda a aproximação e é liberada somente
+quando o erro de posição do TCP para o alvo fica abaixo de
+`cube_cbf_contact_activation_distance` (padrão `0,06 m`). A palma, os punhos e
+as caixas das falanges continuam sujeitos à restrição. A lista pode ser
+alterada por `cube_cbf_excluded_pairs` quando outra ferramenta ou estratégia de
+contato for avaliada.
 
 ## CBF de autocolisao
 
