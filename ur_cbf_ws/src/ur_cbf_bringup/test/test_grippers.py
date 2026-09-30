@@ -401,6 +401,8 @@ def test_cbf_visual_volumes_can_be_toggled_without_editing_env():
     for rviz_name in ("ur_cbf.rviz", "cbf_witness.rviz"):
         rviz = (PACKAGE_ROOT / "rviz" / rviz_name).read_text(encoding="utf-8")
         assert "/cylinder_collision/witness_markers" in rviz
+        assert "/cube_collision/obstacle_marker" in rviz
+        assert "/cube_collision/witness_markers" in rviz
 
 
 def test_manipulation_scenarios_keep_volumes_hidden_in_gazebo():
@@ -410,6 +412,7 @@ def test_manipulation_scenarios_keep_volumes_hidden_in_gazebo():
         ).read_text(encoding="utf-8")
         assert '"show_cbf_volumes": "true"' in launch
         assert '"show_cbf_volumes_gazebo": "false"' in launch
+        assert '"cube_cbf_mode": "enforce"' in launch
 
 
 @pytest.mark.parametrize(

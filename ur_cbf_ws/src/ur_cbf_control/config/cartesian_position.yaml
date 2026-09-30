@@ -36,6 +36,7 @@ cartesian_position_test:
     cylinder_position: [-0.35, 0.0]
     cylinder_radius: 0.08
     cylinder_height: 0.15
+    cube_size: 0.04
     # Compatibilidade com ensaios antigos; a manipulacao atual nao cria
     # waypoints de aproximacao, elevacao ou retracao.
     manipulation_approach_height: 0.05
@@ -100,6 +101,18 @@ cartesian_position_test:
     cylinder_cbf_gain: 5.0
     cylinder_witness_mode: closest
     cylinder_witness_topic: /cylinder_collision/witness_markers
+    # A CBF do cubo protege a aproximacao direta. As pontas da RG2 sao
+    # excluidas porque o contato lateral delas e intencional na pega.
+    cube_cbf_mode: off
+    cube_safe_distance: 0.005
+    cube_cbf_gain: 5.0
+    cube_cbf_excluded_pairs:
+      - link_5_obj_6
+      - link_5_obj_7
+    cube_witness_mode: closest
+    cube_witness_topic: /cube_collision/witness_markers
+    cube_obstacle_topic: /cube_collision/obstacle_marker
+    cube_obstacle_frame: base
     max_cartesian_speed: 0.01
     max_abs_joint_velocity: 0.10
     # Limites efetivos usados pelos perfis complex e challenging.

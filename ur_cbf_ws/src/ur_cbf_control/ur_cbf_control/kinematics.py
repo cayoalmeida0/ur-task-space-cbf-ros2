@@ -14,6 +14,11 @@ from ur_cbf_control.cylinder_obstacle_cbf import (
     CylinderObstacleCbfError,
     evaluate_cylinder_obstacle_distances,
 )
+from ur_cbf_control.box_obstacle_cbf import (
+    BoxObstacleDistances,
+    BoxObstacleCbfError,
+    evaluate_box_obstacle_distances,
+)
 from ur_cbf_control.uaibot_collision_model import (
     configure_ur3e_rg2_project_collision_model,
 )
@@ -405,11 +410,43 @@ class UaibotKinematics:
                 radius=radius,
                 height=height,
                 geometry_source=(
-                    "ur-task-space-cbf-ros2@0.6.39:"
+                    "ur-task-space-cbf-ros2@0.6.40:"
                     "ur_cbf_control/cylinder_obstacle_cbf.py"
                 ),
             )
         except CylinderObstacleCbfError as error:
             raise KinematicsError(
                 f"Falha ao calcular distância ao obstáculo cilíndrico: {error}"
+            ) from error
+
+    def evaluate_box_obstacle(
+        self,
+        model_positions: Sequence[float],
+        *,
+        center: Sequence[float],
+        size: Sequence[float],
+        excluded_pair_labels: Sequence[str] = (),
+    ) -> BoxObstacleDistances:
+        """Avalia a distancia dos volumes do robo a uma caixa fixa na cena."""
+
+        positions = np.asarray(model_positions, dtype=float).reshape(-1)
+        if positions.size != len(self.model_joint_names):
+            raise KinematicsError(
+                "Dimensao da configuracao difere da ordem do modelo."
+            )
+        try:
+            return evaluate_box_obstacle_distances(
+                self.robot,
+                positions,
+                center=center,
+                size=size,
+                geometry_source=(
+                    "ur-task-space-cbf-ros2@0.6.40:"
+                    "ur_cbf_control/box_obstacle_cbf.py"
+                ),
+                excluded_pair_labels=excluded_pair_labels,
+            )
+        except BoxObstacleCbfError as error:
+            raise KinematicsError(
+                f"Falha ao calcular distancia ao obstaculo em caixa: {error}"
             ) from error

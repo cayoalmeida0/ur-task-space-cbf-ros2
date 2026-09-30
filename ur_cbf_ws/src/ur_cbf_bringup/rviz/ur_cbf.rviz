@@ -314,6 +314,30 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /cylinder_collision/witness_markers
       Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: CubeCbfVolume
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /cube_collision/obstacle_marker
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: CubeCbfWitness
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /cube_collision/witness_markers
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48

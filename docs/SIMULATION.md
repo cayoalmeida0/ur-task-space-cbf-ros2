@@ -123,25 +123,47 @@ conversão URDF/SDFormat.
 O envelope cartesiano da CBF é publicado no tópico
 `/workspace/boundary_markers` e carregado automaticamente pela configuração
 `ur_cbf.rviz`. Por padrão, ele utiliza `x=[-0,45; 0,45] m`, `y=[-0,55; 0,55] m`
-e `z=[0,05; 0,90] m`, com margem de segurança de `0,05 m`; os parâmetros podem
+e `z=[0,02; 0,90] m`, com margem de segurança de `0,05 m`; os parâmetros podem
 ser alterados em `ur_cbf_control/config/cartesian_position.yaml`. Para impor as
 seis restrições no QP, acrescente `workspace_cbf_mode:=enforce` ao lançamento do
 ensaio; `monitor` apenas calcula e registra as barreiras.
 
 ### Cena de manipulação
 
-O mundo padrão agora contém uma mesa cilíndrica de raio `0,08 m` e altura
-`0,30 m`, um cubo dinâmico de aresta `0,04 m` e uma caixa aberta de
-`0,08×0,08×0,04 m`, posicionada inicialmente a `0,20 m` do eixo da base. A
+O mundo parametrizado contém uma mesa cilíndrica de raio `0,08 m`, um cubo de
+aresta `0,04 m` e uma caixa aberta de `0,08×0,08×0,04 m`. A
 posição da mesa, do cubo, da caixa e suas dimensões podem ser alteradas pelos
 argumentos do launch (`table_x`, `table_y`, `table_height`, `cube_x`, `cube_y`,
 `drop_x`, `drop_y`, entre outros).
 
-O controlador de manipulação não faz uma triagem de factibilidade. Ele sempre
-executa a sequência de aproximação, descida, fechamento, elevação, transferência,
-abertura e retração. Portanto, uma posição fora do envelope é deliberadamente
-um ensaio de segurança: o robô tenta seguir o alvo até que a CBF limite ou
-impeça o comando.
+O controlador de manipulação executa somente três waypoints cartesianos:
+`cubo -> caixa -> HOME`. Não são adicionadas poses explícitas de aproximação,
+elevação ou retração. Nos três launchers integrados, a mesa e o cubo são CBFs
+externas em `enforce`; a CBF do cubo é avaliada por uma distância assinada à
+superfície axis-aligned, dilatada pelo raio conservador de cada primitiva do
+robô. As pontas cilíndricas da RG2 ficam excluídas apenas dessa CBF para
+permitir o contato final intencional da pega.
+
+### Volume do cubo e witness points
+
+Quando `cube_cbf_mode` está em `monitor` ou `enforce`, o controlador publica a
+caixa física e sua margem adicional no tópico
+`/cube_collision/obstacle_marker`. O par de pontos testemunha mais próximo é
+publicado em `/cube_collision/witness_markers`; ambos já estão configurados
+como `MarkerArray` no RViz. O marcador é expresso no frame DH `base`, enquanto
+`cube_position` continua sendo fornecido no frame da cena indicado por
+`manipulation_object_frame`.
+
+Para observar a CBF sem alterar o comando nominal, use `monitor`. Para ativá-la
+no QP, use `enforce` com `controller_mode:=qp`:
+
+```bash
+ros2 launch ur_cbf_control cartesian_position.launch.py \
+  task_type:=manipulation \
+  cube_cbf_mode:=monitor \
+  cube_witness_mode:=closest \
+  execute_test:=true
+```
 
 ### Ensaio visual de movimento
 

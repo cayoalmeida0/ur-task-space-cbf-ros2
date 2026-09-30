@@ -1,3 +1,17 @@
+## Revisao experimental 0.6.40 / controle 0.6.40 / bringup 0.3.20 — 30 de setembro de 2026
+
+- Adiciona a CBF externa do cubo como obstaculo prismático axis-aligned durante
+  a aproximacao direta da garra, usando a mesma dilatacao conservadora por
+  esferas das primitivas do UR3e/RG2.
+- Mantem as duas pontas cilindricas da RG2 como pares de contato intencional,
+  excluindo `link_5_obj_6` e `link_5_obj_7` somente da CBF do cubo; palma,
+  punhos e caixas das falanges continuam protegidos.
+- Publica no RViz a caixa fisica, a margem adicional da CBF e os witness points
+  em `/cube_collision/obstacle_marker` e `/cube_collision/witness_markers`.
+- Inclui as restricoes do cubo no mesmo QP das CBFs de autocolisao, workspace e
+  mesa, registra diagnosticos no resultado experimental e atualiza o esquema
+  para `1.8`.
+
 ## Revisao experimental 0.6.39 / controle 0.6.39 / bringup 0.3.19 — 30 de setembro de 2026
 
 - Faz os quatro volumes laterais da RG2 acompanharem a largura comandada no

@@ -100,6 +100,33 @@ def launch_setup(context):
                     "cylinder_witness_mode": LaunchConfiguration(
                         "cylinder_witness_mode"
                     ),
+                    "cube_size": ParameterValue(
+                        LaunchConfiguration("cube_size"), value_type=float
+                    ),
+                    "cube_cbf_mode": LaunchConfiguration("cube_cbf_mode"),
+                    "cube_safe_distance": ParameterValue(
+                        LaunchConfiguration("cube_safe_distance"),
+                        value_type=float,
+                    ),
+                    "cube_cbf_gain": ParameterValue(
+                        LaunchConfiguration("cube_cbf_gain"),
+                        value_type=float,
+                    ),
+                    "cube_cbf_excluded_pairs": LaunchConfiguration(
+                        "cube_cbf_excluded_pairs"
+                    ),
+                    "cube_witness_mode": LaunchConfiguration(
+                        "cube_witness_mode"
+                    ),
+                    "cube_witness_topic": LaunchConfiguration(
+                        "cube_witness_topic"
+                    ),
+                    "cube_obstacle_topic": LaunchConfiguration(
+                        "cube_obstacle_topic"
+                    ),
+                    "cube_obstacle_frame": LaunchConfiguration(
+                        "cube_obstacle_frame"
+                    ),
                     "max_control_duration": ParameterValue(
                         LaunchConfiguration("max_control_duration"),
                         value_type=float,
@@ -292,6 +319,55 @@ def generate_launch_description():
                 default_value="closest",
                 choices=["off", "closest", "all"],
                 description="Witness points do cilindro.",
+            ),
+            DeclareLaunchArgument(
+                "cube_size",
+                default_value="0.04",
+                description="Aresta do cubo usada pela CBF externa.",
+            ),
+            DeclareLaunchArgument(
+                "cube_cbf_mode",
+                default_value="off",
+                choices=["off", "monitor", "enforce"],
+                description="CBF para o cubo da cena.",
+            ),
+            DeclareLaunchArgument(
+                "cube_safe_distance",
+                default_value="0.005",
+                description="Margem geometrica adicional para o cubo.",
+            ),
+            DeclareLaunchArgument(
+                "cube_cbf_gain",
+                default_value="5.0",
+                description="Ganho da CBF do cubo.",
+            ),
+            DeclareLaunchArgument(
+                "cube_cbf_excluded_pairs",
+                default_value="['link_5_obj_6', 'link_5_obj_7']",
+                description=(
+                    "Primitivas permitidas para contato intencional com o cubo."
+                ),
+            ),
+            DeclareLaunchArgument(
+                "cube_witness_mode",
+                default_value="closest",
+                choices=["off", "closest", "all"],
+                description="Witness points do cubo.",
+            ),
+            DeclareLaunchArgument(
+                "cube_witness_topic",
+                default_value="/cube_collision/witness_markers",
+                description="Topico dos witness points do cubo.",
+            ),
+            DeclareLaunchArgument(
+                "cube_obstacle_topic",
+                default_value="/cube_collision/obstacle_marker",
+                description="Topico do volume do cubo no RViz.",
+            ),
+            DeclareLaunchArgument(
+                "cube_obstacle_frame",
+                default_value="base",
+                description="Frame do volume do cubo no RViz.",
             ),
             DeclareLaunchArgument(
                 "max_control_duration",

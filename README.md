@@ -6,12 +6,12 @@ distância diferenciáveis. A mesma interface comanda a planta simulada e o rob�
 real: velocidades articulares em
 `/forward_velocity_controller/commands`.
 
-> **Estado atual — revisão experimental 0.6.39:** infraestrutura Docker `0.2.0`,
-> `ur_cbf_bringup` `0.3.19` e `ur_cbf_control` `0.6.39`. A tarefa de
+> **Estado atual — revisão experimental 0.6.40:** infraestrutura Docker `0.2.0`,
+> `ur_cbf_bringup` `0.3.20` e `ur_cbf_control` `0.6.40`. A tarefa de
 > manipulação pick-and-place usa exatamente três alvos cartesianos: cubo,
 > caixa e HOME. Não são inseridos waypoints explícitos de aproximação,
-> elevação ou retração; a CBF da mesa protege o deslocamento direto até o
-> cubo. As CBFs de autocolisão e de fronteira do workspace permanecem no modo
+> elevação ou retração; as CBFs da mesa e do cubo protegem o deslocamento direto
+> até o alvo. As CBFs de autocolisão e de fronteira do workspace permanecem no modo
 > `enforce`. A cena usa mesa de altura `0,15 m`, cubo em `[-0,35, 0, 0,17]` e
 > caixa em `[-0,30, 0,18]`, no frame `base_link`. O HOME padrão é a pose inicial
 > capturada após a estabilização. A pose da pega usa orientação vertical com yaw
@@ -49,12 +49,16 @@ flowchart TD
 - formulação de autocolisão `J_d qdot >= -gamma (d-d_safe)` integrada ao QP;
 - CBF de fronteira do workspace com seis restrições cartesianas axis-aligned;
 - CBF externa para o cilindro da mesa, aplicada aos volumes de colisão do robô;
+- CBF externa prismática para o cubo, com exclusão explícita das pontas da RG2
+  como pares de contato intencional da pega;
 - tarefa física simulada de pick-and-place com comando da garra RG2;
 - pose vertical com yaw fixo para alinhar os dedos às faces do cubo;
 - métricas de manipulabilidade (`sigma_min`, condição e índice de Yoshikawa)
   registradas em cada amostra;
 - witness points de autocolisão e marcadores da fronteira do workspace no RViz;
 - witness points da mesa em `/cylinder_collision/witness_markers` no RViz;
+- volume do cubo em `/cube_collision/obstacle_marker` e witness points em
+  `/cube_collision/witness_markers` no RViz;
 - TCP controlado em `gripper_tcp`, no centro dos dedos fechados;
 - watchdogs, comando nulo em falhas e ensaios explicitamente armados;
 - 19 primitivas visuais do modelo UAIbot corrigido, incluindo os oito volumes
@@ -179,7 +183,12 @@ ros2 launch ur_cbf_control cartesian_position.launch.py \
   self_collision_cbf_mode:=enforce \
   workspace_cbf_mode:=enforce \
   cylinder_cbf_mode:=enforce \
+  cube_cbf_mode:=enforce \
+  cube_size:=0.04 \
+  cube_safe_distance:=0.005 \
+  cube_cbf_excluded_pairs:="['link_5_obj_6', 'link_5_obj_7']" \
   self_collision_witness_mode:=closest \
+  cube_witness_mode:=closest \
   manipulation_object_frame:=base_link \
   cube_position:="[-0.35, 0.0, 0.17]" \
   drop_position:="[-0.30, 0.18]" \
@@ -207,7 +216,10 @@ coerentes entre si. Cada execução tem somente `cubo -> caixa -> HOME`. Eles us
 `task_control_mode:=pose` e `orientation_target_mode:=vertical_yaw`, portanto a
 garra mantém o eixo vertical e o yaw fixado em `0` rad, alinhado às faces do
 cubo axis-aligned. A mesa é tratada como um cilindro de colisão com margem de
-`0,01 m` e CBF em `enforce`; a altura do cubo é sempre
+`0,01 m` e CBF em `enforce`; o cubo também é tratado como uma caixa axis-aligned
+de `0,04 m`, com margem adicional de `0,005 m` e CBF em `enforce`. As duas
+primitivas cilíndricas das pontas da RG2 são excluídas apenas da CBF do cubo,
+pois representam o contato intencional da pega. A altura do cubo é sempre
 `table_height + cube_size/2`.
 
 | Launcher | Mesa/cubo no `base_link` | Altura | Caixa no `base_link` |
@@ -226,9 +238,9 @@ ros2 launch ur_cbf_bringup manipulation_scenario_03.launch.py
 
 Os resultados registram a menor singularidade `sigma_min` e o maior número de
 condição observados. Nesta revisão a manipulabilidade é critério diagnóstico,
-não uma restrição adicional do QP. A CBF do cilindro é a proteção geométrica
-durante o caminho direto; o cubo é o alvo intencional da pega, não um obstáculo
-proibido.
+não uma restrição adicional do QP. A CBF do cilindro e a CBF prismática do cubo
+protegem o caminho direto. O cubo continua sendo o alvo intencional da pega;
+somente as pontas da RG2 podem estabelecer o contato final permitido.
 
 Para comparar com orientação 6D completamente fixa, use o launcher genérico e
 `task_control_mode:=pose orientation_target_mode:=vertical_yaw
