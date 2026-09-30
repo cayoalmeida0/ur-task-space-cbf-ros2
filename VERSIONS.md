@@ -1,3 +1,14 @@
+## Revisao experimental 0.6.44 / controle 0.6.44 / bringup 0.3.24 — 30 de setembro de 2026
+
+- Corrige o witness da boundary: a linha azul termina na superficie fisica do
+  envelope, enquanto a margem permanece somente na barreira CBF; os resultados
+  tambem passam a registrar `d_workspace_min` separadamente de `h_workspace_min`.
+- Limita a linha diagnostica da caixa ao waypoint de colocacao e publica
+  `DELETEALL` nos demais waypoints, removendo witnesses antigos do RViz.
+- Torna o HOME inicial mais robusto, preservando x/y da pose capturada e
+  limitando sua altura a `manipulation_home_height=0,30 m`.
+- Atualiza os testes, a documentacao e os manifestos para a revisao `0.6.44`.
+
 ## Revisao experimental 0.6.43 / controle 0.6.43 / bringup 0.3.23 — 30 de setembro de 2026
 
 - Ajusta a janela final da CBF do cubo para liberar C55--C58, os quatro

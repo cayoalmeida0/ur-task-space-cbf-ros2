@@ -62,6 +62,10 @@ def launch_setup(context):
                     "manipulation_home_position": LaunchConfiguration(
                         "manipulation_home_position"
                     ),
+                    "manipulation_home_height": ParameterValue(
+                        LaunchConfiguration("manipulation_home_height"),
+                        value_type=float,
+                    ),
                     "cylinder_position": LaunchConfiguration(
                         "cylinder_position"
                     ),
@@ -293,9 +297,16 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "manipulation_home_position",
-                default_value="[0.0, 0.0, 0.40]",
+                default_value="[0.0, 0.0, 0.30]",
                 description=(
                     "Posicao HOME fixa em base quando manipulation_home_mode:=fixed."
+                ),
+            ),
+            DeclareLaunchArgument(
+                "manipulation_home_height",
+                default_value="0.30",
+                description=(
+                    "Altura maxima do HOME inicial; x/y permanecem na pose capturada."
                 ),
             ),
             DeclareLaunchArgument(

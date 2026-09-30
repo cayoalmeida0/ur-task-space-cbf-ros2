@@ -11,6 +11,16 @@ from visualization_msgs.msg import MarkerArray
 WITNESS_VISUALIZATION_MODES = ("off", "closest", "all")
 
 
+def build_clear_marker_array() -> MarkerArray:
+    """Cria uma mensagem que remove witnesses antigos do display RViz."""
+
+    markers = MarkerArray()
+    clear = Marker()
+    clear.action = Marker.DELETEALL
+    markers.markers.append(clear)
+    return markers
+
+
 def _color(distance: float, safe_distance: float) -> ColorRGBA:
     color = ColorRGBA()
     color.a = 1.0
@@ -61,10 +71,7 @@ def build_witness_marker_array(
     if point_size <= 0.0 or not np.isfinite(point_size):
         raise ValueError("point_size deve ser positivo e finito.")
 
-    markers = MarkerArray()
-    clear = Marker()
-    clear.action = Marker.DELETEALL
-    markers.markers.append(clear)
+    markers = build_clear_marker_array()
     if normalized_mode == "off" or constraints.count == 0:
         return markers
 
@@ -142,10 +149,7 @@ def build_single_witness_marker_array(
     if line_width <= 0.0 or point_size <= 0.0:
         raise ValueError("line_width e point_size devem ser positivos.")
 
-    markers = MarkerArray()
-    clear = Marker()
-    clear.action = Marker.DELETEALL
-    markers.markers.append(clear)
+    markers = build_clear_marker_array()
 
     line = Marker()
     line.header.frame_id = frame_id

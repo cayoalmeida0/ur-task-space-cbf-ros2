@@ -82,7 +82,8 @@ Com `task_type:=manipulation`, o mesmo QP executa a sequencia física de
 pick-and-place e publica a largura desejada em
 `/finger_width_controller/commands`. A sequência possui exatamente três alvos:
 `cubo`, `caixa` e `HOME`. O cubo é atingido diretamente, a garra fecha nesse
-alvo, abre na caixa e retorna à pose inicial capturada como HOME. Não há
+alvo, abre na caixa e retorna ao HOME com x/y da pose inicial e altura limitada
+por `manipulation_home_height` (padrão `0,30 m`). Não há
 waypoints explícitos de aproximação, elevação ou retração; as CBFs continuam
 atuando durante todo o caminho. O modo `orientation_target_mode:=vertical_yaw`
 com `task_control_mode:=pose` constrói uma orientação cujo eixo `z` do
@@ -148,9 +149,11 @@ O controlador publica uma linha witness para cada relacao de seguranca ativa:
 autocolisao em `/self_collision/witness_markers`, mesa em
 `/cylinder_collision/witness_markers`, cubo em
 `/cube_collision/witness_markers` e plano de workspace mais proximo em
-`/workspace/boundary_witness_markers`. A distancia da caixa de deposito e
-publicada em `/drop_box/witness_markers` como diagnostico monitor-only; ela nao
-entra no QP porque a caixa e o destino intencional do terceiro waypoint.
+`/workspace/boundary_witness_markers`. A linha da boundary termina na superficie
+fisica do envelope; a margem de seguranca permanece somente na barreira CBF.
+A distancia da caixa de deposito e publicada em `/drop_box/witness_markers`
+como diagnostico monitor-only somente no waypoint da caixa; ela nao entra no
+QP porque a caixa e o destino intencional do segundo waypoint.
 
 Por padrão, `link_5_obj_4` a `link_5_obj_7` — os quatro volumes móveis das
 falanges e pontas da RG2 — são os pares que podem ser excluídos da CBF do cubo.
@@ -298,7 +301,8 @@ visualizacao, mas suas combinacoes de distancia sao excluidas por configuracao
 quando a geometria causa uma restricao artificial durante a aproximacao.
 
 Na tarefa de manipulacao, `manipulation_home_mode:=initial` usa como terceiro
-alvo a pose capturada após a estabilização. Para uma HOME cartesiana explícita,
+alvo x/y da pose capturada após a estabilização, limitando z por
+`manipulation_home_height` (padrão `0,30 m`). Para uma HOME cartesiana explícita,
 use `manipulation_home_mode:=fixed` e forneça
 `manipulation_home_position:=[x,y,z]` no frame `base`. Os parâmetros
 `manipulation_approach_height`, `manipulation_lift_height`,

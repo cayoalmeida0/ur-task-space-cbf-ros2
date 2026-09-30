@@ -26,12 +26,13 @@ def test_workspace_cbf_has_six_plane_constraints_in_axis_order():
     np.testing.assert_allclose(constraints.matrix, expected_matrix)
     np.testing.assert_allclose(
         constraints.barrier_values,
-        [0.55, 0.55, 0.21, 1.09, 0.44, 0.16],
+        [0.40, 0.40, 0.06, 1.04, 0.59, 0.16],
     )
     np.testing.assert_allclose(
         constraints.lower_bound,
         -7.0 * constraints.barrier_values,
     )
+    assert constraints.minimum_physical_distance == pytest.approx(0.11)
 
 
 def test_workspace_vertices_form_closed_box():
@@ -41,7 +42,7 @@ def test_workspace_vertices_form_closed_box():
     np.testing.assert_allclose(vertices[6], [0.45, 0.55, 0.90])
 
 
-def test_closest_boundary_witness_projects_to_the_active_safe_plane():
+def test_closest_boundary_witness_projects_to_the_active_physical_surface():
     constraints = formulate_workspace_boundary_cbf(
         [0.0, -0.44, 0.69],
         np.eye(3, 6),
@@ -52,7 +53,7 @@ def test_closest_boundary_witness_projects_to_the_active_safe_plane():
 
     first, second = closest_workspace_boundary_witness(constraints)
     np.testing.assert_allclose(first, [0.0, -0.44, 0.69])
-    np.testing.assert_allclose(second, [0.0, -0.50, 0.69])
+    np.testing.assert_allclose(second, [0.0, -0.55, 0.69])
 
 
 @pytest.mark.parametrize(

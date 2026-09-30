@@ -19,6 +19,7 @@ def generate_launch_description():
         "orientation_target_mode": "vertical_yaw",
         "manipulation_grasp_yaw": "0.0",
         "manipulation_home_mode": "initial",
+        "manipulation_home_height": "0.30",
         "manipulation_object_frame": "base_link",
         "cube_position": "[-0.35, 0.0, 0.17]",
         "drop_position": "[-0.30, 0.18]",

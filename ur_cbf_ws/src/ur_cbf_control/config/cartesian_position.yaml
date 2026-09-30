@@ -53,10 +53,11 @@ cartesian_position_test:
     manipulation_drop_approach_height: 0.14
     manipulation_release_height: 0.08
     manipulation_retract_height: 0.16
-    # HOME usa a pose inicial capturada apos a estabilizacao. O modo fixed
-    # permite sobrescrever com uma posicao expressa no frame base.
+    # HOME usa x/y da pose inicial capturada apos a estabilizacao e limita sua
+    # altura a 0,30 m. O modo fixed continua permitindo uma pose explicita.
     manipulation_home_mode: initial
-    manipulation_home_position: [0.0, 0.0, 0.40]
+    manipulation_home_position: [0.0, 0.0, 0.30]
+    manipulation_home_height: 0.30
     # Pose de pega alinhada às faces do cubo axis-aligned.
     manipulation_grasp_yaw: 0.0
     gripper_open_width: 0.08

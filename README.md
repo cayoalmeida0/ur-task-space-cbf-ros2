@@ -6,15 +6,15 @@ distância diferenciáveis. A mesma interface comanda a planta simulada e o rob�
 real: velocidades articulares em
 `/forward_velocity_controller/commands`.
 
-> **Estado atual — revisão experimental 0.6.43:** infraestrutura Docker `0.2.0`,
-> `ur_cbf_bringup` `0.3.23` e `ur_cbf_control` `0.6.43`. A tarefa de
+> **Estado atual — revisão experimental 0.6.44:** infraestrutura Docker `0.2.0`,
+> `ur_cbf_bringup` `0.3.24` e `ur_cbf_control` `0.6.44`. A tarefa de
 > manipulação pick-and-place usa exatamente três alvos cartesianos: cubo,
 > caixa e HOME. Não são inseridos waypoints explícitos de aproximação,
 > elevação ou retração; as CBFs da mesa e do cubo protegem o deslocamento direto
 > até o alvo. As CBFs de autocolisão e de fronteira do workspace permanecem no modo
 > `enforce`. A cena usa mesa de altura `0,15 m`, cubo em `[-0,35, 0, 0,17]` e
-> caixa em `[-0,30, 0,18]`, no frame `base_link`. O HOME padrão é a pose inicial
-> capturada após a estabilização. A pose da pega usa orientação vertical com yaw
+> caixa em `[-0,30, 0,18]`, no frame `base_link`. O HOME padrão preserva x/y da
+> pose inicial capturada, mas limita sua altura a `0,30 m`. A pose da pega usa orientação vertical com yaw
 > fixo, mantendo os dedos paralelos às faces do cubo. Os quatro volumes laterais
 > da RG2 acompanham a abertura comandada tanto no RViz quanto na geometria usada
 > pela CBF. A mesa é um obstáculo cilíndrico finito e fica em `enforce` nos três
@@ -66,9 +66,9 @@ flowchart TD
   `/model/manipulation_cube/pose`; o volume do cubo no RViz e a avaliacao da
   CBF acompanham o objeto capturado, com fallback para `cube_position` enquanto
   a pose dinamica ainda nao chegou;
-- linhas de distancia separadas para autocolisao, mesa, cubo, fronteira mais
-  proxima e caixa de deposito; a linha da caixa e diagnostica e nao e inserida
-  no QP porque a caixa e o destino da tarefa;
+- linhas de distancia separadas para autocolisao, mesa, cubo e fronteira mais
+  proxima; a linha da caixa de deposito aparece somente durante o waypoint de
+  colocacao, e e diagnostica, sem ser inserida no QP;
 - TCP controlado em `gripper_tcp`, no centro dos dedos fechados;
 - watchdogs, comando nulo em falhas e ensaios explicitamente armados;
 - 19 primitivas visuais do modelo UAIbot corrigido, incluindo os oito volumes
@@ -265,12 +265,15 @@ crítica de cada família ativa:
 | Autocolisão | `/self_collision/witness_markers` | par de volumes do robô mais próximo |
 | Mesa | `/cylinder_collision/witness_markers` | volume do robô até o cilindro da mesa |
 | Cubo | `/cube_collision/witness_markers` | volume do robô até o cubo real |
-| Fronteira | `/workspace/boundary_witness_markers` | TCP até o plano seguro mais próximo |
-| Caixa | `/drop_box/witness_markers` | distância monitorada até a região de destino |
+| Fronteira | `/workspace/boundary_witness_markers` | TCP até a superfície física mais próxima |
+| Caixa | `/drop_box/witness_markers` | distância monitorada somente no waypoint da caixa |
 
 Os modos `all` continuam disponíveis para autocolisão, mesa, cubo e caixa. A
-caixa permanece `monitor-only`: ela é exibida e medida para diagnóstico, mas não
-entra nas restrições do QP, permitindo que o waypoint de colocação seja atingido.
+caixa permanece `monitor-only`: ela é exibida e medida somente durante o
+waypoint de colocação, mas não entra nas restrições do QP, permitindo que o
+destino seja atingido. A linha da fronteira termina na superfície geométrica
+real; a margem da CBF continua aparecendo numericamente como a diferença entre
+`d_workspace_min` e `h_workspace_min`.
 O marcador do cubo recebe a pose do Gazebo e também muda de orientação; por isso
 ele acompanha a pega depois que o cubo deixa a posição inicial.
 

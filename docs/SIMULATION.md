@@ -169,11 +169,14 @@ A geometria da mesa é publicada como cilindro em
 como volume axis-aligned em `/drop_box/obstacle_marker`. Esses marcadores são
 publicados durante o waypoint de controle mesmo quando as respectivas CBFs
 estão em `off`. A distância até a caixa também é publicada em
-`/drop_box/witness_markers`, mas permanece monitor-only porque a caixa é o
-destino da tarefa. O tópico não é inserido no QP.
+`/drop_box/witness_markers` somente durante o segundo waypoint, mas permanece
+monitor-only porque a caixa é o destino da tarefa. O tópico não é inserido no
+QP e é limpo nos demais waypoints.
 
-Com `closest`, as cinco relações visuais ficam separadas em displays RViz:
-autocolisão, mesa, cubo, fronteira e caixa. Use `all` nos parâmetros
+Com `closest`, as relações visuais ficam separadas em displays RViz:
+autocolisão, mesa, cubo, fronteira e caixa (esta última somente no waypoint de
+colocação). A linha da fronteira termina na superfície física do envelope; a
+margem de segurança continua somente no valor da barreira. Use `all` nos parâmetros
 `self_collision_witness_mode`, `cylinder_witness_mode`, `cube_witness_mode` ou
 `drop_box_witness_mode` quando precisar de todos os pares de uma família.
 

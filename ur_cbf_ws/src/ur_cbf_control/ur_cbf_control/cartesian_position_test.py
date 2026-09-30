@@ -54,6 +54,7 @@ from ur_cbf_control.workspace_boundary import build_workspace_boundary_marker_ar
 from ur_cbf_control.workspace_boundary import closest_workspace_boundary_witness
 from ur_cbf_control.workspace_boundary import formulate_workspace_boundary_cbf
 from ur_cbf_control.witness_visualization import build_single_witness_marker_array
+from ur_cbf_control.witness_visualization import build_clear_marker_array
 from ur_cbf_control.witness_visualization import build_witness_marker_array
 from ur_cbf_control.witness_visualization import WITNESS_VISUALIZATION_MODES
 from ur_cbf_control.cylinder_obstacle_cbf import (
@@ -133,7 +134,8 @@ class CartesianPositionTest(Node):
         self.declare_parameter("manipulation_release_height", 0.08)
         self.declare_parameter("manipulation_retract_height", 0.16)
         self.declare_parameter("manipulation_home_mode", "initial")
-        self.declare_parameter("manipulation_home_position", [0.0, 0.0, 0.40])
+        self.declare_parameter("manipulation_home_position", [0.0, 0.0, 0.30])
+        self.declare_parameter("manipulation_home_height", 0.30)
         self.declare_parameter("manipulation_grasp_yaw", 0.0)
         self.declare_parameter("gripper_open_width", 0.08)
         self.declare_parameter("gripper_grasp_width", 0.035)
@@ -315,6 +317,9 @@ class CartesianPositionTest(Node):
             self.get_parameter("manipulation_home_position").value,
             dtype=float,
         ).reshape(-1)
+        self.manipulation_home_height = float(
+            self.get_parameter("manipulation_home_height").value
+        )
         self.manipulation_grasp_yaw = float(
             self.get_parameter("manipulation_grasp_yaw").value
         )
@@ -739,10 +744,11 @@ class CartesianPositionTest(Node):
                 f"cube_cbf={self.cube_cbf_mode}; "
                 f"cube_contact_activation={self.cube_cbf_contact_activation_distance:.3f} m; "
                 f"grasp_yaw={self.manipulation_grasp_yaw:.3f} rad; "
+                f"home_z_max={self.manipulation_home_height:.3f} m; "
                 f"uaibot={self.kinematics.mode} "
                 f"(solicitado={self.kinematics.requested_mode}); "
                 f"seed={self.random_seed}; "
-                "pacote=0.6.43; imagem esperada=ur-cbf-jazzy:0.2.0."
+                "pacote=0.6.44; imagem esperada=ur-cbf-jazzy:0.2.0."
             )
             if self.task_type == "manipulation":
                 self.get_logger().info(
@@ -808,6 +814,7 @@ class CartesianPositionTest(Node):
             "cube_cbf_contact_activation_distance": (
                 self.cube_cbf_contact_activation_distance
             ),
+            "manipulation_home_height": self.manipulation_home_height,
         }
         for name, value in positive_values.items():
             if not math.isfinite(value) or value <= 0.0:
@@ -1346,6 +1353,10 @@ class CartesianPositionTest(Node):
                     "A pose inicial deve ser capturada antes de construir HOME."
                 )
             home = self.initial_position.copy()
+            # Mantem a projecao horizontal da pose inicial, mas evita retornar
+            # a uma altura excessiva que pode alongar ou inviabilizar o ultimo
+            # deslocamento do manipulador.
+            home[2] = min(home[2], self.manipulation_home_height)
         else:
             home = self.manipulation_home_position.copy()
         return (
@@ -1543,7 +1554,16 @@ class CartesianPositionTest(Node):
         fosse tratada como obstaculo rigido.
         """
 
-        if self.task_type != "manipulation" or self.drop_box_witness_mode == "off":
+        # A caixa e um destino, nao um obstaculo permanente. O witness e
+        # significativo somente no segundo alvo (indice 1); fora dele, a
+        # mensagem DELETEALL evita que uma linha antiga pareca apontar para um
+        # objeto inexistente perto do robo.
+        if (
+            self.task_type != "manipulation"
+            or self.drop_box_witness_mode == "off"
+            or self.waypoint_index != 1
+        ):
+            self.drop_box_witness_publisher.publish(build_clear_marker_array())
             self._last_drop_box_cbf = None
             return None
         try:
@@ -1558,6 +1578,7 @@ class CartesianPositionTest(Node):
                 gain=1.0,
             )
         except (KinematicsError, BoxObstacleCbfError) as error:
+            self.drop_box_witness_publisher.publish(build_clear_marker_array())
             self._last_drop_box_cbf = None
             now = time.monotonic()
             if now - self._last_drop_box_warning >= 1.0:
@@ -1876,7 +1897,7 @@ class CartesianPositionTest(Node):
             "reason": reason,
             "software": {
                 "docker_image": "ur-cbf-jazzy:0.2.0",
-                "control_package": "ur_cbf_control:0.6.43",
+                "control_package": "ur_cbf_control:0.6.44",
                 "controller_mode": self.controller_mode,
                 "self_collision_cbf_mode": self.self_collision_cbf_mode,
                 "self_collision_witness_mode": self.self_collision_witness_mode,
@@ -2028,6 +2049,7 @@ class CartesianPositionTest(Node):
                 "manipulation_home_position": (
                     self.manipulation_home_position.tolist()
                 ),
+                "manipulation_home_height": self.manipulation_home_height,
                 "manipulation_approach_height": self.manipulation_approach_height,
                 "manipulation_lift_height": self.manipulation_lift_height,
                 "manipulation_drop_approach_height": self.manipulation_drop_approach_height,
@@ -2480,6 +2502,7 @@ class CartesianPositionTest(Node):
                     ""
                     if workspace_cbf is None
                     else (
+                        f"d_workspace_min={workspace_cbf.minimum_physical_distance:.4f} m; "
                         f"h_workspace_min={workspace_cbf.minimum_barrier:.4f} m; "
                         f"boundary={workspace_cbf.closest_boundary}; "
                     )

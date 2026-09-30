@@ -46,12 +46,19 @@ class WorkspaceBoundaryCbfConstraints:
     def closest_boundary(self) -> str:
         return self.labels[int(np.argmin(self.barrier_values))]
 
+    @property
+    def minimum_physical_distance(self) -> float:
+        """Distancia assinada ate a superficie fisica da face selecionada."""
+
+        return self.minimum_barrier + self.safety_margin
+
     def to_record(self) -> dict[str, object]:
         """Resume a avaliacao sem gravar as matrizes do QP."""
 
         return {
             "constraint_count": self.count,
             "minimum_barrier_m": self.minimum_barrier,
+            "minimum_physical_distance_m": self.minimum_physical_distance,
             "closest_boundary": self.closest_boundary,
             "position_m": self.position.tolist(),
             "bounds_m": self.bounds.reshape(-1).tolist(),
@@ -63,11 +70,13 @@ class WorkspaceBoundaryCbfConstraints:
 def closest_workspace_boundary_witness(
     constraints: WorkspaceBoundaryCbfConstraints,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Retorna o efetuador e a projecao no plano de barreira mais proximo.
+    """Retorna o efetuador e a projecao na superficie fisica mais proxima.
 
-    As coordenadas laterais sao projetadas no envelope seguro. Assim a linha
-    exibida representa a mesma distancia cartesiana usada pela barreira
-    selecionada, e nao uma diagonal ate um vertice arbitrario.
+    A margem de seguranca permanece somente na barreira ``h = d - margin``.
+    O witness visual, entretanto, deve terminar na boundary geometrica real,
+    para que o comprimento da linha represente a distancia fisica ao envelope
+    mostrado no RViz. As coordenadas laterais sao projetadas na face real,
+    evitando uma diagonal ate um vertice arbitrario.
     """
 
     position = np.asarray(constraints.position, dtype=float).reshape(-1)
@@ -77,13 +86,13 @@ def closest_workspace_boundary_witness(
         raise WorkspaceBoundaryCbfError(
             "constraints possui dimensoes invalidas para um witness de fronteira."
         )
-    safe_lower = bounds[:, 0] + float(constraints.safety_margin)
-    safe_upper = bounds[:, 1] - float(constraints.safety_margin)
-    projected = np.clip(position, safe_lower, safe_upper)
+    lower = bounds[:, 0]
+    upper = bounds[:, 1]
+    projected = np.clip(position, lower, upper)
     candidates = np.tile(projected, (6, 1))
     for axis in range(3):
-        candidates[2 * axis, axis] = safe_lower[axis]
-        candidates[2 * axis + 1, axis] = safe_upper[axis]
+        candidates[2 * axis, axis] = lower[axis]
+        candidates[2 * axis + 1, axis] = upper[axis]
     closest = int(np.argmin(barriers))
     return position.copy(), candidates[closest].copy()
 
