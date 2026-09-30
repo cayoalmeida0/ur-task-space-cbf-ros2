@@ -1,3 +1,16 @@
+## Revisao experimental 0.6.39 / controle 0.6.39 / bringup 0.3.19 — 30 de setembro de 2026
+
+- Faz os quatro volumes laterais da RG2 acompanharem a largura comandada no
+  modelo UAIbot usado pela CBF, preservando as oito primitivas da geometria
+  original e sincronizando a visualização do RViz com as juntas móveis da garra.
+- Fixa nos três launchers de manipulação a pose completa vertical com yaw
+  configurável (`manipulation_grasp_yaw`), mantendo os dedos paralelos às faces
+  do cubo axis-aligned e evitando uma pega sobre as arestas.
+- Mantém a mesa como cilindro estático em `enforce`, corrige a distância assinada
+  dentro do volume finito e registra no log a menor distância/barreira da mesa.
+- Atualiza o esquema do resultado experimental para `1.7` e mantém os volumes de
+  CBF ocultos no Gazebo por padrão.
+
 ## Revisao experimental 0.6.38 / controle 0.6.38 / bringup 0.3.18 — 23 de setembro de 2026
 
 - Reduz a tarefa de manipulacao a tres waypoints semanticos: cubo, caixa e

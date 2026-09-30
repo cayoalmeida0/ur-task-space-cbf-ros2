@@ -15,8 +15,10 @@
   y=0 m e comprimento=0.0945 m; c41 usa z=-0.027 m; c42 usa
   x=0, y=0 m e z=0; c51 permanece inalterado; e c52 usa x=0.0011 m, y=-0.026 m e z=-0.030 m.
   A RG2 usa os oito objetos do elo final da fabrica UAIbot: C51/C52 e os seis
-  objetos adicionais de esfera, caixas e cilindros. Estes links sao apenas
-  visuais e permanecem sincronizados com UR3E_RG2_PROJECT_PRIMITIVES.
+  objetos adicionais de esfera, caixas e cilindros. C53/C54 permanecem presos
+  ao punho; C55/C56 acompanham as juntas externas e C57/C58 acompanham as
+  pontas das falanges. Assim, a visualizacao fecha junto com a RG2, enquanto o
+  modelo UAIbot atualiza as mesmas quatro primitivas laterais por largura.
 
   Estes links nao possuem collision nem inertial: aparecem apenas na descricao
   visual usada pelo RViz, acompanham os elos por juntas fixas e nao alteram a
@@ -151,7 +153,7 @@
   </xacro:macro>
 
   <xacro:macro name="rg2_cbf_visual_volume" params="prefix">
-    <!-- Objetos 2..7 do elo 5 original do UAIbot, no frame wrist_3_link. -->
+    <!-- C53/C54: palma fixa no frame wrist_3_link. -->
     <xacro:cbf_sphere_visual
       name="${prefix}uaibot_c53" parent="${prefix}wrist_3_link"
       xyz="0.0011 0.004 0.0279" radius="0.05"
@@ -161,22 +163,23 @@
       xyz="0.0011 -0.006 0.1079" rpy="0 1.570796326795 0"
       size="0.09 0.07 0.06" rgba="1.00 0.45 0.00 0.30"/>
     <xacro:cbf_box_visual
-      name="${prefix}uaibot_c55" parent="${prefix}wrist_3_link"
-      xyz="-0.0389 -0.001 0.1529"
+      name="${prefix}uaibot_c55" parent="${prefix}left_outer_knuckle"
+      xyz="0 0 0"
       rpy="1.570796326795 0.785398163397 0"
       size="0.075 0.04 0.035" rgba="1.00 0.45 0.00 0.30"/>
     <xacro:cbf_box_visual
-      name="${prefix}uaibot_c56" parent="${prefix}wrist_3_link"
-      xyz="0.0411 -0.001 0.1529"
+      name="${prefix}uaibot_c56" parent="${prefix}right_outer_knuckle"
+      xyz="0 0 0"
       rpy="-1.570796326795 0.785398163397 3.14159265359"
       size="0.075 0.04 0.035" rgba="1.00 0.45 0.00 0.30"/>
+    <!-- C57/C58: cilindros presos aos links de ponta das falanges móveis. -->
     <xacro:cbf_cylinder_visual
-      name="${prefix}uaibot_c57" parent="${prefix}wrist_3_link"
-      xyz="0.0511 -0.001 0.1979" rpy="3.14159265359 0 1.570796326795"
+      name="${prefix}uaibot_c57" parent="${prefix}left_finger_tip"
+      xyz="0 0 0" rpy="3.14159265359 0 1.570796326795"
       radius="0.021" length="0.04" rgba="1.00 0.45 0.00 0.30"/>
     <xacro:cbf_cylinder_visual
-      name="${prefix}uaibot_c58" parent="${prefix}wrist_3_link"
-      xyz="-0.0489 -0.001 0.1979" rpy="3.14159265359 0 1.570796326795"
+      name="${prefix}uaibot_c58" parent="${prefix}right_finger_tip"
+      xyz="0 0 0" rpy="3.14159265359 0 1.570796326795"
       radius="0.021" length="0.04" rgba="1.00 0.45 0.00 0.30"/>
   </xacro:macro>
 </robot>

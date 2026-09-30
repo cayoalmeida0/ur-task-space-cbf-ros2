@@ -17,8 +17,12 @@ from ur_cbf_control.cylinder_obstacle_cbf import (
 from ur_cbf_control.uaibot_collision_model import (
     configure_ur3e_rg2_project_collision_model,
 )
+from ur_cbf_control.uaibot_collision_model import RG2_REFERENCE_WIDTH_M
 from ur_cbf_control.uaibot_collision_model import PROJECT_GEOMETRY_SOURCE
 from ur_cbf_control.uaibot_collision_model import UaibotCollisionModelError
+from ur_cbf_control.uaibot_collision_model import (
+    update_ur3e_rg2_gripper_width,
+)
 from ur_cbf_control.uaibot_collision_model import (
     validate_ur3e_rg2_project_collision_model,
 )
@@ -203,6 +207,7 @@ class UaibotKinematics:
         self.model_corrections = tuple(model_corrections)
         self.distance_utils = distance_utils
         self._self_collision_geometry_validated = False
+        self._gripper_width_m: float | None = None
         htm_n_eef = homogeneous_transform_from_xyz_rpy(
             eef_offset_xyz,
             eef_offset_rpy,
@@ -251,7 +256,7 @@ class UaibotKinematics:
         except UaibotCollisionModelError as error:
             raise KinematicsError(str(error)) from error
         corrections = _correct_ur3e_uaibot_dh(robot)
-        return cls(
+        instance = cls(
             robot,
             model_joint_names,
             eef_offset_xyz,
@@ -262,6 +267,20 @@ class UaibotKinematics:
             requested_mode=mode,
             distance_utils=ub.Utils,
         )
+        # configure_ur3e_rg2_project_collision_model validou o estado de
+        # referência antes de a abertura passar a ser dinâmica.
+        instance._self_collision_geometry_validated = True
+        instance._gripper_width_m = RG2_REFERENCE_WIDTH_M
+        return instance
+
+    def set_gripper_width(self, width: float) -> None:
+        """Sincroniza a geometria interna da RG2 com a abertura comandada."""
+
+        try:
+            update_ur3e_rg2_gripper_width(self.robot, width)
+        except UaibotCollisionModelError as error:
+            raise KinematicsError(str(error)) from error
+        self._gripper_width_m = float(width)
 
     def evaluate(self, model_positions: Sequence[float]) -> KinematicState:
         """Calcula pose e Jacobiano geometrico para uma configuração."""
@@ -386,7 +405,7 @@ class UaibotKinematics:
                 radius=radius,
                 height=height,
                 geometry_source=(
-                    "ur-task-space-cbf-ros2@0.6.38:"
+                    "ur-task-space-cbf-ros2@0.6.39:"
                     "ur_cbf_control/cylinder_obstacle_cbf.py"
                 ),
             )

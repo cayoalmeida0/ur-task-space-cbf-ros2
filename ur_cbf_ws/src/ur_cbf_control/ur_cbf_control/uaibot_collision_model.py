@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from dataclasses import replace
+import math
 from typing import Any
 
 import numpy as np
@@ -12,9 +13,18 @@ UAIBOT_FACTORY_GEOMETRY_SOURCE = (
     "uaibot/robot/_create_ur_ur3e.py"
 )
 PROJECT_GEOMETRY_SOURCE = (
-    "ur-task-space-cbf-ros2@0.6.38:"
+    "ur-task-space-cbf-ros2@0.6.39:"
     "ur_cbf_control/uaibot_collision_model.py#UR3E_RG2_PROJECT_PRIMITIVES"
 )
+
+# A RG2 aceita uma abertura nominal de 0 a 110 mm. Os quatro objetos laterais
+# (duas caixas das falanges e dois cilindros das pontas) são deslocados
+# simetricamente a partir da geometria UAIbot em 80 mm, que é a abertura usada
+# como referência pelo cenário.
+RG2_MIN_WIDTH_M = 0.0
+RG2_MAX_WIDTH_M = 0.110
+RG2_REFERENCE_WIDTH_M = 0.080
+RG2_MOVING_OBJECT_INDICES = (4, 5, 6, 7)
 
 
 class UaibotCollisionModelError(RuntimeError):
@@ -274,6 +284,86 @@ def validate_ur3e_rg2_project_collision_model(robot: Any) -> None:
         expected_counts=(1, 3, 3, 2, 2, 8),
         label="UR3e/RG2 do projeto",
     )
+
+
+def update_ur3e_rg2_gripper_width(
+    robot: Any,
+    width: float,
+    *,
+    reference_width: float = RG2_REFERENCE_WIDTH_M,
+) -> None:
+    """Atualiza as poses laterais da RG2 conforme a abertura comandada.
+
+    A geometria UAIbot é anexada ao frame DH do último elo. Portanto, a
+    abertura física da garra não aparece automaticamente no modelo interno.
+    As primitivas centrais permanecem fixas e as quatro primitivas laterais
+    são recalculadas a partir da pose de referência, movendo cada lado pela
+    metade da variação da abertura. A operação mantém tipos e dimensões e é
+    compatível com o cálculo de distância do UAIbot e com a CBF da mesa.
+    """
+
+    width = float(width)
+    reference_width = float(reference_width)
+    if not math.isfinite(width) or not (
+        RG2_MIN_WIDTH_M <= width <= RG2_MAX_WIDTH_M
+    ):
+        raise UaibotCollisionModelError(
+            "A largura da RG2 deve estar entre 0 e 0.110 m."
+        )
+    if not math.isfinite(reference_width) or not (
+        RG2_MIN_WIDTH_M <= reference_width <= RG2_MAX_WIDTH_M
+    ):
+        raise UaibotCollisionModelError(
+            "A largura de referência da RG2 é inválida."
+        )
+
+    try:
+        storage = robot.links[5]._col_objects
+    except (AttributeError, IndexError, TypeError) as error:
+        raise UaibotCollisionModelError(
+            "O modelo UR3e/RG2 não expõe o armazenamento do elo final."
+        ) from error
+    if not isinstance(storage, list) or len(storage) != 8:
+        raise UaibotCollisionModelError(
+            "O elo final da RG2 deve conter exatamente oito primitivas."
+        )
+
+    specs = {
+        spec.object_index: spec
+        for spec in UR3E_RG2_PROJECT_PRIMITIVES
+        if spec.link_index == 5
+    }
+    width_delta = width - reference_width
+    for object_index in RG2_MOVING_OBJECT_INDICES:
+        spec = specs[object_index]
+        try:
+            item = storage[object_index]
+            attached = np.asarray(item[1], dtype=float)
+        except (AttributeError, IndexError, TypeError, ValueError) as error:
+            raise UaibotCollisionModelError(
+                f"Transformação ausente em link_5_obj_{object_index}."
+            ) from error
+        if attached.shape != (4, 4):
+            raise UaibotCollisionModelError(
+                f"Transformação inválida em link_5_obj_{object_index}."
+            )
+
+        updated = attached.copy()
+        reference_x = float(spec.htm[0][3])
+        # x negativo é o lado esquerdo e x positivo o lado direito no frame
+        # final UAIbot. Ao fechar, ambos avançam na direção do centro.
+        updated[0, 3] = reference_x + math.copysign(
+            1.0,
+            reference_x,
+        ) * 0.5 * width_delta
+        if isinstance(item, tuple):
+            storage[object_index] = (item[0], updated)
+        elif isinstance(item, list):
+            storage[object_index] = [item[0], updated]
+        else:
+            raise UaibotCollisionModelError(
+                f"Entrada inválida em link_5_obj_{object_index}."
+            )
 
 
 def _create_primitive(uaibot_module: Any, spec: UaibotPrimitiveSpec) -> Any:

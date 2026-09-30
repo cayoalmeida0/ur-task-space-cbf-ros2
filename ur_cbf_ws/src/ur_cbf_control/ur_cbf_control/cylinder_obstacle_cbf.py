@@ -2,7 +2,8 @@
 
 O obstáculo é descrito como um cilindro vertical finito. Cada primitiva de
 colisão do robô é conservadoramente envolvida por uma esfera; a distância
-assinada entre essa esfera e o cilindro fornece uma restrição diferencial
+assinada entre essa esfera e o cilindro (com raio e tampas dilatados) fornece
+uma restrição diferencial
 ``J_d qdot >= -gamma (d - d_safe)``. A aproximação é deliberadamente
 conservadora e evita depender de uma API privada de distância da biblioteca
 cinemática.
@@ -130,28 +131,39 @@ def _signed_distance_and_gradient(
         radial_gradient = np.array((1.0, 0.0, 0.0))
     radial_gap = radial_norm - radius
 
-    if radial_gap >= 0.0 and z_min <= point[2] <= z_max:
-        return radial_gap, radial_gradient
-    if radial_gap < 0.0 and point[2] < z_min:
-        return z_min - point[2], np.array((0.0, 0.0, -1.0))
-    if radial_gap < 0.0 and point[2] > z_max:
-        return point[2] - z_max, np.array((0.0, 0.0, 1.0))
-    if radial_gap >= 0.0 and point[2] < z_min:
-        delta_z = z_min - point[2]
-        distance = math.hypot(radial_gap, delta_z)
-        return distance, (radial_gap * radial_gradient - delta_z * np.array((0.0, 0.0, 1.0))) / distance
-    if radial_gap >= 0.0 and point[2] > z_max:
-        delta_z = point[2] - z_max
-        distance = math.hypot(radial_gap, delta_z)
-        return distance, (radial_gap * radial_gradient + delta_z * np.array((0.0, 0.0, 1.0))) / distance
+    lower_gap = z_min - float(point[2])
+    upper_gap = float(point[2]) - z_max
 
-    margins = np.array((radial_gap, point[2] - z_min, z_max - point[2]))
-    active = int(np.argmin(margins))
+    if radial_gap >= 0.0 and lower_gap <= 0.0 and upper_gap <= 0.0:
+        return radial_gap, radial_gradient
+    if radial_gap < 0.0 and lower_gap > 0.0:
+        return lower_gap, np.array((0.0, 0.0, -1.0))
+    if radial_gap < 0.0 and upper_gap > 0.0:
+        return upper_gap, np.array((0.0, 0.0, 1.0))
+    if radial_gap >= 0.0 and lower_gap > 0.0:
+        delta_z = lower_gap
+        distance = math.hypot(radial_gap, delta_z)
+        return distance, (
+            radial_gap * radial_gradient
+            - delta_z * np.array((0.0, 0.0, 1.0))
+        ) / distance
+    if radial_gap >= 0.0 and upper_gap > 0.0:
+        delta_z = upper_gap
+        distance = math.hypot(radial_gap, delta_z)
+        return distance, (
+            radial_gap * radial_gradient
+            + delta_z * np.array((0.0, 0.0, 1.0))
+        ) / distance
+
+    # Dentro do cilindro, o valor assinado é negativo e corresponde à menor
+    # penetração até uma das três superfícies: lateral, inferior ou superior.
+    margins = np.array((radial_gap, lower_gap, upper_gap))
+    active = int(np.argmax(margins))
     if active == 0:
         return float(radial_gap), radial_gradient
     if active == 1:
-        return float(margins[active]), np.array((0.0, 0.0, 1.0))
-    return float(margins[active]), np.array((0.0, 0.0, -1.0))
+        return float(margins[active]), np.array((0.0, 0.0, -1.0))
+    return float(margins[active]), np.array((0.0, 0.0, 1.0))
 
 
 def evaluate_cylinder_obstacle_distances(
@@ -203,8 +215,10 @@ def evaluate_cylinder_obstacle_distances(
                 point,
                 center_xy=center,
                 radius=float(radius) + primitive_radius,
-                z_min=0.0,
-                z_max=float(height),
+                # A bounding sphere dilates the finite cylinder in all three
+                # directions, including the lower and upper caps.
+                z_min=-primitive_radius,
+                z_max=float(height) + primitive_radius,
             )
             point_jacobian = (
                 link_jacobian[:3, :]

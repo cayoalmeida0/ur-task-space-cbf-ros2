@@ -77,6 +77,16 @@ Visualization Manager:
         Value: /workspace/boundary_markers
       Name: Workspace Boundary
       Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Marker Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /cylinder_collision/witness_markers
+      Name: Table CBF Witness
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48

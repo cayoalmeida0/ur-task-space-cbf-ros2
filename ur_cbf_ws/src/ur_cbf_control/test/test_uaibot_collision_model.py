@@ -14,6 +14,9 @@ from ur_cbf_control.uaibot_collision_model import (
 from ur_cbf_control.uaibot_collision_model import (
     validate_ur3e_rg2_project_collision_model,
 )
+from ur_cbf_control.uaibot_collision_model import (
+    update_ur3e_rg2_gripper_width,
+)
 
 
 class Primitive:
@@ -209,6 +212,32 @@ class UaibotCollisionModelTest(unittest.TestCase):
         np.testing.assert_allclose(
             distal[7][1], np.asarray(UR3E_UAIBOT_PRIMITIVES[18].htm)
         )
+
+    def test_rg2_side_volumes_follow_the_commanded_width(self):
+        robot = make_factory_robot()
+        configure_ur3e_rg2_project_collision_model(robot, FakeUaibot)
+        open_positions = [
+            float(robot.links[5].col_objects[index][1][0, 3])
+            for index in (4, 5, 6, 7)
+        ]
+
+        update_ur3e_rg2_gripper_width(robot, 0.035)
+        closed_positions = [
+            float(robot.links[5].col_objects[index][1][0, 3])
+            for index in (4, 5, 6, 7)
+        ]
+        self.assertGreater(closed_positions[0], open_positions[0])
+        self.assertLess(closed_positions[1], open_positions[1])
+        self.assertLess(closed_positions[2], open_positions[2])
+        self.assertGreater(closed_positions[3], open_positions[3])
+
+        update_ur3e_rg2_gripper_width(robot, 0.080)
+        for index, spec in zip((4, 5, 6, 7), UR3E_RG2_PROJECT_PRIMITIVES[15:19]):
+            np.testing.assert_allclose(
+                robot.links[5].col_objects[index][1],
+                np.asarray(spec.htm),
+            )
+        validate_ur3e_rg2_project_collision_model(robot)
 
     def test_rejects_changed_factory_primitive_count(self):
         robot = make_factory_robot()

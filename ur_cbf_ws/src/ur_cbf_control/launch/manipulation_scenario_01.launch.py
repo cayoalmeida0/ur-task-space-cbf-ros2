@@ -1,4 +1,4 @@
-"""Ensaio base com três alvos diretos e CBF do cilindro."""
+"""Ensaio base com três alvos diretos e CBF da mesa."""
 
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
@@ -15,8 +15,9 @@ def generate_launch_description():
         "execute_test": "true",
         "task_type": "manipulation",
         "trajectory_profile": "challenging",
-        "task_control_mode": "position_vertical",
-        "orientation_target_mode": "vertical",
+        "task_control_mode": "pose",
+        "orientation_target_mode": "vertical_yaw",
+        "manipulation_grasp_yaw": "0.0",
         "manipulation_home_mode": "initial",
         "manipulation_object_frame": "base_link",
         "cube_position": "[-0.35, 0.0, 0.17]",

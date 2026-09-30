@@ -40,6 +40,10 @@ def launch_setup(context):
                     "orientation_target_mode": LaunchConfiguration(
                         "orientation_target_mode"
                     ),
+                    "manipulation_grasp_yaw": ParameterValue(
+                        LaunchConfiguration("manipulation_grasp_yaw"),
+                        value_type=float,
+                    ),
                     "manipulation_object_frame": LaunchConfiguration(
                         "manipulation_object_frame"
                     ),
@@ -165,8 +169,19 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "orientation_target_mode",
                 default_value="initial",
-                choices=["initial", "vertical", "rpy"],
-                description="Alvo angular inicial, vertical ou RPY configurado.",
+                choices=["initial", "vertical", "vertical_yaw", "rpy"],
+                description=(
+                    "Alvo angular inicial, vertical, vertical com yaw fixo "
+                    "ou RPY configurado."
+                ),
+            ),
+            DeclareLaunchArgument(
+                "manipulation_grasp_yaw",
+                default_value="0.0",
+                description=(
+                    "Yaw da pose de pega em radianos; 0 e pi/2 alinham as "
+                    "faces do cubo axis-aligned."
+                ),
             ),
             DeclareLaunchArgument(
                 "manipulation_object_frame",

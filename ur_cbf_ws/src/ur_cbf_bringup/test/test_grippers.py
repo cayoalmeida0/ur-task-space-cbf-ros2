@@ -212,10 +212,10 @@ def test_uaibot_visual_primitives_preserve_converted_origins_and_sizes():
         "c52": ("cylinder", "wrist_3_link", "0.0011 -0.026 -0.03", "1.570796326795 1.570796326795 0", "0.01", "0.028"),
         "c53": ("sphere", "wrist_3_link", "0.0011 0.004 0.0279", None, "0.05", None),
         "c54": ("box", "wrist_3_link", "0.0011 -0.006 0.1079", "0 1.570796326795 0", "0.09 0.07 0.06", None),
-        "c55": ("box", "wrist_3_link", "-0.0389 -0.001 0.1529", "1.570796326795 0.785398163397 0", "0.075 0.04 0.035", None),
-        "c56": ("box", "wrist_3_link", "0.0411 -0.001 0.1529", "-1.570796326795 0.785398163397 3.14159265359", "0.075 0.04 0.035", None),
-        "c57": ("cylinder", "wrist_3_link", "0.0511 -0.001 0.1979", "3.14159265359 0 1.570796326795", "0.021", "0.04"),
-        "c58": ("cylinder", "wrist_3_link", "-0.0489 -0.001 0.1979", "3.14159265359 0 1.570796326795", "0.021", "0.04"),
+        "c55": ("box", "left_outer_knuckle", "0 0 0", "1.570796326795 0.785398163397 0", "0.075 0.04 0.035", None),
+        "c56": ("box", "right_outer_knuckle", "0 0 0", "-1.570796326795 0.785398163397 3.14159265359", "0.075 0.04 0.035", None),
+        "c57": ("cylinder", "left_finger_tip", "0 0 0", "3.14159265359 0 1.570796326795", "0.021", "0.04"),
+        "c58": ("cylinder", "right_finger_tip", "0 0 0", "3.14159265359 0 1.570796326795", "0.021", "0.04"),
     }
 
     assert set(calls) == set(expected)
@@ -354,7 +354,14 @@ def test_rg2_original_like_model_matches_project_dimensions():
         encoding="utf-8"
     )
 
-    assert volumes.count('parent="${prefix}wrist_3_link"') == 6
+    assert volumes.count('parent="${prefix}wrist_3_link"') == 4
+    for parent in (
+        "left_outer_knuckle",
+        "right_outer_knuckle",
+        "left_finger_tip",
+        "right_finger_tip",
+    ):
+        assert f'parent="${{prefix}}{parent}"' in volumes
     assert 'xyz="0.0011 0.004 0.0279" radius="0.05"' in volumes
     assert 'size="0.09 0.07 0.06"' in volumes
     assert 'size="0.075 0.04 0.035"' in volumes
@@ -391,6 +398,9 @@ def test_cbf_visual_volumes_can_be_toggled_without_editing_env():
     assert '"-string",\n            gazebo_description_content,' in simulation_launch
     assert 'FindPackageShare("ur_cbf_bringup")' in simulation_launch
     assert '"ur_cbf.rviz"' in simulation_launch
+    for rviz_name in ("ur_cbf.rviz", "cbf_witness.rviz"):
+        rviz = (PACKAGE_ROOT / "rviz" / rviz_name).read_text(encoding="utf-8")
+        assert "/cylinder_collision/witness_markers" in rviz
 
 
 def test_manipulation_scenarios_keep_volumes_hidden_in_gazebo():

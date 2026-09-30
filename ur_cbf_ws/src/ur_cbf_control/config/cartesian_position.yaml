@@ -21,7 +21,8 @@ cartesian_position_test:
     target_offset: [0.0, 0.0, 0.01]
     position_gains: [1.0, 1.0, 1.0]
     # position_vertical controla posicao e inclinacao, mantendo yaw livre.
-    # pose usa o Jacobiano geometrico completo [v; omega].
+    # vertical_yaw fixa o yaw escolhido para alinhar a pega; pose usa o
+    # Jacobiano geometrico completo [v; omega].
     task_control_mode: pose
     orientation_gains: [0.5, 0.5, 0.5]
     orientation_target_mode: initial
@@ -30,6 +31,8 @@ cartesian_position_test:
     manipulation_object_frame: base_link
     cube_position: [-0.35, 0.0, 0.17]
     drop_position: [-0.30, 0.18]
+    # A geometria cilíndrica representa a mesa; os launchers de manipulação
+    # a habilitam no modo enforce.
     cylinder_position: [-0.35, 0.0]
     cylinder_radius: 0.08
     cylinder_height: 0.15
@@ -44,6 +47,8 @@ cartesian_position_test:
     # permite sobrescrever com uma posicao expressa no frame base.
     manipulation_home_mode: initial
     manipulation_home_position: [0.0, 0.0, 0.40]
+    # Pose de pega alinhada às faces do cubo axis-aligned.
+    manipulation_grasp_yaw: 0.0
     gripper_open_width: 0.08
     gripper_grasp_width: 0.035
     gripper_width_topic: /finger_width_controller/commands

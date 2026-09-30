@@ -5,6 +5,7 @@ from ur_cbf_control.cylinder_obstacle_cbf import (
     evaluate_cylinder_obstacle_distances,
     formulate_cylinder_obstacle_cbf,
 )
+from ur_cbf_control.cylinder_obstacle_cbf import _signed_distance_and_gradient
 
 
 class Cylinder:
@@ -30,6 +31,13 @@ class Robot:
         return [jacobian], [transform]
 
 
+class RobotNearTableTop(Robot):
+    def jac_geo(self, _q, _axis, mode="python"):
+        jacobians, transforms = super().jac_geo(_q, _axis, mode)
+        transforms[0][0, 3] = 0.09
+        return jacobians, transforms
+
+
 def test_cylinder_obstacle_distance_has_a_differential_constraint():
     distances = evaluate_cylinder_obstacle_distances(
         Robot(),
@@ -50,3 +58,29 @@ def test_cylinder_obstacle_distance_has_a_differential_constraint():
     assert constraints.matrix.shape == (1, 1)
     assert constraints.lower_bound[0] < 0.0
     assert constraints.matrix[0, 0] > 0.0
+
+
+def test_cylinder_signed_distance_uses_the_closest_cap_inside_the_table():
+    distance, gradient = _signed_distance_and_gradient(
+        np.array((0.02, 0.0, 0.145)),
+        center_xy=np.array((0.0, 0.0)),
+        radius=0.10,
+        z_min=0.0,
+        z_max=0.15,
+    )
+
+    assert distance == pytest.approx(-0.005)
+    np.testing.assert_allclose(gradient, (0.0, 0.0, 1.0))
+
+
+def test_cylinder_obstacle_inflates_the_table_caps_by_the_volume_radius():
+    distances = evaluate_cylinder_obstacle_distances(
+        RobotNearTableTop(),
+        [0.0],
+        center_xy=[0.0, 0.0],
+        radius=0.08,
+        height=0.15,
+        geometry_source="test",
+    )
+
+    assert distances.distances[0] < 0.0

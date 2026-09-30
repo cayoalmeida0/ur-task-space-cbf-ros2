@@ -84,10 +84,13 @@ pick-and-place e publica a largura desejada em
 `cubo`, `caixa` e `HOME`. O cubo é atingido diretamente, a garra fecha nesse
 alvo, abre na caixa e retorna à pose inicial capturada como HOME. Não há
 waypoints explícitos de aproximação, elevação ou retração; as CBFs continuam
-atuando durante todo o caminho. O modo `orientation_target_mode:=vertical`
-constrói uma orientação cujo eixo `z` do `gripper_tcp` aponta para o piso. A
-posição do cubo é convertida diretamente em alvos cartesianos; não existe uma
-rotina de pré-validação contra o workspace.
+atuando durante todo o caminho. O modo `orientation_target_mode:=vertical_yaw`
+com `task_control_mode:=pose` constrói uma orientação cujo eixo `z` do
+`gripper_tcp` aponta para o piso e cujo yaw é fixado por
+`manipulation_grasp_yaw`; para o cubo axis-aligned, `0` rad mantém os dedos
+paralelos às faces e `pi/2` seleciona a orientação equivalente. A posição do
+cubo é convertida diretamente em alvos cartesianos; não existe uma rotina de
+pré-validação contra o workspace.
 
 ## CBF de workspace
 
@@ -97,7 +100,7 @@ fica próximo ao piso para permitir a futura tarefa mesa--cubo, enquanto as
 direcoes laterais deixam uma margem menor para o manipulador. Os modos `monitor`
 e `enforce` têm o mesmo significado da CBF de autocolisao.
 
-## Orientação livre, manipulabilidade e cilindro da cena
+## Orientação, manipulabilidade e cilindro da cena
 
 No modo `task_control_mode:=position`, o QP usa apenas `J_v` e a orientação é
 livre. No modo `task_control_mode:=position_vertical`, o QP usa posição e as
@@ -118,7 +121,10 @@ colisão do UR3e/RG2 é envolvida por uma esfera conservadora e a CBF impõe
 as distâncias e `enforce` para incluir as restrições no OSQP. Os parâmetros
 `cylinder_position`, `cylinder_radius` e `cylinder_height` usam o mesmo frame
 de `manipulation_object_frame` da cena; os witness points são publicados em
-`/cylinder_collision/witness_markers`.
+`/cylinder_collision/witness_markers`. Nos três launchers de manipulação essa
+CBF já é `enforce`, com o cilindro coincidindo com a mesa. Os quatro volumes
+laterais da RG2 também são atualizados com a largura comandada, portanto o
+obstáculo considera o estado aberto antes da pega e fechado depois dela.
 
 ## CBF de autocolisao
 
@@ -143,9 +149,11 @@ sao recusados para combinacoes diferentes de `ur3e + rg2`. Consulte
 [`docs/SELF_COLLISION_CBF.md`](../../../docs/SELF_COLLISION_CBF.md) antes de
 ativar a restricao.
 
-Os três launchers de cenário usam `position_vertical` e
-`orientation_target_mode:=vertical`, condição adequada para pegar um cubo
-apoiado em uma superfície horizontal sem impor uma orientação 6D completa.
+Os três launchers de cenário usam `task_control_mode:=pose` e
+`orientation_target_mode:=vertical_yaw`, com `manipulation_grasp_yaw:=0.0`.
+Assim, o eixo z permanece vertical e os dedos ficam paralelos às faces do cubo
+axis-aligned; `manipulation_grasp_yaw:=pi/2` seleciona a orientação equivalente
+das faces ortogonais.
 
 Os witness points podem ser exibidos no RViz pelo topico
 `/self_collision/witness_markers`. Use `self_collision_witness_mode:=closest`

@@ -6,16 +6,20 @@ distância diferenciáveis. A mesma interface comanda a planta simulada e o rob�
 real: velocidades articulares em
 `/forward_velocity_controller/commands`.
 
-> **Estado atual — revisão experimental 0.6.38:** infraestrutura Docker `0.2.0`,
-> `ur_cbf_bringup` `0.3.18` e `ur_cbf_control` `0.6.38`. A tarefa de
+> **Estado atual — revisão experimental 0.6.39:** infraestrutura Docker `0.2.0`,
+> `ur_cbf_bringup` `0.3.19` e `ur_cbf_control` `0.6.39`. A tarefa de
 > manipulação pick-and-place usa exatamente três alvos cartesianos: cubo,
 > caixa e HOME. Não são inseridos waypoints explícitos de aproximação,
-> elevação ou retração; a CBF do cilindro protege o deslocamento direto até o
+> elevação ou retração; a CBF da mesa protege o deslocamento direto até o
 > cubo. As CBFs de autocolisão e de fronteira do workspace permanecem no modo
 > `enforce`. A cena usa mesa de altura `0,15 m`, cubo em `[-0,35, 0, 0,17]` e
 > caixa em `[-0,30, 0,18]`, no frame `base_link`. O HOME padrão é a pose inicial
-> capturada após a estabilização. No perfil `challenging`, os limites são
-> `0,08 m/s` no espaço cartesiano e `0,60 rad/s` nas juntas.
+> capturada após a estabilização. A pose da pega usa orientação vertical com yaw
+> fixo, mantendo os dedos paralelos às faces do cubo. Os quatro volumes laterais
+> da RG2 acompanham a abertura comandada tanto no RViz quanto na geometria usada
+> pela CBF. A mesa é um obstáculo cilíndrico finito e fica em `enforce` nos três
+> cenários. No perfil `challenging`, os limites são `0,08 m/s` no espaço
+> cartesiano e `0,60 rad/s` nas juntas.
 
 ## Visão geral
 
@@ -46,14 +50,15 @@ flowchart TD
 - CBF de fronteira do workspace com seis restrições cartesianas axis-aligned;
 - CBF externa para o cilindro da mesa, aplicada aos volumes de colisão do robô;
 - tarefa física simulada de pick-and-place com comando da garra RG2;
-- modo posicional vertical, que mantém a inclinação da garra e libera o yaw;
+- pose vertical com yaw fixo para alinhar os dedos às faces do cubo;
 - métricas de manipulabilidade (`sigma_min`, condição e índice de Yoshikawa)
   registradas em cada amostra;
 - witness points de autocolisão e marcadores da fronteira do workspace no RViz;
+- witness points da mesa em `/cylinder_collision/witness_markers` no RViz;
 - TCP controlado em `gripper_tcp`, no centro dos dedos fechados;
 - watchdogs, comando nulo em falhas e ensaios explicitamente armados;
 - 19 primitivas visuais do modelo UAIbot corrigido, incluindo os oito volumes
-  originais da RG2 no elo final;
+  originais da RG2; as caixas e pontas laterais acompanham o fechamento;
 - resultados experimentais em JSON com parâmetros, versões, seed e métricas.
 
 ### Escopo dos modelos
@@ -167,11 +172,13 @@ ros2 launch ur_cbf_control cartesian_position.launch.py \
   onrobot_type:=rg2 \
   task_type:=manipulation \
   trajectory_profile:=challenging \
-  task_control_mode:=position_vertical \
-  orientation_target_mode:=vertical \
+  task_control_mode:=pose \
+  orientation_target_mode:=vertical_yaw \
+  manipulation_grasp_yaw:=0.0 \
   controller_mode:=qp \
   self_collision_cbf_mode:=enforce \
   workspace_cbf_mode:=enforce \
+  cylinder_cbf_mode:=enforce \
   self_collision_witness_mode:=closest \
   manipulation_object_frame:=base_link \
   cube_position:="[-0.35, 0.0, 0.17]" \
@@ -197,10 +204,10 @@ chegar à caixa ela abre; o terceiro alvo retorna à pose HOME.
 
 Os launchers abaixo iniciam a cena Gazebo e o controlador com os parâmetros
 coerentes entre si. Cada execução tem somente `cubo -> caixa -> HOME`. Eles usam
-`task_control_mode:=position_vertical`, portanto a
-posição e a inclinação da garra são reguladas, enquanto o yaw permanece livre.
-A mesa é tratada
-como um cilindro de colisão com margem de `0,01 m`; a altura do cubo é sempre
+`task_control_mode:=pose` e `orientation_target_mode:=vertical_yaw`, portanto a
+garra mantém o eixo vertical e o yaw fixado em `0` rad, alinhado às faces do
+cubo axis-aligned. A mesa é tratada como um cilindro de colisão com margem de
+`0,01 m` e CBF em `enforce`; a altura do cubo é sempre
 `table_height + cube_size/2`.
 
 | Launcher | Mesa/cubo no `base_link` | Altura | Caixa no `base_link` |
@@ -224,8 +231,9 @@ durante o caminho direto; o cubo é o alvo intencional da pega, não um obstácu
 proibido.
 
 Para comparar com orientação 6D completamente fixa, use o launcher genérico e
-`task_control_mode:=pose orientation_target_mode:=vertical`. Para a configuração
-posicional sem restrição angular, use `task_control_mode:=position`.
+`task_control_mode:=pose orientation_target_mode:=vertical_yaw
+manipulation_grasp_yaw:=0.0`. Para a configuração posicional sem restrição
+angular, use `task_control_mode:=position`.
 
 ### Diagnóstico do RobotModel no RViz
 
